@@ -5,9 +5,7 @@
     "version": "1.0.0",
     "scheme": "admino",
     "web": {
-      "bundler": "metro",
-      "output": "static",
-      "favicon": "./assets/favicon.png"
+      "bundler": "metro"
     },
     "plugins": [
       "expo-router"

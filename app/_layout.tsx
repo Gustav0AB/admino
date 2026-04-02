@@ -1,18 +1,34 @@
-import { TamaguiProvider } from "tamagui";
-import { Stack } from "expo-router";
-import { useColorScheme } from "react-native";
-import appConfig from "@/shared/config/tamagui.config";
 import "@/shared/i18n";
-import { useThemeStore } from "@/shared/store/themeStore";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Stack } from "expo-router";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { SplashOverlay } from "@/shared/components/SplashOverlay";
+import { useAppLifecycle } from "@/shared/hooks/useAppLifecycle";
+import { useOrgTheme } from "@/shared/theme/useOrgTheme";
 
-export default function RootLayout() {
-  const systemScheme = useColorScheme();
-  const themeMode = useThemeStore((s) => s.mode);
-  const resolvedTheme = themeMode ?? systemScheme ?? "light";
+const queryClient = new QueryClient();
+
+function AppContent() {
+  const { showSplash } = useAppLifecycle();
+  const { primaryColor, orgName } = useOrgTheme();
 
   return (
-    <TamaguiProvider config={appConfig} defaultTheme={resolvedTheme}>
+    <>
       <Stack screenOptions={{ headerShown: false }} />
-    </TamaguiProvider>
+      <SplashOverlay visible={showSplash} primaryColor={primaryColor} orgName={orgName} />
+    </>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <SafeAreaProvider>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <AppContent />
+        </GestureHandlerRootView>
+      </SafeAreaProvider>
+    </QueryClientProvider>
   );
 }

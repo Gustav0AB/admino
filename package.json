@@ -11,18 +11,18 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@tamagui/babel-plugin": "^1.109.0",
-    "@tamagui/config": "^1.109.0",
-    "@tamagui/core": "^1.109.0",
-    "@tamagui/lucide-icons": "^1.109.0",
-    "@tamagui/toast": "^1.109.0",
+    "@react-native-async-storage/async-storage": "^2.1.0",
+    "@react-navigation/drawer": "^7.5.0",
+    "@tanstack/react-query": "^5.96.1",
+    "react-native-worklets": "0.5.1",
     "expo": "~54.0.0",
     "expo-constants": "~18.0.13",
     "expo-linking": "~8.0.11",
     "expo-router": "~6.0.23",
+    "expo-splash-screen": "~31.0.13",
     "expo-status-bar": "~3.0.9",
     "i18next": "^23.10.0",
-    "react": "19.2.4",
+    "react": "19.1.0",
     "react-i18next": "^14.1.0",
     "react-native": "0.81.5",
     "react-native-gesture-handler": "~2.28.0",
@@ -30,18 +30,16 @@
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
     "react-native-web": "^0.21.0",
-    "tamagui": "^1.109.0",
     "zustand": "^5.0.0"
   },
   "overrides": {
-    "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.1.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.0",
-    "babel-preset-expo": "~13.0.0",
-    "@types/react": "~19.2.0",
+    "@types/react": "~19.1.0",
     "babel-plugin-transform-inline-environment-variables": "^0.4.4",
+    "babel-preset-expo": "~13.0.0",
     "typescript": "^5.7.0"
   }
 }
