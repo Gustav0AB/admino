@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "admino",
+    "slug": "admino",
+    "version": "1.0.0",
+    "scheme": "admino",
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
