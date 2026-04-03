@@ -9,7 +9,11 @@ type MainLayoutProps = {
   padding?: boolean;
 };
 
-export function MainLayout({ children, scrollable = false, padding = true }: MainLayoutProps) {
+export function MainLayout({
+  children,
+  scrollable = false,
+  padding = true,
+}: MainLayoutProps) {
   const insets = useSafeAreaInsets();
   const c = useColors();
 
@@ -20,7 +24,11 @@ export function MainLayout({ children, scrollable = false, padding = true }: Mai
         contentContainerStyle={{
           paddingBottom: insets.bottom + 16,
           padding: padding ? 16 : 0,
+          minHeight: "100%",
+          flexGrow: 1,
+          width: "100%",
         }}
+        showsVerticalScrollIndicator={false}
       >
         {children}
       </ScrollView>

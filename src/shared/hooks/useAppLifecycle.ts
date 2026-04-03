@@ -12,6 +12,12 @@ export function useAppLifecycle() {
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   const splashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Safety fallback: dismiss splash after max 4s regardless of store hydration
+  useEffect(() => {
+    const fallback = setTimeout(() => setShowSplash(false), 4000);
+    return () => clearTimeout(fallback);
+  }, []);
+
   const queryClient = useQueryClient();
   const isAuthHydrated = useAuthStore((s) => s._hasHydrated);
   const { isLoaded: isOrgLoaded, loadBranding } = useOrgStore();

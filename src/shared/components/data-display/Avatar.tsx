@@ -1,39 +1,69 @@
-import { Image, View, Text, StyleSheet } from "react-native";
+import { Image, View, Text, StyleSheet, Platform } from "react-native";
 import { useColors } from "@/shared/hooks/useColors";
+import { useOrgTheme } from "@/shared/theme/useOrgTheme";
+import { BORDER_RADIUS, TYPOGRAPHY } from "@/shared/theme/tokens";
 
-type AvatarSize = "sm" | "md" | "lg";
+type AvatarSize = "xs" | "sm" | "md" | "lg" | "xl";
 
-const SIZE_MAP: Record<AvatarSize, number> = { sm: 32, md: 44, lg: 64 };
-const FONT_SIZE_MAP: Record<AvatarSize, number> = { sm: 12, md: 16, lg: 22 };
+const SIZE_MAP: Record<AvatarSize, number> = {
+  xs: 24,
+  sm: 32,
+  md: 44,
+  lg: 64,
+  xl: 80,
+};
+
+const FONT_SIZE_MAP: Record<AvatarSize, number> = {
+  xs: 10,
+  sm: 12,
+  md: 16,
+  lg: 22,
+  xl: 28,
+};
 
 type AvatarProps = {
   name: string;
   src?: string | null;
   size?: AvatarSize;
   accessibilityLabel?: string;
+  showBorder?: boolean;
 };
 
 function getInitials(name: string): string {
   return name
     .split(" ")
-    .map((part) => part[0] ?? "")
+    .map((part) => part[0]?.toUpperCase() ?? "")
     .slice(0, 2)
-    .join("")
-    .toUpperCase();
+    .join("");
 }
 
-export function Avatar({ name, src, size = "md", accessibilityLabel }: AvatarProps) {
+export function Avatar({
+  name,
+  src,
+  size = "md",
+  accessibilityLabel,
+  showBorder = false,
+}: AvatarProps) {
   const c = useColors();
+  const { primaryColor } = useOrgTheme();
+
   const dimension = SIZE_MAP[size];
   const fontSize = FONT_SIZE_MAP[size];
   const initials = getInitials(name);
-  const label = accessibilityLabel ?? name;
+  const label = accessibilityLabel ?? `Avatar for ${name}`;
 
   return (
     <View
       style={[
-        styles.circle,
-        { width: dimension, height: dimension, borderRadius: dimension / 2, backgroundColor: c.secondary },
+        styles.container,
+        {
+          width: dimension,
+          height: dimension,
+          borderRadius: BORDER_RADIUS.full,
+          backgroundColor: primaryColor,
+          borderWidth: showBorder ? 2 : 0,
+          borderColor: c.white,
+        },
       ]}
       accessibilityLabel={label}
       accessibilityRole="image"
@@ -41,20 +71,49 @@ export function Avatar({ name, src, size = "md", accessibilityLabel }: AvatarPro
       {src ? (
         <Image
           source={{ uri: src }}
-          style={{ width: dimension, height: dimension }}
+          style={styles.image}
           accessibilityLabel={label}
+          resizeMode="cover"
         />
       ) : (
-        <Text style={{ color: "#fff", fontSize, fontWeight: "700" }}>{initials}</Text>
+        <Text
+          style={[
+            styles.initials,
+            {
+              fontSize,
+              fontWeight: TYPOGRAPHY.fontWeight.bold,
+              color: c.white,
+            },
+          ]}
+        >
+          {initials}
+        </Text>
       )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  circle: {
+  container: {
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
+    ...Platform.select({
+      web: {
+        userSelect: "none",
+      },
+    }),
+  },
+  image: {
+    width: "100%",
+    height: "100%",
+  },
+  initials: {
+    textAlign: "center",
+    ...Platform.select({
+      web: {
+        userSelect: "none",
+      },
+    }),
   },
 });

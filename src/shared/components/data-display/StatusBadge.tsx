@@ -1,6 +1,16 @@
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, Platform } from "react-native";
+import { useColors } from "@/shared/hooks/useColors";
+import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
 
-export type BadgeStatus = "active" | "pending" | "completed" | "cancelled";
+export type BadgeStatus =
+  | "active"
+  | "pending"
+  | "completed"
+  | "cancelled"
+  | "error"
+  | "warning"
+  | "info";
+export type BadgeSize = "sm" | "md";
 
 type StatusConfig = {
   label: string;
@@ -8,40 +18,107 @@ type StatusConfig = {
   color: string;
 };
 
-const STATUS_CONFIG: Record<BadgeStatus, StatusConfig> = {
-  active: { label: "Active", backgroundColor: "#D1FAE5", color: "#065F46" },
-  pending: { label: "Pending", backgroundColor: "#FEF3C7", color: "#92400E" },
-  completed: { label: "Completed", backgroundColor: "#DBEAFE", color: "#1E40AF" },
-  cancelled: { label: "Cancelled", backgroundColor: "#FEE2E2", color: "#991B1B" },
+const getStatusConfig = (status: BadgeStatus, c: any): StatusConfig => {
+  const configs = {
+    active: { label: "Active", backgroundColor: "#D1FAE5", color: "#065F46" },
+    pending: { label: "Pending", backgroundColor: "#FEF3C7", color: "#92400E" },
+    completed: {
+      label: "Completed",
+      backgroundColor: "#DBEAFE",
+      color: "#1E40AF",
+    },
+    cancelled: {
+      label: "Cancelled",
+      backgroundColor: "#FEE2E2",
+      color: "#991B1B",
+    },
+    error: {
+      label: "Error",
+      backgroundColor: c.danger + "20",
+      color: c.danger,
+    },
+    warning: { label: "Warning", backgroundColor: "#FEF3C7", color: "#92400E" },
+    info: {
+      label: "Info",
+      backgroundColor: c.primary + "20",
+      color: c.primary,
+    },
+  };
+  return configs[status];
 };
 
 type StatusBadgeProps = {
   status: BadgeStatus;
+  size?: BadgeSize;
+  customLabel?: string;
 };
 
-export function StatusBadge({ status }: StatusBadgeProps) {
-  const config = STATUS_CONFIG[status];
+export function StatusBadge({
+  status,
+  size = "md",
+  customLabel,
+}: StatusBadgeProps) {
+  const c = useColors();
+  const config = getStatusConfig(status, c);
+
+  const sizeStyles = {
+    sm: {
+      paddingHorizontal: SPACING.xs,
+      paddingVertical: 2,
+      borderRadius: BORDER_RADIUS.sm,
+    },
+    md: {
+      paddingHorizontal: SPACING.sm,
+      paddingVertical: 3,
+      borderRadius: BORDER_RADIUS.md,
+    },
+  };
+
+  const fontSize =
+    size === "sm" ? TYPOGRAPHY.fontSize.xs : TYPOGRAPHY.fontSize.sm;
 
   return (
     <View
-      style={[styles.pill, { backgroundColor: config.backgroundColor }]}
-      accessibilityLabel={`Status: ${config.label}`}
+      style={[
+        styles.badge,
+        sizeStyles[size],
+        { backgroundColor: config.backgroundColor },
+      ]}
+      accessibilityLabel={`Status: ${customLabel || config.label}`}
     >
-      <Text style={[styles.label, { color: config.color }]}>{config.label}</Text>
+      <Text
+        style={[
+          styles.label,
+          {
+            color: config.color,
+            fontSize,
+            fontWeight: TYPOGRAPHY.fontWeight.semibold,
+          },
+        ]}
+      >
+        {customLabel || config.label}
+      </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  pill: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 99,
+  badge: {
     alignSelf: "flex-start",
+    ...Platform.select({
+      web: {
+        display: "inline-flex",
+        width: "auto",
+      },
+    }),
   },
   label: {
-    fontSize: 11,
-    fontWeight: "600",
+    textAlign: "center",
     letterSpacing: 0.3,
+    ...Platform.select({
+      web: {
+        userSelect: "none",
+      },
+    }),
   },
 });

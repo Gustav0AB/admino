@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { Platform } from "react-native";
 import type { User, UserRole } from "@/shared/types/auth";
 
 export const MOCK_USERS: Record<UserRole, User> = {
@@ -49,7 +50,9 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "auth-storage",
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() =>
+        Platform.OS === "web" ? localStorage : AsyncStorage
+      ),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },

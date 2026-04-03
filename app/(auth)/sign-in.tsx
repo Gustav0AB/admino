@@ -11,14 +11,14 @@ export default function SignInScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const setToken = useAuthStore((s) => s.setToken);
+  const signIn = useAuthStore((s) => s.signIn);
   const c = useColors();
   const { primaryColor } = useOrgTheme();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const handleSignIn = () => {
-    setToken("mock-token");
+    signIn();
     router.replace("/(drawer)");
   };
 
