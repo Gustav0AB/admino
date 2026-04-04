@@ -1,17 +1,18 @@
-import { View, Text, StyleSheet, type TextProps } from "react-native";
+import { View, Text, StyleSheet, type TextProps, type StyleProp, type ViewStyle } from "react-native";
 import { useColors } from "@/shared/hooks/useColors";
 import { TYPOGRAPHY, FONTS } from "@/shared/theme/tokens";
 
 type ContentBlockProps = {
   title?: string;
   paragraph?: string;
+  style?: StyleProp<ViewStyle>;
 };
 
-export function ContentBlock({ title, paragraph }: ContentBlockProps) {
+export function ContentBlock({ title, paragraph, style }: ContentBlockProps) {
   const c = useColors();
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, style]}>
       {title && <Text style={[styles.title, { color: c.text }]}>{title}</Text>}
       {paragraph && (
         <Text style={[styles.paragraph, { color: c.textMuted }]}>

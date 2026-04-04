@@ -6,6 +6,8 @@ import {
   ScrollView,
   Platform,
   Text,
+  type StyleProp,
+  type ViewStyle,
 } from "react-native";
 import { useColors } from "@/shared/hooks/useColors";
 import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
@@ -23,6 +25,7 @@ type CustomTabsProps = {
   variant?: "default" | "pills" | "underline";
   size?: "sm" | "md" | "lg";
   scrollable?: boolean;
+  style?: StyleProp<ViewStyle>;
 };
 
 export function CustomTabs({
@@ -32,6 +35,7 @@ export function CustomTabs({
   variant = "default",
   size = "md",
   scrollable = false,
+  style,
 }: CustomTabsProps) {
   const [internalActiveTab, setInternalActiveTab] = useState(
     activeTab || tabs[0]?.key,
@@ -205,7 +209,7 @@ export function CustomTabs({
   const TabContainer = scrollable ? ScrollView : View;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, style]}>
       <TabContainer
         style={[
           styles.tabRow,

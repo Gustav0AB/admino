@@ -6,6 +6,8 @@ import {
   StyleSheet,
   Platform,
   type TextInputProps,
+  type StyleProp,
+  type ViewStyle,
 } from "react-native";
 import { useColors } from "@/shared/hooks/useColors";
 import { useOrgTheme } from "@/shared/theme/useOrgTheme";
@@ -21,6 +23,8 @@ type CustomInputProps = TextInputProps & {
   size?: InputSize;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+  /** Style for the outer container View (use `style` for the TextInput itself) */
+  containerStyle?: StyleProp<ViewStyle>;
 };
 
 export function CustomInput({
@@ -30,6 +34,7 @@ export function CustomInput({
   size = "md",
   leftIcon,
   rightIcon,
+  containerStyle,
   style,
   ...inputProps
 }: CustomInputProps) {
@@ -59,7 +64,7 @@ export function CustomInput({
   const hasError = !!error;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, containerStyle]}>
       {label && (
         <Text
           style={[

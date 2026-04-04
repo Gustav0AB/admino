@@ -7,6 +7,8 @@ import {
   Platform,
   Modal,
   FlatList,
+  type StyleProp,
+  type ViewStyle,
 } from "react-native";
 import { useColors } from "@/shared/hooks/useColors";
 import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
@@ -24,6 +26,7 @@ type CustomDatePickerProps = {
   disabled?: boolean;
   minimumDate?: Date;
   maximumDate?: Date;
+  style?: StyleProp<ViewStyle>;
 };
 
 export function CustomDatePicker({
@@ -37,6 +40,7 @@ export function CustomDatePicker({
   disabled = false,
   minimumDate,
   maximumDate,
+  style,
 }: CustomDatePickerProps) {
   const [showPicker, setShowPicker] = useState(false);
   const [tempDate, setTempDate] = useState(value || new Date());
@@ -215,7 +219,7 @@ export function CustomDatePicker({
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, style]}>
       {label && <Text style={[styles.label, { color: c.text }]}>{label}</Text>}
 
       <TouchableOpacity

@@ -7,6 +7,8 @@ import {
   Platform,
   UIManager,
   Text,
+  type StyleProp,
+  type ViewStyle,
 } from "react-native";
 import { useColors } from "@/shared/hooks/useColors";
 import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
@@ -24,6 +26,7 @@ type CustomAccordionProps = {
   defaultExpanded?: string[];
   variant?: "default" | "bordered" | "minimal";
   size?: "sm" | "md" | "lg";
+  style?: StyleProp<ViewStyle>;
 };
 
 export function CustomAccordion({
@@ -32,6 +35,7 @@ export function CustomAccordion({
   defaultExpanded = [],
   variant = "default",
   size = "md",
+  style,
 }: CustomAccordionProps) {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(
     new Set(defaultExpanded),
@@ -230,7 +234,7 @@ export function CustomAccordion({
     );
   };
 
-  return <View style={styles.container}>{items.map(renderItem)}</View>;
+  return <View style={[styles.container, style]}>{items.map(renderItem)}</View>;
 }
 
 const styles = StyleSheet.create({

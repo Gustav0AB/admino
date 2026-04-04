@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Platform } from "react-native";
+import { View, Text, StyleSheet, Platform, type StyleProp, type ViewStyle } from "react-native";
 import { useColors } from "@/shared/hooks/useColors";
 import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
 
@@ -51,12 +51,14 @@ type StatusBadgeProps = {
   status: BadgeStatus;
   size?: BadgeSize;
   customLabel?: string;
+  style?: StyleProp<ViewStyle>;
 };
 
 export function StatusBadge({
   status,
   size = "md",
   customLabel,
+  style,
 }: StatusBadgeProps) {
   const c = useColors();
   const config = getStatusConfig(status, c);
@@ -83,6 +85,7 @@ export function StatusBadge({
         styles.badge,
         sizeStyles[size],
         { backgroundColor: config.backgroundColor },
+        style,
       ]}
       accessibilityLabel={`Status: ${customLabel || config.label}`}
     >

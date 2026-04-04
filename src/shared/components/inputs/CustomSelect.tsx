@@ -7,6 +7,8 @@ import {
   FlatList,
   StyleSheet,
   Platform,
+  type StyleProp,
+  type ViewStyle,
 } from "react-native";
 import { useColors } from "@/shared/hooks/useColors";
 import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
@@ -21,9 +23,11 @@ type CustomSelectProps = {
   placeholder?: string;
   options: SelectOption[];
   value?: string | number;
-  onValueChange: (value: string | number) => void;
+  onChange?: (value: string | number) => void;
+  onValueChange?: (value: string | number) => void;
   error?: string;
   disabled?: boolean;
+  style?: StyleProp<ViewStyle>;
 };
 
 export function CustomSelect({
@@ -31,22 +35,25 @@ export function CustomSelect({
   placeholder = "Select an option",
   options,
   value,
+  onChange,
   onValueChange,
   error,
   disabled = false,
+  style,
 }: CustomSelectProps) {
+  const handleChange = onChange ?? onValueChange ?? (() => {});
   const [modalVisible, setModalVisible] = useState(false);
   const c = useColors();
 
   const selectedOption = options.find((option) => option.value === value);
 
   const handleSelect = (option: SelectOption) => {
-    onValueChange(option.value);
+    handleChange(option.value);
     setModalVisible(false);
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, style]}>
       {label && <Text style={[styles.label, { color: c.text }]}>{label}</Text>}
 
       <TouchableOpacity

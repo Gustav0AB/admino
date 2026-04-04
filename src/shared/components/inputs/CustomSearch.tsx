@@ -8,6 +8,8 @@ import {
   Platform,
   Modal,
   Text,
+  type StyleProp,
+  type ViewStyle,
 } from "react-native";
 import { useColors } from "@/shared/hooks/useColors";
 import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
@@ -31,6 +33,7 @@ type CustomSearchProps = {
   disabled?: boolean;
   showSuggestions?: boolean;
   maxSuggestions?: number;
+  style?: StyleProp<ViewStyle>;
 };
 
 export function CustomSearch({
@@ -46,6 +49,7 @@ export function CustomSearch({
   disabled = false,
   showSuggestions = true,
   maxSuggestions = 5,
+  style,
 }: CustomSearchProps) {
   const [searchText, setSearchText] = useState(value);
   const [filteredOptions, setFilteredOptions] = useState<SearchOption[]>([]);
@@ -93,7 +97,7 @@ export function CustomSearch({
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, style]}>
       {label && <Text style={[styles.label, { color: c.text }]}>{label}</Text>}
 
       <View style={styles.inputContainer}>

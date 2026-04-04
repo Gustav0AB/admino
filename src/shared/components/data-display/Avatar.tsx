@@ -1,4 +1,4 @@
-import { Image, View, Text, StyleSheet, Platform } from "react-native";
+import { Image, View, Text, StyleSheet, Platform, type StyleProp, type ViewStyle } from "react-native";
 import { useColors } from "@/shared/hooks/useColors";
 import { useOrgTheme } from "@/shared/theme/useOrgTheme";
 import { BORDER_RADIUS, TYPOGRAPHY } from "@/shared/theme/tokens";
@@ -27,6 +27,7 @@ type AvatarProps = {
   size?: AvatarSize;
   accessibilityLabel?: string;
   showBorder?: boolean;
+  style?: StyleProp<ViewStyle>;
 };
 
 function getInitials(name: string): string {
@@ -43,6 +44,7 @@ export function Avatar({
   size = "md",
   accessibilityLabel,
   showBorder = false,
+  style,
 }: AvatarProps) {
   const c = useColors();
   const { primaryColor } = useOrgTheme();
@@ -64,6 +66,7 @@ export function Avatar({
           borderWidth: showBorder ? 2 : 0,
           borderColor: c.white,
         },
+        style,
       ]}
       accessibilityLabel={label}
       accessibilityRole="image"

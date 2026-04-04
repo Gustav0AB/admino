@@ -5,6 +5,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   Platform,
+  type StyleProp,
+  type ViewStyle,
 } from "react-native";
 import { useColors } from "@/shared/hooks/useColors";
 import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
@@ -22,6 +24,7 @@ type CustomRadioProps = {
   error?: string;
   disabled?: boolean;
   direction?: "vertical" | "horizontal";
+  style?: StyleProp<ViewStyle>;
 };
 
 export function CustomRadio({
@@ -32,11 +35,12 @@ export function CustomRadio({
   error,
   disabled = false,
   direction = "vertical",
+  style,
 }: CustomRadioProps) {
   const c = useColors();
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, style]}>
       {label && <Text style={[styles.label, { color: c.text }]}>{label}</Text>}
 
       <View

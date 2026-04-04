@@ -6,6 +6,8 @@ import {
   StyleSheet,
   Platform,
   type TextInputProps,
+  type StyleProp,
+  type ViewStyle,
 } from "react-native";
 import { useColors } from "@/shared/hooks/useColors";
 import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
@@ -18,6 +20,8 @@ type CustomTextAreaProps = TextInputProps & {
   hint?: string;
   size?: TextAreaSize;
   rows?: number;
+  /** Style for the outer container View (use `style` for the TextInput itself) */
+  containerStyle?: StyleProp<ViewStyle>;
 };
 
 export function CustomTextArea({
@@ -26,6 +30,7 @@ export function CustomTextArea({
   hint,
   size = "md",
   rows = 4,
+  containerStyle,
   style,
   ...inputProps
 }: CustomTextAreaProps) {
@@ -54,7 +59,7 @@ export function CustomTextArea({
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, containerStyle]}>
       {label && <Text style={[styles.label, { color: c.text }]}>{label}</Text>}
 
       <TextInput

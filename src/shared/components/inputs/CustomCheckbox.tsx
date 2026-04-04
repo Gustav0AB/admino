@@ -5,6 +5,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   Platform,
+  type StyleProp,
+  type ViewStyle,
 } from "react-native";
 import { useColors } from "@/shared/hooks/useColors";
 import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
@@ -19,12 +21,12 @@ type CustomCheckboxProps = {
   options?: CheckboxOption[];
   checked?: boolean;
   onCheckedChange?: (checked: boolean) => void;
-  // For multiple selection
   values?: (string | number)[];
   onValuesChange?: (values: (string | number)[]) => void;
   error?: string;
   disabled?: boolean;
   direction?: "vertical" | "horizontal";
+  style?: StyleProp<ViewStyle>;
 };
 
 export function CustomCheckbox({
@@ -37,6 +39,7 @@ export function CustomCheckbox({
   error,
   disabled = false,
   direction = "vertical",
+  style,
 }: CustomCheckboxProps) {
   const c = useColors();
 
@@ -59,7 +62,7 @@ export function CustomCheckbox({
 
   if (isMultiple && options) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, style]}>
         {label && (
           <Text style={[styles.label, { color: c.text }]}>{label}</Text>
         )}
@@ -126,7 +129,7 @@ export function CustomCheckbox({
 
   // Single checkbox
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, style]}>
       <TouchableOpacity
         style={[
           styles.option,
