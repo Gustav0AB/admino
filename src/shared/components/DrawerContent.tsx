@@ -27,7 +27,7 @@ export function DrawerContent(props: DrawerContentComponentProps) {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const c = useColors();
-  const { user, signOut, hasAnyRole } = useAuth();
+  const { user, logout: signOut, hasAnyRole } = useAuth();
   const { isExpanded } = useSidebarStore();
   const { width } = useWindowDimensions();
 

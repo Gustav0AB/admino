@@ -11,6 +11,19 @@ module.exports = function (api) {
         },
       ],
     ],
-    plugins: ["react-native-reanimated/plugin"],
+    plugins: [
+      [
+        "module-resolver",
+        {
+          root: ["./src"],
+          alias: {
+            "@": "./src",
+            "@shared": "./src/shared",
+            "@features": "./src/features",
+          },
+        },
+      ],
+      "react-native-reanimated/plugin",
+    ],
   };
 };

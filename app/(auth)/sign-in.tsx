@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useAuthStore } from "@/shared/store/authStore";
+import { useAuth } from "@/shared/hooks/useAuth";
 import { useColors } from "@/shared/hooks/useColors";
 import { useOrgTheme } from "@/shared/theme/useOrgTheme";
 
@@ -11,15 +11,25 @@ export default function SignInScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const signIn = useAuthStore((s) => s.signIn);
+  const { login } = useAuth();
   const c = useColors();
   const { primaryColor } = useOrgTheme();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSignIn = () => {
-    signIn();
-    router.replace("/(drawer)");
+  const handleSignIn = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      await login({ email, password });
+      router.replace("/(drawer)");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Login failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -51,13 +61,21 @@ export default function SignInScreen() {
         onChangeText={setPassword}
         secureTextEntry
       />
+      {error !== null && (
+        <Text style={[styles.errorText, { color: c.textMuted }]}>{error}</Text>
+      )}
       <TouchableOpacity
-        style={[styles.button, { backgroundColor: primaryColor }]}
+        style={[styles.button, { backgroundColor: primaryColor, opacity: loading ? 0.7 : 1 }]}
         onPress={handleSignIn}
         activeOpacity={0.85}
         accessibilityRole="button"
+        disabled={loading}
       >
-        <Text style={styles.buttonText}>{t("auth.signIn")}</Text>
+        {loading ? (
+          <ActivityIndicator color="#FFFFFF" />
+        ) : (
+          <Text style={styles.buttonText}>{t("auth.signIn")}</Text>
+        )}
       </TouchableOpacity>
     </View>
   );
@@ -73,6 +91,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     fontSize: 16,
   },
+  errorText: { fontSize: 13, marginTop: -8 },
   button: {
     height: 48,
     borderRadius: 8,
