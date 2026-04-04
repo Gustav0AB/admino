@@ -13,13 +13,13 @@ export const SIDEBAR_EXPANDED_W = 220;
 
 export default function DrawerLayout() {
   const { t } = useTranslation();
-  const { isAuthenticated, isHydrated } = useAuth();
+  const { isAuthenticated, isInitialized } = useAuth();
   const { width } = useWindowDimensions();
   const { isExpanded } = useSidebarStore();
 
   const isPermanent = width >= PERMANENT_SIDEBAR_BREAKPOINT;
 
-  if (isHydrated && !isAuthenticated) {
+  if (isInitialized && !isAuthenticated) {
     return <Redirect href="/(auth)/sign-in" />;
   }
 

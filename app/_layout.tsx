@@ -16,6 +16,9 @@ import {
   Inter_700Bold,
 } from "@expo-google-fonts/inter";
 import { SplashOverlay } from "@/shared/components/SplashOverlay";
+import { ErrorBoundary } from "@/shared/components/feedback/ErrorBoundary";
+import { ToastProvider } from "@/shared/components/feedback/Toast";
+import { OfflineBanner } from "@/shared/components/OfflineBanner";
 import { useAppLifecycle } from "@/shared/hooks/useAppLifecycle";
 import { useOrgTheme } from "@/shared/theme/useOrgTheme";
 
@@ -38,6 +41,7 @@ function AppContent() {
   return (
     <>
       <Stack screenOptions={{ headerShown: false }} />
+      <OfflineBanner />
       <SplashOverlay visible={showSplash} primaryColor={primaryColor} orgName={orgName} />
     </>
   );
@@ -48,7 +52,11 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
         <GestureHandlerRootView style={{ flex: 1 }}>
-          <AppContent />
+          <ToastProvider>
+            <ErrorBoundary>
+              <AppContent />
+            </ErrorBoundary>
+          </ToastProvider>
         </GestureHandlerRootView>
       </SafeAreaProvider>
     </QueryClientProvider>

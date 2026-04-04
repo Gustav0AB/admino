@@ -1,7 +1,10 @@
 import { Redirect } from "expo-router";
-import { useAuthStore } from "@/shared/store/authStore";
+import { useAuth } from "@/shared/hooks/useAuth";
 
 export default function Index() {
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const { isAuthenticated, isInitialized } = useAuth();
+
+  if (!isInitialized) return null;
+
   return <Redirect href={isAuthenticated ? "/(drawer)" : "/(auth)/sign-in"} />;
 }

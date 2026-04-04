@@ -9,7 +9,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   web: {
     bundler: "metro",
   },
-  plugins: ["expo-router"],
+  plugins: ["expo-router", "expo-secure-store"],
   experiments: {
     typedRoutes: true,
   },

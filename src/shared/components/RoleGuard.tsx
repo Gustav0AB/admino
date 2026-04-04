@@ -1,5 +1,5 @@
-import { type ReactNode, useEffect } from "react";
-import { useRouter } from "expo-router";
+import { type ReactNode } from "react";
+import { Redirect } from "expo-router";
 import { useAuth } from "@/shared/hooks/useAuth";
 import type { UserRole } from "@/shared/types/auth";
 
@@ -7,33 +7,30 @@ type RoleGuardProps = {
   allowedRoles: UserRole[];
   children: ReactNode;
   fallback?: string;
+  redirect?: boolean;
 };
 
 export function RoleGuard({
   allowedRoles,
   children,
   fallback = "/(drawer)",
+  redirect = true,
 }: RoleGuardProps) {
-  const { user, isAuthenticated, isHydrated } = useAuth();
-  const router = useRouter();
+  const { user, isAuthenticated, isInitialized } = useAuth();
 
-  const isAllowed =
-    isAuthenticated && !!user && allowedRoles.includes(user.role);
+  if (!isInitialized) return null;
 
-  useEffect(() => {
-    if (!isHydrated) return;
+  if (!isAuthenticated || !user) {
+    return redirect ? (
+      <Redirect href="/(auth)/sign-in" />
+    ) : null;
+  }
 
-    if (!isAuthenticated || !user) {
-      router.replace("/(auth)/sign-in");
-      return;
-    }
-
-    if (!allowedRoles.includes(user.role)) {
-      router.replace(fallback as Parameters<typeof router.replace>[0]);
-    }
-  }, [isAuthenticated, user, isHydrated]);
-
-  if (!isHydrated || !isAllowed) return null;
+  if (!allowedRoles.includes(user.role)) {
+    return redirect ? (
+      <Redirect href={fallback as Parameters<typeof Redirect>[0]["href"]} />
+    ) : null;
+  }
 
   return <>{children}</>;
 }
