@@ -1,33 +1,46 @@
 import { Redirect } from "expo-router";
 import { Drawer } from "expo-router/drawer";
 import { useTranslation } from "react-i18next";
-import { useWindowDimensions } from "react-native";
+import { Platform, useWindowDimensions } from "react-native";
 import { AppHeader } from "@/shared/components/AppHeader";
 import { DrawerContent } from "@/shared/components/DrawerContent";
 import { useAuth } from "@/shared/hooks/useAuth";
+import { useSidebarStore } from "@/shared/store/sidebarStore";
 
-const PERMANENT_SIDEBAR_BREAKPOINT = 1020;
+export const PERMANENT_SIDEBAR_BREAKPOINT = 1020;
+export const SIDEBAR_COLLAPSED_W = 60;
+export const SIDEBAR_EXPANDED_W = 220;
 
 export default function DrawerLayout() {
   const { t } = useTranslation();
   const { isAuthenticated, isHydrated } = useAuth();
   const { width } = useWindowDimensions();
+  const { isExpanded } = useSidebarStore();
+
   const isPermanent = width >= PERMANENT_SIDEBAR_BREAKPOINT;
 
   if (isHydrated && !isAuthenticated) {
     return <Redirect href="/(auth)/sign-in" />;
   }
 
+  const desktopDrawerStyle = {
+    width: isExpanded ? SIDEBAR_EXPANDED_W : SIDEBAR_COLLAPSED_W,
+    // Smooth CSS transition on web — no extra lib needed
+    ...Platform.select({
+      web: { transition: "width 0.22s ease" } as object,
+    }),
+  };
+
   return (
     <Drawer
       drawerContent={(props) => <DrawerContent {...props} />}
       screenOptions={{
         headerShown: true,
-        header: (props) => <AppHeader {...props} />,
+        header: (props) => <AppHeader {...props} isPermanent={isPermanent} />,
         drawerType: isPermanent ? "permanent" : "front",
-        drawerStyle: { width: isPermanent ? 260 : "80%" },
+        drawerStyle: isPermanent ? desktopDrawerStyle : { width: "80%" },
         swipeEnabled: !isPermanent,
-        headerLeft: isPermanent ? () => null : undefined,
+        // Never hide the header-left — AppHeader always renders the toggle button
       }}
     >
       <Drawer.Screen
@@ -44,6 +57,10 @@ export default function DrawerLayout() {
       <Drawer.Screen
         name="admin"
         options={{ title: "Admin", drawerLabel: "Admin" }}
+      />
+      <Drawer.Screen
+        name="layout-example"
+        options={{ title: "Layout Example", drawerLabel: "Layout Example" }}
       />
     </Drawer>
   );

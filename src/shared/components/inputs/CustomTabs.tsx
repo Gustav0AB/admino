@@ -208,6 +208,7 @@ export function CustomTabs({
     <View style={styles.container}>
       <TabContainer
         style={[
+          styles.tabRow,
           variantStyles[variant].container,
           scrollable && styles.scrollableContainer,
         ]}
@@ -226,6 +227,9 @@ export function CustomTabs({
 const styles = StyleSheet.create({
   container: {
     marginBottom: SPACING.md,
+  },
+  tabRow: {
+    flexDirection: "row",
   },
   scrollableContainer: {
     flexGrow: 0,

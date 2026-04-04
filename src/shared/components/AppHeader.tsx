@@ -3,10 +3,31 @@ import { DrawerActions } from "@react-navigation/native";
 import { TouchableOpacity, View, Text, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/shared/hooks/useColors";
+import { useSidebarStore } from "@/shared/store/sidebarStore";
 
-export function AppHeader({ navigation, options }: DrawerHeaderProps) {
+type AppHeaderProps = DrawerHeaderProps & {
+  /**
+   * True when the drawer is rendered as a permanent sidebar (desktop).
+   * Switches the toggle button from dispatching DrawerActions to flipping
+   * the sidebarStore so the permanent drawer animates between icon-only
+   * (60 px) and full-width (220 px).
+   */
+  isPermanent?: boolean;
+};
+
+export function AppHeader({ navigation, options, isPermanent = false }: AppHeaderProps) {
   const insets = useSafeAreaInsets();
   const c = useColors();
+  const { toggle } = useSidebarStore();
+
+  const handleMenuPress = () => {
+    if (isPermanent) {
+      // Permanent drawers ignore DrawerActions — drive width via store instead
+      toggle();
+    } else {
+      navigation.dispatch(DrawerActions.toggleDrawer());
+    }
+  };
 
   return (
     <View
@@ -22,7 +43,7 @@ export function AppHeader({ navigation, options }: DrawerHeaderProps) {
     >
       <TouchableOpacity
         style={styles.menuButton}
-        onPress={() => navigation.dispatch(DrawerActions.toggleDrawer())}
+        onPress={handleMenuPress}
         accessibilityLabel="Toggle menu"
         accessibilityRole="button"
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}

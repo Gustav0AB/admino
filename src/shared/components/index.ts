@@ -31,3 +31,6 @@ export { CustomDatePicker } from "./inputs/CustomDatePicker";
 export { CustomSearch } from "./inputs/CustomSearch";
 export { CustomTabs } from "./inputs/CustomTabs";
 export { CustomAccordion } from "./inputs/CustomAccordion";
+
+export { StickyWrapper, BottomDrawer, FeatureShell } from "./shell";
+export type { FeatureShellProps, SaveAction, TabConfig } from "./shell";
