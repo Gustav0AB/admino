@@ -14,6 +14,9 @@ import { useUrlState } from "@/shared/hooks/useUrlState";
 import { CustomButton } from "@/shared/components/inputs/CustomButton";
 import { CustomTabs } from "@/shared/components/inputs/CustomTabs";
 import { BORDER_RADIUS, BREAKPOINTS, SPACING, TYPOGRAPHY, Z_INDEX } from "@/shared/theme/tokens";
+
+const MAX_CONTENT_WIDTH = 1920;
+const SIDEBAR_WIDTH = 280;
 import { StickyWrapper } from "./StickyWrapper";
 import { BottomDrawer } from "./BottomDrawer";
 
@@ -283,11 +286,14 @@ export function FeatureShell({
   };
 
   // ── Row 5 helpers ─────────────────────────────────────────────────────────
+  const isUltraWide = width > MAX_CONTENT_WIDTH;
+
   const renderContentRow = () => (
     <View
       style={[
         styles.contentRow,
         !isMobileView && styles.contentRowDesktop,
+        isUltraWide && styles.contentRowCentered,
       ]}
     >
       {/* Mobile peek: sidebar cards in a horizontal scroll at the top */}
@@ -302,17 +308,12 @@ export function FeatureShell({
         </ScrollView>
       )}
 
-      {/* Main content — 75 % flex on desktop, full width on mobile */}
-      <View
-        style={[
-          styles.mainSlot,
-          !isMobileView && hasSidebar && { flex: 3 },
-        ]}
-      >
+      {/* Main content — fills all remaining space */}
+      <View style={styles.mainSlot}>
         {children}
       </View>
 
-      {/* Desktop sidebar — 25 % flex */}
+      {/* Desktop sidebar — fixed width, main takes the rest */}
       {!isMobileView && hasSidebar && (
         <View
           style={[
@@ -527,17 +528,23 @@ const styles = StyleSheet.create({
   // ── Row 5 – content layout
   contentRow: {
     flex: 1,
+    width: "100%",
   },
   contentRowDesktop: {
     flexDirection: "row",
     alignItems: "flex-start",
+  },
+  contentRowCentered: {
+    maxWidth: MAX_CONTENT_WIDTH,
+    alignSelf: "center",
   },
   mainSlot: {
     flex: 1,
     minHeight: 200,
   },
   sidebarSlot: {
-    flex: 1,
+    width: SIDEBAR_WIDTH,
+    flexShrink: 0,
     borderLeftWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: SPACING.md,
     paddingTop: SPACING.md,

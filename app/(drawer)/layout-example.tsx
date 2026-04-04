@@ -80,14 +80,14 @@ function UserFilters() {
       />
       <CustomSelect
         value={status}
-        onChange={setStatus}
+        onChange={(v) => setStatus(String(v))}
         options={STATUS_OPTIONS}
         placeholder="Status"
         style={{ minWidth: 140 }}
       />
       <CustomSelect
         value={role}
-        onChange={setRole}
+        onChange={(v) => setRole(String(v))}
         options={ROLE_OPTIONS}
         placeholder="Role"
         style={{ minWidth: 120 }}
@@ -166,43 +166,18 @@ const USER_COLUMNS: Column<User>[] = [
 export default function LayoutExampleScreen() {
   const c = useColors();
 
-  // URL-backed tab — bookmarkable via ?view=active or ?view=archived
   const [activeTab, setActiveTab] = useUrlState("view", "active");
-
-  // Row-selection state (drives the Bulk Action Bar)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const currentData = activeTab === "archived" ? ARCHIVED_USERS : ACTIVE_USERS;
 
-  const toggleRow = (id: string) => {
+  const toggleRow = (id: string) =>
     setSelectedIds((prev) => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
-  };
 
-  // ── Slot: table actions (Row 4, normal state) ───────────────────────────
-  const tableActions = (
-    <>
-      <CustomButton
-        variant="primary"
-        size="sm"
-        onPress={() => alert("Opening new-user form…")}
-      >
-        + Add User
-      </CustomButton>
-      <CustomButton
-        variant="outline"
-        size="sm"
-        onPress={() => alert("Exporting…")}
-      >
-        Export CSV
-      </CustomButton>
-    </>
-  );
-
-  // ── Slot: bulk actions (Row 4, selection state) ─────────────────────────
   const bulkActions = (
     <>
       <CustomButton
@@ -240,14 +215,10 @@ export default function LayoutExampleScreen() {
       tabs={TABS}
       tabUrlKey="view"
       activeTab={activeTab}
-      onTabChange={(key) => {
-        setActiveTab(key);
-        setSelectedIds(new Set()); // reset selection on tab switch
-      }}
+      onTabChange={(key) => { setActiveTab(key); setSelectedIds(new Set()); }}
       // ── Row 3
       filters={<UserFilters />}
-      // ── Row 4
-      tableActions={tableActions}
+      // ── Row 4 — only visible when rows are selected
       selectedCount={selectedIds.size}
       bulkActions={bulkActions}
       // ── Row 5 sidebar
@@ -325,7 +296,6 @@ const styles = StyleSheet.create({
     fontSize: TYPOGRAPHY.fontSize.sm,
     lineHeight: TYPOGRAPHY.fontSize.sm * 1.5,
   },
-  // Row actions inside DataTable
   rowActions: {
     flexDirection: "row",
     gap: SPACING.xs,
