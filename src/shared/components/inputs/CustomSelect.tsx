@@ -13,6 +13,8 @@ import {
 import { useColors } from "@/shared/hooks/useColors";
 import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
 
+const isWeb = Platform.OS === "web";
+
 type SelectOption = {
   label: string;
   value: string | number;
@@ -51,6 +53,56 @@ export function CustomSelect({
     handleChange(option.value);
     setModalVisible(false);
   };
+
+  if (isWeb) {
+    return (
+      <View style={[styles.container, style]}>
+        {label && (
+          <Text style={[styles.label, { color: c.text }]}>{label}</Text>
+        )}
+        {/* @ts-ignore — select is valid on web */}
+        <select
+          value={value ?? ""}
+          disabled={disabled}
+          onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+            handleChange(e.target.value)
+          }
+          style={{
+            height: 44,
+            paddingLeft: SPACING.md,
+            paddingRight: SPACING.md,
+            borderRadius: BORDER_RADIUS.md,
+            borderWidth: error ? 2 : 1,
+            borderStyle: "solid",
+            borderColor: error ? c.danger : c.border,
+            backgroundColor: c.background,
+            color: value !== undefined && value !== "" ? c.text : c.textPlaceholder,
+            fontSize: TYPOGRAPHY.fontSize.md,
+            width: "100%",
+            cursor: disabled ? "not-allowed" : "pointer",
+            opacity: disabled ? 0.5 : 1,
+            outline: "none",
+            appearance: "none",
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "right 12px center",
+          }}
+        >
+          <option value="" disabled hidden>
+            {placeholder}
+          </option>
+          {options.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        {error && (
+          <Text style={[styles.errorText, { color: c.danger }]}>{error}</Text>
+        )}
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, style]}>
