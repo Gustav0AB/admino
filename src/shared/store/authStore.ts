@@ -5,6 +5,15 @@ import { Platform } from "react-native";
 import { authService } from "@/shared/services/authService";
 import type { AuthSession, LoginCredentials, User, UserRole } from "@/shared/types/auth";
 
+function getExpensesStore() {
+  try {
+    // Lazy import to avoid circular dep at module init time
+    return require("@/features/expenses/store").useExpensesStore;
+  } catch {
+    return null;
+  }
+}
+
 const storage = createJSONStorage(() =>
   Platform.OS === "web" ? localStorage : AsyncStorage
 );
@@ -70,21 +79,29 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: true,
           isInitialized: true,
         });
+        const expensesStore = getExpensesStore();
+        if (expensesStore) await expensesStore.getState().rehydrate();
       },
-      logout: () =>
+      logout: () => {
+        const expensesStore = getExpensesStore();
+        if (expensesStore) expensesStore.getState().clearAll();
         set({
           user: null,
           token: null,
           isAuthenticated: false,
           isInitialized: true,
-        }),
-      simulateLogin: (role) =>
+        });
+      },
+      simulateLogin: (role) => {
         set({
           user: MOCK_USERS[role],
           token: MOCK_TOKENS[role],
           isAuthenticated: true,
           isInitialized: true,
-        }),
+        });
+        const expensesStore = getExpensesStore();
+        if (expensesStore) expensesStore.getState().rehydrate().catch(() => {});
+      },
       switchRole: (role) =>
         set({
           user: MOCK_USERS[role],

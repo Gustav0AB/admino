@@ -59,6 +59,10 @@ export default function DrawerLayout() {
         options={{ title: "Admin", drawerLabel: "Admin" }}
       />
       <Drawer.Screen
+        name="expenses"
+        options={{ title: "Gastos", drawerLabel: "Gastos" }}
+      />
+      <Drawer.Screen
         name="layout-example"
         options={{ title: "Layout Example", drawerLabel: "Layout Example" }}
       />

@@ -39,6 +39,7 @@ export function DrawerContent(props: DrawerContentComponentProps) {
     { label: "Dashboard",      href: "/(drawer)",               icon: "⊞", roles: ["SYSTEM_ADMIN", "ORGANIZATION", "CLIENT"] },
     { label: t("planning.title"), href: "/(drawer)/planning",   icon: "◫", roles: ["SYSTEM_ADMIN", "ORGANIZATION"] },
     { label: "Admin",          href: "/(drawer)/admin",         icon: "⚙", roles: ["SYSTEM_ADMIN"] },
+    { label: "Gastos",         href: "/(drawer)/expenses",        icon: "₱", roles: ["SYSTEM_ADMIN", "ORGANIZATION", "CLIENT"] },
     { label: "Layout Example", href: "/(drawer)/layout-example",icon: "⊟", roles: ["SYSTEM_ADMIN", "ORGANIZATION", "CLIENT"] },
   ];
 
