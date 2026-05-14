@@ -4,3 +4,11 @@ export type OrgBranding = {
   orgName: string;
   logoUrl: string | null;
 };
+
+export type OrgFeature =
+  | "payments"
+  | "training_planning"
+  | "tracker"
+  | "patients"
+  | "log_access"
+  | "nutritionist_planning";

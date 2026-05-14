@@ -1,24 +1,42 @@
+import React from "react";
 import {
   DrawerContentComponentProps,
   DrawerContentScrollView,
 } from "@react-navigation/drawer";
 import { useRouter, usePathname } from "expo-router";
 import { useTranslation } from "react-i18next";
-import { TouchableOpacity, View, Text, StyleSheet, useWindowDimensions } from "react-native";
+import {
+  TouchableOpacity,
+  View,
+  Text,
+  StyleSheet,
+  useWindowDimensions,
+} from "react-native";
+import {
+  MaterialIcons,
+  Feather,
+  MaterialCommunityIcons,
+  FontAwesome5,
+  AntDesign,
+  FontAwesome6,
+} from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/shared/hooks/useColors";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { DevRoleSwitcher } from "@/shared/components/DevRoleSwitcher";
 import { useSidebarStore } from "@/shared/store/sidebarStore";
+import { useOrgStore } from "@/shared/store/orgStore";
 import type { UserRole } from "@/shared/types/auth";
+import type { OrgFeature } from "@/shared/types/organization";
 
 const PERMANENT_SIDEBAR_BREAKPOINT = 1020;
 
 type NavItem = {
   label: string;
   href: string;
-  icon: string;
+  icon: (color: string) => React.ReactNode;
   roles: UserRole[];
+  feature?: OrgFeature;
 };
 
 export function DrawerContent(props: DrawerContentComponentProps) {
@@ -30,19 +48,78 @@ export function DrawerContent(props: DrawerContentComponentProps) {
   const { user, logout: signOut, hasAnyRole } = useAuth();
   const { isExpanded } = useSidebarStore();
   const { width } = useWindowDimensions();
+  const { hasFeature } = useOrgStore();
 
   const isPermanent = width >= PERMANENT_SIDEBAR_BREAKPOINT;
   // Collapsed = permanent sidebar AND user hasn't expanded it yet
   const collapsed = isPermanent && !isExpanded;
 
+  const isSystemAdmin = user?.role === "SYSTEM_ADMIN";
+
   const NAV_ITEMS: NavItem[] = [
-    { label: "Dashboard",      href: "/(drawer)",               icon: "⊞", roles: ["SYSTEM_ADMIN", "ORGANIZATION", "CLIENT"] },
-    { label: t("planning.title"), href: "/(drawer)/planning",   icon: "◫", roles: ["SYSTEM_ADMIN", "ORGANIZATION"] },
-    { label: "Admin",          href: "/(drawer)/admin",         icon: "⚙", roles: ["SYSTEM_ADMIN"] },
-    { label: "Layout Example", href: "/(drawer)/layout-example",icon: "⊟", roles: ["SYSTEM_ADMIN", "ORGANIZATION", "CLIENT"] },
+    {
+      label: "Dashboard",
+      href: "/(drawer)",
+      icon: (color) => <MaterialIcons name="dashboard" size={20} color={color} />,
+      roles: ["SYSTEM_ADMIN", "ORGANIZATION", "CLIENT"],
+    },
+    {
+      label: "Admin",
+      href: "/(drawer)/admin",
+      icon: (color) => <Feather name="settings" size={20} color={color} />,
+      roles: ["SYSTEM_ADMIN"],
+    },
+    {
+      label: "Payments",
+      href: "/(drawer)/payments",
+      icon: (color) => <MaterialIcons name="attach-money" size={20} color={color} />,
+      roles: ["SYSTEM_ADMIN", "ORGANIZATION", "CLIENT"],
+      feature: "payments",
+    },
+    {
+      label: "Training Planning",
+      href: "/(drawer)/training-planning",
+      icon: (color) => <MaterialCommunityIcons name="weight-lifter" size={20} color={color} />,
+      roles: ["SYSTEM_ADMIN", "ORGANIZATION", "CLIENT"],
+      feature: "training_planning",
+    },
+    {
+      label: "Tracker",
+      href: "/(drawer)/tracker",
+      icon: (color) => <FontAwesome5 name="running" size={20} color={color} />,
+      roles: ["SYSTEM_ADMIN", "ORGANIZATION", "CLIENT"],
+      feature: "tracker",
+    },
+    {
+      label: "Patients",
+      href: "/(drawer)/patients",
+      icon: (color) => <MaterialIcons name="food-bank" size={20} color={color} />,
+      roles: ["SYSTEM_ADMIN", "ORGANIZATION", "CLIENT"],
+      feature: "patients",
+    },
+    {
+      label: "Log Access",
+      href: "/(drawer)/log-access",
+      icon: (color) => <AntDesign name="qrcode" size={20} color={color} />,
+      roles: ["SYSTEM_ADMIN", "ORGANIZATION"],
+      feature: "log_access",
+    },
+    {
+      label: "Nutritionist Planning",
+      href: "/(drawer)/nutritionist-planning",
+      icon: (color) => <FontAwesome6 name="weight-scale" size={20} color={color} />,
+      roles: ["SYSTEM_ADMIN", "ORGANIZATION", "CLIENT"],
+      feature: "nutritionist_planning",
+    },
   ];
 
-  const visibleItems = NAV_ITEMS.filter((item) => hasAnyRole(item.roles));
+  const visibleItems = NAV_ITEMS.filter((item) => {
+    if (!hasAnyRole(item.roles)) return false;
+    // SYSTEM_ADMIN bypasses the feature gate — they see everything
+    if (item.feature && !isSystemAdmin && !hasFeature(item.feature))
+      return false;
+    return true;
+  });
 
   const handleSignOut = () => {
     signOut();
@@ -77,7 +154,9 @@ export function DrawerContent(props: DrawerContentComponentProps) {
       ) : (
         <View style={styles.header}>
           <Text style={[styles.appName, { color: c.text }]}>admino</Text>
-          <Text style={[styles.userName, { color: c.textMuted }]}>{user?.name ?? ""}</Text>
+          <Text style={[styles.userName, { color: c.textMuted }]}>
+            {user?.name ?? ""}
+          </Text>
           <Text style={[styles.userRole, { color: c.textPlaceholder }]}>
             {user?.role.replace("_", " ")}
           </Text>
@@ -96,20 +175,25 @@ export function DrawerContent(props: DrawerContentComponentProps) {
               key={item.href}
               style={[
                 collapsed ? styles.navItemCollapsed : styles.navItem,
-                { backgroundColor: isActive ? c.backgroundHover : "transparent" },
+                {
+                  backgroundColor: isActive ? c.backgroundHover : "transparent",
+                },
               ]}
               onPress={() => handleNavPress(item.href)}
               accessibilityRole="button"
               accessibilityLabel={item.label}
             >
-              <Text style={[styles.navIcon, { color: isActive ? c.primary : c.textMuted }]}>
-                {item.icon}
-              </Text>
+              <View style={styles.navIcon}>
+                {item.icon(isActive ? c.primary : c.textMuted)}
+              </View>
               {!collapsed && (
                 <Text
                   style={[
                     styles.navLabel,
-                    { color: isActive ? c.text : c.textMuted, fontWeight: isActive ? "600" : "400" },
+                    {
+                      color: isActive ? c.text : c.textMuted,
+                      fontWeight: isActive ? "600" : "400",
+                    },
                   ]}
                 >
                   {item.label}
@@ -130,7 +214,9 @@ export function DrawerContent(props: DrawerContentComponentProps) {
         >
           <Text style={[styles.navIcon, { color: c.textMuted }]}>⏻</Text>
           {!collapsed && (
-            <Text style={[styles.navLabel, { color: c.textMuted }]}>{t("auth.signOut")}</Text>
+            <Text style={[styles.navLabel, { color: c.textMuted }]}>
+              {t("auth.signOut")}
+            </Text>
           )}
         </TouchableOpacity>
         {!collapsed && <DevRoleSwitcher />}
@@ -141,12 +227,12 @@ export function DrawerContent(props: DrawerContentComponentProps) {
 
 const styles = StyleSheet.create({
   // ── Scroll containers
-  scrollContent:          { flex: 1 },
+  scrollContent: { flex: 1 },
   scrollContentCollapsed: { flex: 1, alignItems: "center" },
 
   // ── Header — expanded
   header: { paddingHorizontal: 16, paddingVertical: 24, gap: 4 },
-  appName:  { fontSize: 28, fontWeight: "800", letterSpacing: -1 },
+  appName: { fontSize: 28, fontWeight: "800", letterSpacing: -1 },
   userName: { fontSize: 14 },
   userRole: { fontSize: 12, marginTop: 2, textTransform: "capitalize" },
 
@@ -171,11 +257,16 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     gap: 12,
   },
-  navIcon:  { fontSize: 16, width: 20, textAlign: "center" },
+  navIcon: { width: 20, alignItems: "center" },
   navLabel: { fontSize: 15 },
 
   // ── Nav list — collapsed (icons only, centered)
-  navListCollapsed: { flex: 1, alignItems: "center", gap: 2, paddingHorizontal: 0 },
+  navListCollapsed: {
+    flex: 1,
+    alignItems: "center",
+    gap: 2,
+    paddingHorizontal: 0,
+  },
   navItemCollapsed: {
     width: 44,
     height: 44,
@@ -185,6 +276,6 @@ const styles = StyleSheet.create({
   },
 
   // ── Footer
-  footer:         { paddingHorizontal: 8, gap: 2 },
+  footer: { paddingHorizontal: 8, gap: 2 },
   footerCollapsed: { alignItems: "center", gap: 2 },
 });
