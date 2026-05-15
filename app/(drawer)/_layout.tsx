@@ -88,6 +88,22 @@ export default function DrawerLayout() {
           drawerLabel: "Nutritionist Planning",
         }}
       />
+      <Drawer.Screen
+        name="checkin"
+        options={{ title: "Check-in", drawerLabel: "Check-in" }}
+      />
+      <Drawer.Screen
+        name="events"
+        options={{ title: "Events", drawerLabel: "Events" }}
+      />
+      <Drawer.Screen
+        name="analytics"
+        options={{ title: "Analytics", drawerLabel: "Analytics" }}
+      />
+      <Drawer.Screen
+        name="injuries"
+        options={{ title: "Injuries", drawerLabel: "Injuries" }}
+      />
     </Drawer>
   );
 }

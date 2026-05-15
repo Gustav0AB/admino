@@ -111,6 +111,34 @@ export function DrawerContent(props: DrawerContentComponentProps) {
       roles: ["SYSTEM_ADMIN", "ORGANIZATION", "CLIENT"],
       feature: "nutritionist_planning",
     },
+    {
+      label: "Check-in",
+      href: "/(drawer)/checkin",
+      icon: (color) => <MaterialIcons name="location-on" size={20} color={color} />,
+      roles: ["SYSTEM_ADMIN", "ORGANIZATION", "CLIENT"],
+      feature: "checkin",
+    },
+    {
+      label: "Events",
+      href: "/(drawer)/events",
+      icon: (color) => <MaterialIcons name="event" size={20} color={color} />,
+      roles: ["SYSTEM_ADMIN", "ORGANIZATION", "CLIENT"],
+      feature: "events",
+    },
+    {
+      label: "Analytics",
+      href: "/(drawer)/analytics",
+      icon: (color) => <MaterialCommunityIcons name="chart-timeline-variant" size={20} color={color} />,
+      roles: ["SYSTEM_ADMIN", "ORGANIZATION", "CLIENT"],
+      feature: "analytics",
+    },
+    {
+      label: "Injuries",
+      href: "/(drawer)/injuries",
+      icon: (color) => <MaterialCommunityIcons name="bandage" size={20} color={color} />,
+      roles: ["SYSTEM_ADMIN", "ORGANIZATION", "CLIENT"],
+      feature: "injuries",
+    },
   ];
 
   const visibleItems = NAV_ITEMS.filter((item) => {
