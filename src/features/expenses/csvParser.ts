@@ -38,7 +38,7 @@ export function toMes(raw: string): string {
     noviembre: "Noviembre", november: "Noviembre", nov: "Noviembre", "11": "Noviembre",
     diciembre: "Diciembre", december: "Diciembre", dec: "Diciembre", "12": "Diciembre",
   };
-  return monthMap[s] ?? MESES_LIST[new Date().getMonth()];
+  return monthMap[s] ?? MESES_LIST[new Date().getMonth()] ?? "Enero";
 }
 
 export function toMetodoPago(raw: string): MetodoPago {
@@ -61,10 +61,9 @@ export function toEstado(raw: string): Estado {
   return "no pagado";
 }
 
-export function toFecha(raw: string): 0 | 15 | 30 {
+export function toFecha(raw: string): number {
   const n = parseInt(raw, 10);
-  if (n === 15) return 15;
-  if (n === 30) return 30;
+  if (Number.isFinite(n) && n >= 0) return n;
   return 0;
 }
 
@@ -75,7 +74,7 @@ export function parseCsv(csv: string): Expense[] {
   const results: Expense[] = [];
 
   for (let i = 1; i < lines.length; i++) {
-    const cols = parseCsvLine(lines[i]);
+    const cols = parseCsvLine(lines[i] ?? "");
     if (cols.length < 2) continue;
 
     const [mesRaw = "", gastosRaw = "", , montoRaw = "", metodoPagoRaw = "", frecuenciaRaw = "", fechaRaw = "", fechaMaximaRaw = "", estadoRaw = ""] = cols;

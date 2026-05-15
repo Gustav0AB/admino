@@ -2,6 +2,15 @@ export type MetodoPago = "efectivo" | "credito";
 export type Frecuencia = "mes" | "quincenal" | "unico";
 export type Estado = "pagado" | "no pagado" | "guardado" | "no guardado";
 
+export type CreditCard = {
+  id: string;
+  name: string;
+  cutDay: number;
+  payDay: number;
+  initialDebt: number;
+  debtMes: string;
+};
+
 export type Expense = {
   id: string;
   mes: string;
@@ -9,10 +18,11 @@ export type Expense = {
   monto: number;
   metodoPago: MetodoPago;
   frecuencia: Frecuencia;
-  fecha: 0 | 15 | 30;
+  fecha: number;
   fechaMaxima: string;
   estado: Estado;
   selected: boolean;
+  creditCardId?: string;
 };
 
 export type CreditHistoryEntry = {
@@ -44,4 +54,6 @@ export type AppData = {
   creditCutDay?: number;
   creditPayDay?: number;
   savedAt?: string;
+  creditCards?: CreditCard[];
+  initialCreditDebt?: number;
 };

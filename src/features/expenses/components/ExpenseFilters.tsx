@@ -37,9 +37,9 @@ export function ExpenseFilters() {
   ];
 
   const fechaOptions = [
-    { label: "Todos", value: 0 },
-    { label: "15", value: 15 },
-    { label: "30", value: 30 },
+    { label: "Todas", value: 0 },
+    { label: "1-15", value: 15 },
+    { label: "16-31", value: 30 },
   ];
 
   const hasActiveFilter =

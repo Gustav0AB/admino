@@ -3,49 +3,110 @@ import { View, Text, StyleSheet } from "react-native";
 import { useColors } from "@/shared/hooks/useColors";
 import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
 import { useExpensesStore } from "../store";
-import { formatMXN } from "../helpers";
+import { formatMXN, getFilteredExpenses } from "../helpers";
+import { usePlanningStore } from "@/features/expenses/planning/store";
 
 export function SummaryPanel() {
   const c = useColors();
-  const { expenses } = useExpensesStore();
+  const { expenses, filterMes, filterFrecuencia, filterFecha } = useExpensesStore();
+  const { scheduledExpenses, vacations } = usePlanningStore();
 
-  const selected = expenses.filter((e) => e.selected);
+  const filtered = useMemo(
+    () => getFilteredExpenses(expenses, filterMes, filterFrecuencia, filterFecha),
+    [expenses, filterMes, filterFrecuencia, filterFecha],
+  );
 
-  const { efectivo, credito, total } = useMemo(() => {
-    const efe = selected
-      .filter((e) => e.metodoPago === "efectivo")
+  const selected = filtered.filter((e) => e.selected);
+
+  const { pagado, sinPagar, credito, totalFiltrado } = useMemo(() => {
+    const pag = filtered
+      .filter((e) => e.estado === "pagado")
       .reduce((s, e) => s + e.monto, 0);
-    const cred = selected
+    const sin = filtered
+      .filter((e) => e.estado === "no pagado" || e.estado === "no guardado")
+      .reduce((s, e) => s + e.monto, 0);
+    const cred = filtered
       .filter((e) => e.metodoPago === "credito")
       .reduce((s, e) => s + e.monto, 0);
-    return { efectivo: efe, credito: cred, total: efe + cred };
-  }, [selected]);
+    const tot = filtered.reduce((s, e) => s + e.monto, 0);
+    return { pagado: pag, sinPagar: sin, credito: cred, totalFiltrado: tot };
+  }, [filtered]);
+
+  const upcomingTotal = useMemo(
+    () =>
+      scheduledExpenses
+        .filter((e) => e.amountKnown && e.status !== "cancelled")
+        .reduce((s, e) => s + e.amount, 0),
+    [scheduledExpenses],
+  );
+
+  const vacationsTotal = useMemo(
+    () =>
+      vacations
+        .filter((v) => v.status !== "cancelled" && v.budget > 0)
+        .reduce((s, v) => s + v.budget, 0),
+    [vacations],
+  );
 
   return (
     <View style={[styles.card, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
-      <Text style={[styles.title, { color: c.text }]}>Resumen seleccionados</Text>
-      <Row label="Efectivo" value={`$${formatMXN(efectivo)}`} c={c} />
+      <Text style={[styles.title, { color: c.text }]}>Resumen</Text>
+      <Row label="Pagados" value={`$${formatMXN(pagado)}`} c={c} />
+      <Row label="Sin pagar" value={`$${formatMXN(sinPagar)}`} c={c} />
       <Row label="Crédito" value={`$${formatMXN(credito)}`} c={c} color={c.primary} />
       <View style={[styles.divider, { backgroundColor: c.border }]} />
-      <Row label="Total" value={`$${formatMXN(total)}`} c={c} bold />
-      <Text style={[styles.hint, { color: c.textMuted }]}>{selected.length} registros seleccionados</Text>
+      <Row label="Total filtrado" value={`$${formatMXN(totalFiltrado)}`} c={c} bold />
+      <View style={[styles.divider, { backgroundColor: c.border }]} />
+      <Row label="Programados" value={`$${formatMXN(upcomingTotal)}`} c={c} muted />
+      <Row label="Vacaciones" value={`$${formatMXN(vacationsTotal)}`} c={c} muted />
+      <Text style={[styles.hint, { color: c.textMuted }]}>
+        {filtered.length} registros · {selected.length} seleccionados
+      </Text>
     </View>
   );
 }
 
 function Row({
-  label, value, c, bold, color,
+  label,
+  value,
+  c,
+  bold,
+  color,
+  muted,
 }: {
   label: string;
   value: string;
   c: ReturnType<typeof useColors>;
   bold?: boolean;
   color?: string;
+  muted?: boolean;
 }) {
   return (
     <View style={styles.row}>
-      <Text style={[styles.label, { color: c.textMuted, fontWeight: bold ? "600" : "400" }]}>{label}</Text>
-      <Text style={[styles.value, { color: color ?? c.text, fontWeight: bold ? "700" : "500" }]}>{value}</Text>
+      <Text
+        style={[
+          styles.label,
+          {
+            color: c.textMuted,
+            fontWeight: bold ? "600" : "400",
+            fontSize: muted ? TYPOGRAPHY.fontSize.xs : TYPOGRAPHY.fontSize.sm,
+          },
+        ]}
+      >
+        {label}
+      </Text>
+      <Text
+        style={[
+          styles.value,
+          {
+            color: color ?? (muted ? c.textMuted : c.text),
+            fontWeight: bold ? "700" : "500",
+            fontSize: muted ? TYPOGRAPHY.fontSize.xs : TYPOGRAPHY.fontSize.sm,
+          },
+        ]}
+      >
+        {value}
+      </Text>
     </View>
   );
 }

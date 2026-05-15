@@ -1,4 +1,4 @@
-import type { AppData, CreditCycleInfo, CreditHistoryEntry, Expense } from "./types";
+import type { AppData, CreditCard, CreditCycleInfo, CreditHistoryEntry, Expense } from "./types";
 
 export const MESES_LIST = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -6,7 +6,7 @@ export const MESES_LIST = [
 ];
 
 export function currentMonthName(): string {
-  return MESES_LIST[new Date().getMonth()];
+  return MESES_LIST[new Date().getMonth()] ?? "Enero";
 }
 
 export function getFilteredExpenses(
@@ -18,7 +18,8 @@ export function getFilteredExpenses(
   return expenses.filter((e) => {
     if (filterMes && filterMes !== "Todos" && e.mes !== filterMes) return false;
     if (filterFrecuencia && filterFrecuencia !== "Todos" && e.frecuencia !== filterFrecuencia) return false;
-    if (filterFecha !== 0 && e.fecha !== filterFecha) return false;
+    if (filterFecha === 15 && !(e.fecha >= 1 && e.fecha <= 15)) return false;
+    if (filterFecha === 30 && !(e.fecha >= 16 && e.fecha <= 31)) return false;
     return true;
   });
 }
@@ -67,12 +68,19 @@ export function getCreditHistory(
   return entries;
 }
 
+export function getCreditHistoryForCard(
+  expenses: Expense[],
+  card: CreditCard
+): CreditHistoryEntry[] {
+  return getCreditHistory(expenses, card.initialDebt, card.debtMes);
+}
+
 export function getCurrentCreditBalance(
   history: CreditHistoryEntry[],
   initialCreditDebt: number
 ): number {
   if (history.length === 0) return initialCreditDebt;
-  return history[history.length - 1].balance;
+  return history[history.length - 1]?.balance ?? initialCreditDebt;
 }
 
 export function getCreditCycleInfo(
@@ -82,7 +90,7 @@ export function getCreditCycleInfo(
   creditPayDay: number
 ): CreditCycleInfo {
   const today = new Date();
-  const currentMonth = MESES_LIST[today.getMonth()];
+  const currentMonth = MESES_LIST[today.getMonth()] ?? "Enero";
   const dayOfMonth = today.getDate();
 
   const isCutPassed = creditCutDay > 0 && dayOfMonth > creditCutDay;
@@ -121,6 +129,13 @@ export function getCreditCycleInfo(
   };
 }
 
+export function getCreditCycleInfoForCard(
+  expenses: Expense[],
+  card: CreditCard
+): CreditCycleInfo {
+  return getCreditCycleInfo(expenses, card.initialDebt, card.cutDay, card.payDay);
+}
+
 export function formatMXN(n: number): string {
   return n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -130,7 +145,12 @@ export function buildAppData(
   creditDebt: number,
   creditDebtMes: string,
   creditCutDay: number,
-  creditPayDay: number
+  creditPayDay: number,
+  creditCards?: import("./types").CreditCard[]
 ): AppData {
-  return { expenses, creditDebt, creditDebtMes, creditCutDay, creditPayDay };
+  const base: AppData = { expenses, creditDebt, creditDebtMes, creditCutDay, creditPayDay };
+  if (creditCards && creditCards.length > 0) {
+    base.creditCards = creditCards;
+  }
+  return base;
 }

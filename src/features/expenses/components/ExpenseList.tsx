@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import {
-  FlatList,
+  SectionList,
   StyleSheet,
   Text,
   TextInput,
@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { CustomSelect } from "@/shared/components/inputs/CustomSelect";
 import { CustomButton } from "@/shared/components/inputs/CustomButton";
+import { CustomModal } from "@/shared/components/feedback/CustomModal";
 import { TableShell } from "@/shared/components/data-display/TableShell";
 import { tableStyles } from "@/shared/components/data-display/tableStyles";
 import { useColors } from "@/shared/hooks/useColors";
@@ -20,9 +21,11 @@ import {
   TYPOGRAPHY,
 } from "@/shared/theme/tokens";
 import { useExpensesStore } from "../store";
-import { getFilteredExpenses, MESES_LIST } from "../helpers";
+import { getFilteredExpenses, MESES_LIST, formatMXN } from "../helpers";
 import { ExpenseRow } from "./ExpenseRow";
-import type { Estado } from "../types";
+import { ExpenseModal } from "./ExpenseModal";
+import { UpcomingSection } from "./UpcomingSection";
+import type { Estado, Expense } from "../types";
 
 const ESTADO_OPTIONS: { label: string; value: Estado }[] = [
   { label: "Pagado", value: "pagado" },
@@ -34,15 +37,17 @@ const ESTADO_OPTIONS: { label: string; value: Estado }[] = [
 const COLUMN_HEADERS = [
   "",
   "Mes",
-  "Gasto",
+  "Descripción",
   "Monto",
   "Método",
-  "Frecuencia",
+  "Frec.",
   "Fecha",
   "Nota",
   "Estado",
   "",
 ];
+
+type SectionData = { title: string; data: Expense[]; total: number };
 
 export function ExpenseList() {
   const c = useColors();
@@ -54,11 +59,14 @@ export function ExpenseList() {
     filterMes,
     filterFrecuencia,
     filterFecha,
-    addExpense,
     selectAll,
     bulkAddExpenses,
     bulkUpdateEstado,
     bulkDuplicateExpenses,
+    duplicateExpense,
+    removeExpense,
+    addExpenseFromModal,
+    updateExpenseFromModal,
   } = useExpensesStore();
 
   const filtered = useMemo(
@@ -76,6 +84,12 @@ export function ExpenseList() {
   const [bulkEstado, setBulkEstado] = useState<Estado>("pagado");
   const [bulkMeses, setBulkMeses] = useState<string[]>([]);
   const [showBulkDup, setShowBulkDup] = useState(false);
+  const [dense, setDense] = useState(false);
+
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [deleteConfirmExpense, setDeleteConfirmExpense] = useState<Expense | null>(null);
 
   const handleBulkAdd = () => {
     const mes =
@@ -99,7 +113,42 @@ export function ExpenseList() {
     setBulkMeses([]);
   };
 
-  // ── Toolbar ──
+  const statusBarData = useMemo(() => {
+    const pagado = filtered
+      .filter((e) => e.estado === "pagado" && e.monto > 0)
+      .reduce((s, e) => s + e.monto, 0);
+    const sinPagar = filtered
+      .filter(
+        (e) =>
+          (e.estado === "no pagado" || e.estado === "no guardado") &&
+          e.monto > 0,
+      )
+      .reduce((s, e) => s + e.monto, 0);
+    const guardado = filtered
+      .filter((e) => e.estado === "guardado" && e.monto > 0)
+      .reduce((s, e) => s + e.monto, 0);
+    const total = pagado + sinPagar + guardado;
+    return { pagado, sinPagar, guardado, total };
+  }, [filtered]);
+
+  const groupedSections = useMemo<SectionData[]>(() => {
+    if (filterMes !== "Todos") return [];
+    const map = new Map<string, Expense[]>();
+    for (const e of filtered) {
+      const arr = map.get(e.mes) ?? [];
+      arr.push(e);
+      map.set(e.mes, arr);
+    }
+    return MESES_LIST.filter((m) => map.has(m)).map((m) => {
+      const items = map.get(m)!;
+      return {
+        title: m,
+        data: items,
+        total: items.reduce((s, e) => s + e.monto, 0),
+      };
+    });
+  }, [filtered, filterMes]);
+
   const toolbar = (
     <>
       <View style={tableStyles.toolbarLeft}>
@@ -122,7 +171,7 @@ export function ExpenseList() {
             )}
           </View>
         </TouchableOpacity>
-        <CustomButton variant="primary" size="sm" onPress={addExpense}>
+        <CustomButton variant="primary" size="sm" onPress={() => setAddModalOpen(true)}>
           + Agregar
         </CustomButton>
         <CustomButton
@@ -131,6 +180,13 @@ export function ExpenseList() {
           onPress={() => setShowBulkAdd(!showBulkAdd)}
         >
           + Múltiple
+        </CustomButton>
+        <CustomButton
+          variant="outline"
+          size="sm"
+          onPress={() => setDense((v) => !v)}
+        >
+          {dense ? "⊞ Cómodo" : "⊟ Compact"}
         </CustomButton>
       </View>
 
@@ -168,7 +224,7 @@ export function ExpenseList() {
     if (i === 0) return { width: 40, textAlign: "center" as const };
     if (i === 9) return { width: 56, textAlign: "center" as const };
     if (h === "Fecha") return { width: 70 };
-    if (h === "Gasto") return { flex: 2 };
+    if (h === "Descripción") return { flex: 2 };
     return { flex: 1 };
   };
 
@@ -304,9 +360,163 @@ export function ExpenseList() {
     </>
   );
 
+  const hasBarData = statusBarData.total > 0;
+
+  const statusBar = hasBarData ? (
+    <View style={localStyles.statusBarContainer}>
+      <View style={localStyles.statusBar}>
+        <View
+          style={[
+            localStyles.statusSegment,
+            {
+              flex: statusBarData.pagado,
+              backgroundColor: "#16A34A",
+              borderTopLeftRadius: BORDER_RADIUS.full,
+              borderBottomLeftRadius: BORDER_RADIUS.full,
+            },
+          ]}
+        />
+        <View
+          style={[
+            localStyles.statusSegment,
+            {
+              flex: statusBarData.sinPagar,
+              backgroundColor: "#CA8A04",
+            },
+          ]}
+        />
+        <View
+          style={[
+            localStyles.statusSegment,
+            {
+              flex: statusBarData.guardado,
+              backgroundColor: "#2563EB",
+              borderTopRightRadius: BORDER_RADIUS.full,
+              borderBottomRightRadius: BORDER_RADIUS.full,
+            },
+          ]}
+        />
+      </View>
+      <View style={localStyles.statusLabels}>
+        <Text style={[localStyles.statusLabel, { color: "#16A34A" }]}>
+          Pag. ${formatMXN(statusBarData.pagado)}
+        </Text>
+        <Text style={[localStyles.statusLabel, { color: "#CA8A04" }]}>
+          S/P ${formatMXN(statusBarData.sinPagar)}
+        </Text>
+        <Text style={[localStyles.statusLabel, { color: "#2563EB" }]}>
+          Grd. ${formatMXN(statusBarData.guardado)}
+        </Text>
+      </View>
+    </View>
+  ) : null;
+
+  const modals = (
+    <>
+      <ExpenseModal
+        open={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        onSave={(data) => {
+          addExpenseFromModal(data);
+          setAddModalOpen(false);
+        }}
+      />
+      <ExpenseModal
+        open={editModalOpen}
+        {...(editingExpense ? { expense: editingExpense } : {})}
+        onClose={() => setEditModalOpen(false)}
+        onSave={(data) => {
+          if (editingExpense) updateExpenseFromModal(editingExpense.id, data);
+          setEditModalOpen(false);
+        }}
+        onDelete={() => {
+          setDeleteConfirmExpense(editingExpense);
+          setEditModalOpen(false);
+        }}
+      />
+      <CustomModal
+        open={deleteConfirmExpense !== null}
+        onOpenChange={(v) => { if (!v) setDeleteConfirmExpense(null); }}
+        title="¿Eliminar gasto?"
+        size="sm"
+        footer={
+          <View style={localStyles.deleteFooter}>
+            <CustomButton variant="outline" size="sm" onPress={() => setDeleteConfirmExpense(null)}>
+              Cancelar
+            </CustomButton>
+            <CustomButton
+              variant="outline"
+              size="sm"
+              onPress={() => {
+                if (deleteConfirmExpense) removeExpense(deleteConfirmExpense.id);
+                setDeleteConfirmExpense(null);
+              }}
+            >
+              Eliminar
+            </CustomButton>
+          </View>
+        }
+      >
+        <Text style={{ color: c.text }}>
+          Esto eliminará el registro permanentemente.
+        </Text>
+      </CustomModal>
+    </>
+  );
+
+  const makeRowProps = (e: Expense) => ({
+    expense: e,
+    dense,
+    onEdit: () => { setEditingExpense(e); setEditModalOpen(true); },
+    onClone: () => duplicateExpense(e.id, [e.mes]),
+    onDelete: () => setDeleteConfirmExpense(e),
+  });
+
   if (isMobile) {
+    if (filterMes === "Todos" && groupedSections.length > 0) {
+      return (
+        <View style={localStyles.container}>
+          {modals}
+          <View
+            style={[
+              tableStyles.toolbar,
+              { borderBottomColor: c.border, backgroundColor: c.background },
+            ]}
+          >
+            {toolbar}
+          </View>
+          {panels}
+          {statusBar}
+          <UpcomingSection />
+          <SectionList
+            sections={groupedSections}
+            keyExtractor={(e) => e.id}
+            renderItem={({ item }) => <ExpenseRow {...makeRowProps(item)} />}
+            renderSectionHeader={({ section }) => (
+              <View
+                style={[
+                  localStyles.sectionHeader,
+                  { backgroundColor: c.backgroundStrong, borderBottomColor: c.border },
+                ]}
+              >
+                <Text style={[localStyles.sectionTitle, { color: c.text }]}>
+                  {section.title}
+                </Text>
+                <Text style={[localStyles.sectionTotal, { color: c.textMuted }]}>
+                  ${formatMXN(section.total)}
+                </Text>
+              </View>
+            )}
+            contentContainerStyle={localStyles.mobileList}
+            showsVerticalScrollIndicator={false}
+          />
+        </View>
+      );
+    }
+
     return (
       <View style={localStyles.container}>
+        {modals}
         <View
           style={[
             tableStyles.toolbar,
@@ -316,10 +526,13 @@ export function ExpenseList() {
           {toolbar}
         </View>
         {panels}
-        <FlatList
-          data={filtered}
+        {statusBar}
+        <UpcomingSection />
+        <SectionList
+          sections={[{ title: "", data: filtered, total: 0 }]}
           keyExtractor={(e) => e.id}
-          renderItem={({ item }) => <ExpenseRow expense={item} />}
+          renderItem={({ item }) => <ExpenseRow {...makeRowProps(item)} />}
+          renderSectionHeader={() => null}
           contentContainerStyle={localStyles.mobileList}
           showsVerticalScrollIndicator={false}
         />
@@ -327,12 +540,48 @@ export function ExpenseList() {
     );
   }
 
+  if (filterMes === "Todos" && groupedSections.length > 0) {
+    return (
+      <View style={localStyles.container}>
+        {modals}
+        {panels}
+        {statusBar}
+        <UpcomingSection />
+        <TableShell toolbar={toolbar} header={headerRow}>
+          {groupedSections.map((section) => (
+            <View key={section.title}>
+              <View
+                style={[
+                  localStyles.groupHeader,
+                  { backgroundColor: c.backgroundStrong, borderBottomColor: c.border },
+                ]}
+              >
+                <Text style={[localStyles.groupTitle, { color: c.text }]}>
+                  {section.title}
+                </Text>
+                <Text style={[localStyles.groupTotal, { color: c.textMuted }]}>
+                  ${formatMXN(section.total)}
+                </Text>
+              </View>
+              {section.data.map((e) => (
+                <ExpenseRow key={e.id} {...makeRowProps(e)} />
+              ))}
+            </View>
+          ))}
+        </TableShell>
+      </View>
+    );
+  }
+
   return (
     <View style={localStyles.container}>
+      {modals}
       {panels}
+      {statusBar}
+      <UpcomingSection />
       <TableShell toolbar={toolbar} header={headerRow}>
         {filtered.map((e) => (
-          <ExpenseRow key={e.id} expense={e} />
+          <ExpenseRow key={e.id} {...makeRowProps(e)} />
         ))}
       </TableShell>
     </View>
@@ -357,4 +606,61 @@ const localStyles = StyleSheet.create({
     borderWidth: 1,
   },
   dupChipText: { fontSize: TYPOGRAPHY.fontSize.xs },
+  statusBarContainer: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    gap: SPACING.xs,
+  },
+  statusBar: {
+    height: 8,
+    flexDirection: "row",
+    borderRadius: BORDER_RADIUS.full,
+    overflow: "hidden",
+  },
+  statusSegment: {
+    height: 8,
+  },
+  statusLabels: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  statusLabel: {
+    fontSize: TYPOGRAPHY.fontSize.xs,
+    fontWeight: "500",
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  sectionTitle: {
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontWeight: "600",
+  },
+  sectionTotal: {
+    fontSize: TYPOGRAPHY.fontSize.xs,
+  },
+  groupHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  groupTitle: {
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontWeight: "600",
+  },
+  groupTotal: {
+    fontSize: TYPOGRAPHY.fontSize.xs,
+  },
+  deleteFooter: {
+    flexDirection: "row",
+    gap: SPACING.sm,
+    justifyContent: "flex-end",
+  },
 });

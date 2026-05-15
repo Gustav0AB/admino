@@ -1,13 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Modal,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
-  useWindowDimensions,
 } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
@@ -15,7 +12,7 @@ import { FeatureShell } from "@/shared/components/shell/FeatureShell";
 import { CustomButton } from "@/shared/components/inputs/CustomButton";
 import { useColors } from "@/shared/hooks/useColors";
 import { useToast } from "@/shared/components/feedback/Toast";
-import { BORDER_RADIUS, BREAKPOINTS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
+import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
 import { expensesApi } from "../api";
 import { parseCsv, sheetsUrlToCsvUrl } from "../csvParser";
 import { ExpenseFilters } from "../components/ExpenseFilters";
@@ -23,19 +20,33 @@ import { ExpenseList } from "../components/ExpenseList";
 import { SummaryPanel } from "../components/SummaryPanel";
 import { CreditPanel } from "../components/CreditPanel";
 import { useExpensesStore } from "../store";
+import { VacationPlanner } from "@/features/expenses/planning/components/VacationPlanner";
+import { ScheduledExpensesTab } from "@/features/expenses/planning/components/ScheduledExpensesTab";
 import type { AppData } from "../types";
 
 const DEBOUNCE_MS = 1500;
-const WIDE_BREAKPOINT = BREAKPOINTS.desktop;
+
+const TABS = [
+  { key: "gastos", label: "Gastos" },
+  { key: "vacaciones", label: "Vacaciones" },
+  { key: "programados", label: "Programados" },
+];
 
 export function ExpensesScreen() {
   const c = useColors();
   const toast = useToast();
-  const { width } = useWindowDimensions();
-  const isWide = width >= WIDE_BREAKPOINT;
 
-  const { expenses, initialCreditDebt, creditCutDay, creditPayDay, getAppData, loadAppData, setExpenses } =
-    useExpensesStore();
+  const [activeTab, setActiveTab] = useState("gastos");
+
+  const {
+    expenses,
+    initialCreditDebt,
+    creditCutDay,
+    creditPayDay,
+    getAppData,
+    loadAppData,
+    setExpenses,
+  } = useExpensesStore();
 
   const [saving, setSaving] = useState(false);
   const [sheetsModalOpen, setSheetsModalOpen] = useState(false);
@@ -44,11 +55,14 @@ export function ExpensesScreen() {
 
   // Load from API on mount
   useEffect(() => {
-    expensesApi.get().then((data) => {
-      if (data && "expenses" in data && Array.isArray((data as AppData).expenses)) {
-        loadAppData(data as AppData);
-      }
-    }).catch(() => {});
+    expensesApi
+      .get()
+      .then((data) => {
+        if (data && "expenses" in data && Array.isArray((data as AppData).expenses)) {
+          loadAppData(data as AppData);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   // Auto-save debounced
@@ -58,7 +72,9 @@ export function ExpensesScreen() {
     debounceTimer.current = setTimeout(() => {
       expensesApi.put(getAppData()).catch(() => {});
     }, DEBOUNCE_MS);
-    return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    };
   }, [expenses, initialCreditDebt, creditCutDay, creditPayDay]);
 
   const handleSave = useCallback(async () => {
@@ -91,7 +107,9 @@ export function ExpensesScreen() {
 
   const handleLoadFile = useCallback(async () => {
     try {
-      const result = await DocumentPicker.getDocumentAsync({ type: ["application/json", "text/csv", "text/plain"] });
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ["application/json", "text/csv", "text/plain"],
+      });
       if (result.canceled || !result.assets?.[0]) return;
 
       const asset = result.assets[0];
@@ -111,28 +129,38 @@ export function ExpensesScreen() {
     }
   }, [loadAppData, setExpenses]);
 
-  const saveActions = [
-    { label: "Sheets", type: "secondary" as const, onClick: () => setSheetsModalOpen(true) },
-    { label: "Archivo", type: "secondary" as const, onClick: handleLoadFile },
-    { label: saving ? "Guardando…" : "Guardar", type: "primary" as const, onClick: handleSave },
-  ];
+  const gastosSaveActions =
+    activeTab === "gastos"
+      ? [
+          { label: "Sheets", type: "secondary" as const, onClick: () => setSheetsModalOpen(true) },
+          { label: "Archivo", type: "secondary" as const, onClick: handleLoadFile },
+          { label: saving ? "Guardando…" : "Guardar", type: "primary" as const, onClick: handleSave },
+        ]
+      : [];
 
-  const sidebarContent = (
-    <>
-      <SummaryPanel />
-      <CreditPanel />
-    </>
-  );
+  const sidebarContent =
+    activeTab === "gastos" ? (
+      <>
+        <SummaryPanel />
+        <CreditPanel />
+      </>
+    ) : undefined;
 
   return (
     <>
       <FeatureShell
-        title="Gastos"
-        saveActions={saveActions}
-        filters={<ExpenseFilters />}
+        title="Finanzas"
+        tabs={TABS}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        tabUrlKey="fin-view"
+        saveActions={gastosSaveActions}
+        filters={activeTab === "gastos" ? <ExpenseFilters /> : undefined}
         sidebarCards={sidebarContent}
       >
-        <ExpenseList />
+        {activeTab === "gastos" && <ExpenseList />}
+        {activeTab === "vacaciones" && <VacationPlanner />}
+        {activeTab === "programados" && <ScheduledExpensesTab />}
       </FeatureShell>
 
       {/* Google Sheets modal */}
@@ -144,7 +172,9 @@ export function ExpensesScreen() {
       >
         <View style={styles.overlay}>
           <View style={[styles.modalCard, { backgroundColor: c.background, borderColor: c.border }]}>
-            <Text style={[styles.modalTitle, { color: c.text }]}>Importar desde Google Sheets</Text>
+            <Text style={[styles.modalTitle, { color: c.text }]}>
+              Importar desde Google Sheets
+            </Text>
             <TextInput
               style={[styles.modalInput, { color: c.text, borderColor: c.border }]}
               value={sheetsUrl}
@@ -154,8 +184,12 @@ export function ExpensesScreen() {
               autoCapitalize="none"
             />
             <View style={styles.modalActions}>
-              <CustomButton variant="outline" size="sm" onPress={() => setSheetsModalOpen(false)}>Cancelar</CustomButton>
-              <CustomButton variant="primary" size="sm" onPress={handleLoadSheets}>Cargar</CustomButton>
+              <CustomButton variant="outline" size="sm" onPress={() => setSheetsModalOpen(false)}>
+                Cancelar
+              </CustomButton>
+              <CustomButton variant="primary" size="sm" onPress={handleLoadSheets}>
+                Cargar
+              </CustomButton>
             </View>
           </View>
         </View>

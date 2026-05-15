@@ -5,49 +5,146 @@ import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
 import { useExpensesStore } from "../store";
 import {
   formatMXN,
-  getCreditCycleInfo,
-  getCreditHistory,
+  getCreditCycleInfoForCard,
+  getCreditHistoryForCard,
   getCurrentCreditBalance,
+  currentMonthName,
 } from "../helpers";
+import type { CreditCard, Expense } from "../types";
 
 export function CreditPanel() {
   const c = useColors();
-  const {
-    expenses,
-    initialCreditDebt,
-    creditDebtMes,
-    creditCutDay,
-    creditPayDay,
-    setInitialCreditDebt,
-    setCreditCutDay,
-    setCreditPayDay,
-  } = useExpensesStore();
+  const { expenses, creditCards, addCreditCard, updateCreditCard, removeCreditCard } = useExpensesStore();
 
-  const [showHistory, setShowHistory] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newCutDay, setNewCutDay] = useState("");
+  const [newPayDay, setNewPayDay] = useState("");
+  const [newDebt, setNewDebt] = useState("");
 
-  const history = useMemo(
-    () => getCreditHistory(expenses, initialCreditDebt, creditDebtMes),
-    [expenses, initialCreditDebt, creditDebtMes]
-  );
-
-  const cycle = useMemo(
-    () => getCreditCycleInfo(expenses, initialCreditDebt, creditCutDay, creditPayDay),
-    [expenses, initialCreditDebt, creditCutDay, creditPayDay]
-  );
-
-  const currentBalance = getCurrentCreditBalance(history, initialCreditDebt);
+  const handleAdd = () => {
+    if (!newName.trim()) return;
+    addCreditCard({
+      name: newName.trim(),
+      cutDay: parseInt(newCutDay) || 0,
+      payDay: parseInt(newPayDay) || 0,
+      initialDebt: parseFloat(newDebt) || 0,
+      debtMes: currentMonthName(),
+    });
+    setNewName("");
+    setNewCutDay("");
+    setNewPayDay("");
+    setNewDebt("");
+    setShowAddForm(false);
+  };
 
   return (
-    <View style={[styles.card, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
+    <View style={[styles.container, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: c.text }]}>Crédito</Text>
+        <TouchableOpacity
+          onPress={() => setShowAddForm((v) => !v)}
+          style={[styles.addBtn, { borderColor: c.border }]}
+        >
+          <Text style={[styles.addBtnText, { color: c.primary }]}>+ Tarjeta</Text>
+        </TouchableOpacity>
+      </View>
+
+      {creditCards.length === 0 && !showAddForm && (
+        <Text style={[styles.emptyText, { color: c.textMuted }]}>
+          No tienes tarjetas configuradas
+        </Text>
+      )}
+
+      {creditCards.map((card) => (
+        <CardSection
+          key={card.id}
+          card={card}
+          expenses={expenses}
+          onUpdate={(patch) => updateCreditCard(card.id, patch)}
+          onRemove={() => removeCreditCard(card.id)}
+          c={c}
+        />
+      ))}
+
+      {showAddForm && (
+        <View style={[styles.addForm, { borderColor: c.border }]}>
+          <Text style={[styles.addFormTitle, { color: c.text }]}>Nueva tarjeta</Text>
+          <ConfigInput label="Nombre" value={newName} onChangeText={setNewName} c={c} />
+          <ConfigInput label="Día de corte" value={newCutDay} onChangeText={setNewCutDay} keyboardType="numeric" c={c} />
+          <ConfigInput label="Día de pago" value={newPayDay} onChangeText={setNewPayDay} keyboardType="numeric" c={c} />
+          <ConfigInput label="Adeudo inicial ($)" value={newDebt} onChangeText={setNewDebt} keyboardType="numeric" c={c} />
+          <View style={styles.addFormActions}>
+            <TouchableOpacity
+              onPress={() => setShowAddForm(false)}
+              style={[styles.btn, { borderColor: c.border }]}
+            >
+              <Text style={[styles.btnText, { color: c.text }]}>Cancelar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleAdd}
+              style={[styles.btn, { backgroundColor: c.primary, borderColor: c.primary }]}
+            >
+              <Text style={[styles.btnText, { color: c.primaryForeground }]}>Agregar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+    </View>
+  );
+}
+
+function CardSection({
+  card,
+  expenses,
+  onUpdate,
+  onRemove,
+  c,
+}: {
+  card: CreditCard;
+  expenses: Expense[];
+  onUpdate: (patch: Partial<CreditCard>) => void;
+  onRemove: () => void;
+  c: ReturnType<typeof useColors>;
+}) {
+  const [showHistory, setShowHistory] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+
+  const cycle = useMemo(() => getCreditCycleInfoForCard(expenses, card), [expenses, card]);
+  const history = useMemo(() => getCreditHistoryForCard(expenses, card), [expenses, card]);
+  const currentBalance = getCurrentCreditBalance(history, card.initialDebt);
+
+  return (
+    <View style={[styles.cardSection, { borderColor: c.border }]}>
+      <View style={styles.cardHeader}>
+        <TextInput
+          style={[styles.cardNameInput, { color: c.text, borderColor: c.border }]}
+          value={card.name}
+          onChangeText={(v) => onUpdate({ name: v })}
+          placeholder="Nombre de tarjeta"
+          placeholderTextColor={c.textPlaceholder}
+        />
         <View style={[styles.monthBadge, { backgroundColor: `${c.primary}20` }]}>
           <Text style={[styles.monthText, { color: c.primary }]}>{cycle.currentMonth}</Text>
         </View>
+        {confirmRemove ? (
+          <View style={styles.confirmRow}>
+            <Text style={[styles.confirmText, { color: c.danger }]}>¿Eliminar?</Text>
+            <TouchableOpacity onPress={onRemove}>
+              <Text style={[styles.confirmBtn, { color: c.danger }]}>Sí</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setConfirmRemove(false)}>
+              <Text style={[styles.confirmBtn, { color: c.textMuted }]}>No</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity onPress={() => setConfirmRemove(true)}>
+            <Text style={[styles.removeBtn, { color: c.textMuted }]}>✕</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
-      {/* Cycle status */}
-      {creditCutDay > 0 && (
+      {card.cutDay > 0 && (
         <View style={styles.cycleSection}>
           <View style={styles.cycleRow}>
             <Text style={[styles.cycleLabel, { color: c.textMuted }]}>Corte: día {cycle.cutDay}</Text>
@@ -68,7 +165,6 @@ export function CreditPanel() {
         </View>
       )}
 
-      {/* Debt breakdown */}
       <View style={styles.section}>
         <DebtRow label="Adeudo estado de cuenta" value={cycle.frozenDebt} c={c} />
         {cycle.totalPayments > 0 && (
@@ -80,34 +176,33 @@ export function CreditPanel() {
         {cycle.newCharges > 0 && (
           <DebtRow label="Nuevos cargos (próx. ciclo)" value={cycle.newCharges} c={c} color={c.textMuted} />
         )}
+        <DebtRow label="Balance actual" value={currentBalance} c={c} />
       </View>
 
-      {/* Config */}
       <View style={[styles.section, styles.configSection]}>
         <ConfigInput
           label="Adeudo inicial ($)"
-          value={String(initialCreditDebt || "")}
-          onChangeText={(v) => setInitialCreditDebt(parseFloat(v) || 0)}
+          value={String(card.initialDebt || "")}
+          onChangeText={(v) => onUpdate({ initialDebt: parseFloat(v) || 0 })}
           keyboardType="numeric"
           c={c}
         />
         <ConfigInput
           label="Día de corte"
-          value={String(creditCutDay || "")}
-          onChangeText={(v) => setCreditCutDay(parseInt(v) || 0)}
+          value={String(card.cutDay || "")}
+          onChangeText={(v) => onUpdate({ cutDay: parseInt(v) || 0 })}
           keyboardType="numeric"
           c={c}
         />
         <ConfigInput
           label="Día de pago"
-          value={String(creditPayDay || "")}
-          onChangeText={(v) => setCreditPayDay(parseInt(v) || 0)}
+          value={String(card.payDay || "")}
+          onChangeText={(v) => onUpdate({ payDay: parseInt(v) || 0 })}
           keyboardType="numeric"
           c={c}
         />
       </View>
 
-      {/* History toggle */}
       <TouchableOpacity onPress={() => setShowHistory(!showHistory)} style={styles.historyToggle}>
         <Text style={[styles.historyToggleText, { color: c.primary }]}>
           {showHistory ? "▲ Ocultar historial" : "▼ Ver historial"}
@@ -177,11 +272,22 @@ function ConfigInput({ label, value, onChangeText, keyboardType, c }: {
 }
 
 const styles = StyleSheet.create({
-  card: { borderRadius: BORDER_RADIUS.md, borderWidth: StyleSheet.hairlineWidth, padding: SPACING.md, gap: SPACING.sm },
+  container: { borderRadius: BORDER_RADIUS.md, borderWidth: StyleSheet.hairlineWidth, padding: SPACING.md, gap: SPACING.sm },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   title: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "700" },
+  addBtn: { paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs, borderRadius: BORDER_RADIUS.sm, borderWidth: 1 },
+  addBtnText: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "600" },
+  emptyText: { fontSize: TYPOGRAPHY.fontSize.xs, fontStyle: "italic" },
+
+  cardSection: { borderWidth: StyleSheet.hairlineWidth, borderRadius: BORDER_RADIUS.sm, padding: SPACING.sm, gap: SPACING.sm },
+  cardHeader: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
+  cardNameInput: { flex: 1, fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "600", borderBottomWidth: StyleSheet.hairlineWidth, paddingVertical: 2 },
   monthBadge: { paddingHorizontal: SPACING.sm, paddingVertical: 2, borderRadius: BORDER_RADIUS.full },
   monthText: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "600" },
+  removeBtn: { fontSize: TYPOGRAPHY.fontSize.md, paddingHorizontal: SPACING.xs },
+  confirmRow: { flexDirection: "row", alignItems: "center", gap: SPACING.xs },
+  confirmText: { fontSize: TYPOGRAPHY.fontSize.xs },
+  confirmBtn: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "700", paddingHorizontal: SPACING.xs },
 
   cycleSection: { gap: SPACING.xs },
   cycleRow: { flexDirection: "row", justifyContent: "space-between" },
@@ -203,7 +309,6 @@ const styles = StyleSheet.create({
   historyToggle: { paddingVertical: SPACING.xs },
   historyToggleText: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "600" },
   historyList: { gap: SPACING.xs },
-  emptyText: { fontSize: TYPOGRAPHY.fontSize.xs },
   historyEntry: { flexDirection: "row", alignItems: "center", paddingVertical: SPACING.xs, borderBottomWidth: StyleSheet.hairlineWidth, gap: SPACING.sm },
   typeBadge: { paddingHorizontal: SPACING.xs, paddingVertical: 2, borderRadius: BORDER_RADIUS.sm },
   typeBadgeText: { fontSize: 10, fontWeight: "600" },
@@ -213,4 +318,10 @@ const styles = StyleSheet.create({
   historyAmounts: { alignItems: "flex-end" },
   historyAmt: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "600" },
   historyBal: { fontSize: 10 },
+
+  addForm: { borderWidth: StyleSheet.hairlineWidth, borderRadius: BORDER_RADIUS.sm, padding: SPACING.sm, gap: SPACING.sm },
+  addFormTitle: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "600" },
+  addFormActions: { flexDirection: "row", gap: SPACING.sm, justifyContent: "flex-end" },
+  btn: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs, borderRadius: BORDER_RADIUS.sm, borderWidth: 1 },
+  btnText: { fontSize: TYPOGRAPHY.fontSize.sm },
 });

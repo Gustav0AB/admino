@@ -5,7 +5,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { useAuthStore } from "@/shared/store/authStore";
 import { currentMonthName, buildAppData } from "./helpers";
-import type { AppData, Estado, Expense, Frecuencia, MetodoPago } from "./types";
+import type { AppData, CreditCard, Estado, Expense, Frecuencia, MetodoPago } from "./types";
 
 function getUserId() {
   return useAuthStore.getState().user?.id ?? "anonymous";
@@ -53,6 +53,7 @@ type ExpensesState = {
   creditDebtMes: string;
   creditCutDay: number;
   creditPayDay: number;
+  creditCards: CreditCard[];
 
   setExpenses: (expenses: Expense[]) => void;
   setFilterMes: (v: string) => void;
@@ -63,6 +64,10 @@ type ExpensesState = {
   setCreditCutDay: (v: number) => void;
   setCreditPayDay: (v: number) => void;
 
+  addCreditCard: (card: Omit<CreditCard, "id">) => void;
+  updateCreditCard: (id: string, patch: Partial<CreditCard>) => void;
+  removeCreditCard: (id: string) => void;
+
   addExpense: () => void;
   removeExpense: (id: string) => void;
   updateExpense: (id: string, field: keyof Expense, value: unknown) => void;
@@ -72,6 +77,8 @@ type ExpensesState = {
   bulkDuplicateExpenses: (targetMeses: string[]) => void;
   bulkUpdateEstado: (estado: Estado) => void;
   bulkAddExpenses: (text: string, defaultMes: string) => number;
+  addExpenseFromModal: (data: Omit<Expense, "id" | "selected">) => void;
+  updateExpenseFromModal: (id: string, data: Omit<Expense, "id" | "selected">) => void;
   getAppData: () => AppData;
   loadAppData: (data: AppData) => void;
   clearAll: () => void;
@@ -89,6 +96,7 @@ export const useExpensesStore = create<ExpensesState>()(
       creditDebtMes: currentMonthName(),
       creditCutDay: 0,
       creditPayDay: 0,
+      creditCards: [],
 
       setExpenses: (expenses) => set({ expenses }),
       setFilterMes: (filterMes) => set({ filterMes }),
@@ -98,6 +106,23 @@ export const useExpensesStore = create<ExpensesState>()(
       setCreditDebtMes: (creditDebtMes) => set({ creditDebtMes }),
       setCreditCutDay: (creditCutDay) => set({ creditCutDay }),
       setCreditPayDay: (creditPayDay) => set({ creditPayDay }),
+
+      addCreditCard: (card) =>
+        set((s) => ({
+          creditCards: [...s.creditCards, { ...card, id: randomUUID() }],
+        })),
+
+      updateCreditCard: (id, patch) =>
+        set((s) => ({
+          creditCards: s.creditCards.map((c) =>
+            c.id === id ? { ...c, ...patch } : c
+          ),
+        })),
+
+      removeCreditCard: (id) =>
+        set((s) => ({
+          creditCards: s.creditCards.filter((c) => c.id !== id),
+        })),
 
       addExpense: () =>
         set((s) => ({ expenses: [...s.expenses, blankExpense()] })),
@@ -127,11 +152,19 @@ export const useExpensesStore = create<ExpensesState>()(
         const idx = expenses.findIndex((e) => e.id === id);
         if (idx === -1) return;
         const source = expenses[idx];
-        const copies = targetMeses.map((mes) => ({
-          ...source,
+        if (!source) return;
+        const copies: Expense[] = targetMeses.map((mes) => ({
           id: randomUUID(),
           mes,
+          gastos: source.gastos,
+          monto: source.monto,
+          metodoPago: source.metodoPago,
+          frecuencia: source.frecuencia,
+          fecha: source.fecha,
+          fechaMaxima: source.fechaMaxima,
+          estado: source.estado,
           selected: false,
+          ...(source.creditCardId ? { creditCardId: source.creditCardId } : {}),
         }));
         const next = [...expenses];
         next.splice(idx + 1, 0, ...copies);
@@ -140,13 +173,20 @@ export const useExpensesStore = create<ExpensesState>()(
 
       bulkDuplicateExpenses: (targetMeses) => {
         const { expenses } = get();
-        const selected = expenses.filter((e) => e.selected);
-        const copies = selected.flatMap((source) =>
-          targetMeses.map((mes) => ({
-            ...source,
+        const selectedExpenses = expenses.filter((e) => e.selected);
+        const copies: Expense[] = selectedExpenses.flatMap((source) =>
+          targetMeses.map((mes): Expense => ({
             id: randomUUID(),
             mes,
+            gastos: source.gastos,
+            monto: source.monto,
+            metodoPago: source.metodoPago,
+            frecuencia: source.frecuencia,
+            fecha: source.fecha,
+            fechaMaxima: source.fechaMaxima,
+            estado: source.estado,
             selected: false,
+            ...(source.creditCardId ? { creditCardId: source.creditCardId } : {}),
           }))
         );
         set({ expenses: [...expenses, ...copies] });
@@ -170,10 +210,7 @@ export const useExpensesStore = create<ExpensesState>()(
           const [gastos = "", montoRaw = "0", fechaRaw = "0", metodoPagoRaw = "efectivo"] = parts;
           const monto = parseFloat(montoRaw.replace(/[^0-9.]/g, "")) || 0;
 
-          let fecha: 0 | 15 | 30 = 0;
-          const f = parseInt(fechaRaw, 10);
-          if (f === 15) fecha = 15;
-          else if (f === 30) fecha = 30;
+          const fecha = parseInt(fechaRaw, 10) || 0;
 
           const metodoPago: MetodoPago =
             metodoPagoRaw.toLowerCase().includes("cred") ? "credito" : "efectivo";
@@ -196,6 +233,21 @@ export const useExpensesStore = create<ExpensesState>()(
         return newExpenses.length;
       },
 
+      addExpenseFromModal: (data) =>
+        set((s) => ({
+          expenses: [
+            ...s.expenses,
+            { ...data, id: randomUUID(), selected: true },
+          ],
+        })),
+
+      updateExpenseFromModal: (id, data) =>
+        set((s) => ({
+          expenses: s.expenses.map((e) =>
+            e.id === id ? { ...data, id, selected: e.selected } : e
+          ),
+        })),
+
       getAppData: () => {
         const s = get();
         return buildAppData(
@@ -203,18 +255,36 @@ export const useExpensesStore = create<ExpensesState>()(
           s.initialCreditDebt,
           s.creditDebtMes,
           s.creditCutDay,
-          s.creditPayDay
+          s.creditPayDay,
+          s.creditCards
         );
       },
 
-      loadAppData: (data: AppData) =>
+      loadAppData: (data: AppData) => {
+        let creditCards: CreditCard[] = [];
+        if (data.creditCards && data.creditCards.length > 0) {
+          creditCards = data.creditCards;
+        } else if ((data.creditCutDay ?? 0) > 0 || (data.creditPayDay ?? 0) > 0) {
+          creditCards = [
+            {
+              id: randomUUID(),
+              name: "Tarjeta Principal",
+              cutDay: data.creditCutDay ?? 0,
+              payDay: data.creditPayDay ?? 0,
+              initialDebt: data.creditDebt ?? 0,
+              debtMes: data.creditDebtMes ?? currentMonthName(),
+            },
+          ];
+        }
         set({
           expenses: data.expenses ?? [],
           initialCreditDebt: data.creditDebt ?? 0,
           creditDebtMes: data.creditDebtMes ?? currentMonthName(),
           creditCutDay: data.creditCutDay ?? 0,
           creditPayDay: data.creditPayDay ?? 0,
-        }),
+          creditCards,
+        });
+      },
 
       clearAll: () =>
         set({
@@ -226,6 +296,7 @@ export const useExpensesStore = create<ExpensesState>()(
           creditDebtMes: currentMonthName(),
           creditCutDay: 0,
           creditPayDay: 0,
+          creditCards: [],
         }),
 
       rehydrate: async () => {
