@@ -17,26 +17,26 @@ export const MOCK_USERS: Record<UserRole, User> = {
     role: "SYSTEM_ADMIN",
     orgId: null,
   },
-  ORGANIZATION: {
+  CLIENT: {
     id: "mock-org-1",
     name: "Sam Coach",
     email: "coach@admino.app",
-    role: "ORGANIZATION",
+    role: "CLIENT",
     orgId: "org-demo-1",
   },
-  CLIENT: {
+  MEMBER: {
     id: "mock-client-1",
     name: "John Athlete",
     email: "athlete@admino.app",
-    role: "CLIENT",
+    role: "MEMBER",
     orgId: "org-demo-1",
   },
 };
 
 export const MOCK_TOKENS: Record<UserRole, string> = {
   SYSTEM_ADMIN: "mock-token-admin",
-  ORGANIZATION: "mock-token-org",
   CLIENT: "mock-token-client",
+  MEMBER: "mock-token-member",
 };
 
 type AuthState = {

@@ -10,7 +10,7 @@ export const mockLogin: ApiResponse<AuthSession> = {
       id: "mock-client-1",
       name: "John Athlete",
       email: "athlete@admino.app",
-      role: "CLIENT",
+      role: "MEMBER",
       orgId: "org-demo-1",
     },
   },

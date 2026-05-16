@@ -88,6 +88,10 @@ export default function DrawerLayout() {
           drawerLabel: "Nutritionist Planning",
         }}
       />
+      <Drawer.Screen
+        name="client-settings"
+        options={{ title: "Configuración", drawerLabel: "Configuración" }}
+      />
     </Drawer>
   );
 }

@@ -1,11 +1,12 @@
-export type OrgBranding = {
+export type ClientBranding = {
   primaryColor: string;
   secondaryColor: string;
+  backgroundColor: string;
   orgName: string;
   logoUrl: string | null;
 };
 
-export type OrgFeature =
+export type ClientFeature =
   | "payments"
   | "training_planning"
   | "tracker"

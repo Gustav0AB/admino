@@ -1,6 +1,6 @@
 import { Image, View, Text, StyleSheet, Platform, type StyleProp, type ViewStyle } from "react-native";
 import { useColors } from "@/shared/hooks/useColors";
-import { useOrgTheme } from "@/shared/theme/useOrgTheme";
+import { useClientTheme } from "@/shared/theme/useClientTheme";
 import { BORDER_RADIUS, TYPOGRAPHY } from "@/shared/theme/tokens";
 
 type AvatarSize = "xs" | "sm" | "md" | "lg" | "xl";
@@ -47,7 +47,7 @@ export function Avatar({
   style,
 }: AvatarProps) {
   const c = useColors();
-  const { primaryColor } = useOrgTheme();
+  const { primaryColor } = useClientTheme();
 
   const dimension = SIZE_MAP[size];
   const fontSize = FONT_SIZE_MAP[size];

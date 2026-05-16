@@ -20,7 +20,7 @@ import { ErrorBoundary } from "@/shared/components/feedback/ErrorBoundary";
 import { ToastProvider } from "@/shared/components/feedback/Toast";
 import { OfflineBanner } from "@/shared/components/OfflineBanner";
 import { useAppLifecycle } from "@/shared/hooks/useAppLifecycle";
-import { useOrgTheme } from "@/shared/theme/useOrgTheme";
+import { useClientTheme } from "@/shared/theme/useClientTheme";
 
 const queryClient = new QueryClient();
 
@@ -36,7 +36,7 @@ function AppContent() {
   });
 
   const { showSplash } = useAppLifecycle();
-  const { primaryColor, orgName } = useOrgTheme();
+  const { primaryColor, orgName } = useClientTheme();
 
   return (
     <>

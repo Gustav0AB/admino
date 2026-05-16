@@ -2,12 +2,12 @@ import { useState } from "react";
 import { View, Text } from "react-native";
 import { MainLayout } from "@/shared/components/MainLayout";
 import { useColors } from "@/shared/hooks/useColors";
-import { useOrgTheme } from "@/shared/theme/useOrgTheme";
+import { useClientTheme } from "@/shared/theme/useClientTheme";
 import { SPACING } from "@/shared/theme/tokens";
 
 export default function DashboardScreen() {
   const c = useColors();
-  const { primaryColor } = useOrgTheme();
+  const { primaryColor } = useClientTheme();
 
   return (
     <MainLayout scrollable padding={false}>

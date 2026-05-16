@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { useColors } from "@/shared/hooks/useColors";
-import { useOrgTheme } from "@/shared/theme/useOrgTheme";
+import { useClientTheme } from "@/shared/theme/useClientTheme";
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS } from "@/shared/theme/tokens";
 
 type CustomSwitchProps = {
@@ -25,7 +25,7 @@ export function CustomSwitch({
   style,
 }: CustomSwitchProps) {
   const c = useColors();
-  const { primaryColor } = useOrgTheme();
+  const { primaryColor } = useClientTheme();
 
   const handlePress = () => {
     if (!disabled && onCheckedChange) {

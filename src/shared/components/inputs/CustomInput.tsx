@@ -10,7 +10,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import { useColors } from "@/shared/hooks/useColors";
-import { useOrgTheme } from "@/shared/theme/useOrgTheme";
+import { useClientTheme } from "@/shared/theme/useClientTheme";
 import { componentStyles, commonStyles } from "@/shared/theme/styles";
 import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
 
@@ -40,7 +40,7 @@ export function CustomInput({
 }: CustomInputProps) {
   const [focused, setFocused] = useState(false);
   const c = useColors();
-  const { primaryColor } = useOrgTheme();
+  const { primaryColor } = useClientTheme();
 
   const sizeStyles = {
     sm: {

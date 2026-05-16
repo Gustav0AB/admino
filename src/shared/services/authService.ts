@@ -4,8 +4,8 @@ import type { AuthSession, LoginCredentials } from "@/shared/types/auth";
 
 const MOCK_CREDENTIALS: Record<string, keyof typeof MOCK_USERS> = {
   "admin@admino.app": "SYSTEM_ADMIN",
-  "coach@admino.app": "ORGANIZATION",
-  "athlete@admino.app": "CLIENT",
+  "coach@admino.app": "CLIENT",
+  "athlete@admino.app": "MEMBER",
 };
 
 async function mockLogin(credentials: LoginCredentials): Promise<AuthSession> {

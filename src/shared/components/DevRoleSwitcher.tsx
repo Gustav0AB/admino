@@ -3,11 +3,11 @@ import { useColors } from "@/shared/hooks/useColors";
 import { useAuth } from "@/shared/hooks/useAuth";
 import type { UserRole } from "@/shared/types/auth";
 
-const ROLES: UserRole[] = ["SYSTEM_ADMIN", "ORGANIZATION", "CLIENT"];
+const ROLES: UserRole[] = ["SYSTEM_ADMIN", "CLIENT", "MEMBER"];
 const ROLE_LABELS: Record<UserRole, string> = {
   SYSTEM_ADMIN: "Admin",
-  ORGANIZATION: "Org",
   CLIENT: "Client",
+  MEMBER: "Member",
 };
 
 export function DevRoleSwitcher() {

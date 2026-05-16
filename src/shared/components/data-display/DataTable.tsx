@@ -37,6 +37,7 @@ type DataTableProps<T extends Record<string, unknown>> = {
   keyExtractor: (item: T) => string;
   renderActions?: (item: T) => ReactNode;
   actionsLabel?: string;
+  actionsWidth?: number;
   isLoading?: boolean;
   isFetching?: boolean;
   emptyText?: string;
@@ -284,6 +285,7 @@ function DesktopRow<T extends Record<string, unknown>>({
   row,
   columns,
   renderActions,
+  actionsWidth,
   isEven,
   rowDivider,
   selectable,
@@ -295,6 +297,7 @@ function DesktopRow<T extends Record<string, unknown>>({
   row: T;
   columns: Column<T>[];
   renderActions?: (item: T) => ReactNode;
+  actionsWidth: number;
   isEven: boolean;
   rowDivider: RowDividerStyle;
   selectable: boolean;
@@ -359,7 +362,7 @@ function DesktopRow<T extends Record<string, unknown>>({
         );
       })}
       {renderActions && (
-        <View style={[tableStyles.actionsCell, { width: 120 }]}>{renderActions(row)}</View>
+        <View style={[tableStyles.actionsCell, { width: actionsWidth }]}>{renderActions(row)}</View>
       )}
     </Pressable>
   );
@@ -375,6 +378,7 @@ export function DataTable<T extends Record<string, unknown>>({
   keyExtractor,
   renderActions,
   actionsLabel = "Actions",
+  actionsWidth = 120,
   isLoading = false,
   isFetching = false,
   emptyText = "No data available.",
@@ -512,7 +516,7 @@ export function DataTable<T extends Record<string, unknown>>({
         </Pressable>
       ))}
       {renderActions && (
-        <View style={[{ width: 120 }, tableStyles.headerCell, { alignItems: alignStyle("right") }]}>
+        <View style={[{ width: actionsWidth }, tableStyles.headerCell, { alignItems: alignStyle("right") }]}>
           <Text style={[tableStyles.headerText, { color: c.textMuted }]}>{actionsLabel}</Text>
         </View>
       )}
@@ -590,6 +594,7 @@ export function DataTable<T extends Record<string, unknown>>({
               columns={columns}
               {...(renderActions ? { renderActions } : {})}
               {...(onRowPress ? { onRowPress } : {})}
+              actionsWidth={actionsWidth}
               isEven={index % 2 === 0}
               rowDivider={rowDivider}
               selectable={selectable}

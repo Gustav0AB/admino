@@ -3,7 +3,7 @@ import { AppState, Platform, type AppStateStatus } from "react-native";
 import * as SplashScreen from "expo-splash-screen";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/shared/store/authStore";
-import { useOrgStore } from "@/shared/store/orgStore";
+import { useClientStore } from "@/shared/store/clientStore";
 
 const FOREGROUND_SPLASH_DURATION_MS = 1500;
 const isWeb = Platform.OS === "web";
@@ -22,7 +22,7 @@ export function useAppLifecycle() {
 
   const queryClient = useQueryClient();
   const isAuthHydrated = useAuthStore((s) => s._hasHydrated);
-  const { isLoaded: isOrgLoaded, loadBranding } = useOrgStore();
+  const { isLoaded: isOrgLoaded, loadBranding } = useClientStore();
 
   useEffect(() => {
     loadBranding();
