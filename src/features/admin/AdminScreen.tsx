@@ -30,6 +30,7 @@ import type {
   ImpersonateResult,
 } from "@/shared/types/admin";
 import { SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
+import { ChangePasswordSection } from "@/shared/components/inputs/ChangePasswordSection";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -489,6 +490,7 @@ function AuditLogsTab() {
 const TABS = [
   { key: "orgs", label: "Organizaciones" },
   { key: "logs", label: "Audit Logs" },
+  { key: "security", label: "Security" },
 ];
 
 export function AdminScreen() {
@@ -514,7 +516,7 @@ export function AdminScreen() {
           />
 
           <View style={styles.tabContent}>
-            {activeTab === "orgs" ? <OrganizationsTab /> : <AuditLogsTab />}
+            {activeTab === "orgs" ? <OrganizationsTab /> : activeTab === "logs" ? <AuditLogsTab /> : <ChangePasswordSection />}
           </View>
         </View>
       </MainLayout>

@@ -29,12 +29,14 @@ import type {
   UpdateMemberInput,
 } from "@/shared/types/member";
 import { MemberFormModal } from "./MemberFormModal";
+import { ChangePasswordSection } from "@/shared/components/inputs/ChangePasswordSection";
 
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 const TABS = [
   { key: "branding", label: "Branding" },
   { key: "members", label: "Usuarios" },
+  { key: "security", label: "Seguridad" },
 ];
 
 const ROLE_LABEL: Record<string, string> = {
@@ -385,7 +387,11 @@ export function ClientSettingsScreen() {
             : []
         }
       >
-        {activeTab === "branding" ? renderBranding() : renderMembers()}
+        {activeTab === "branding" ? renderBranding() : activeTab === "members" ? renderMembers() : (
+          <View style={styles.tabContent}>
+            <ChangePasswordSection />
+          </View>
+        )}
       </FeatureShell>
 
       <MemberFormModal

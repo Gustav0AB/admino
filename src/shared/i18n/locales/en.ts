@@ -6,7 +6,7 @@ const en = {
   auth: {
     signIn: "Sign In",
     signOut: "Sign Out",
-    email: "Email",
+    email: "Account",
     password: "Password",
   },
   planning: {

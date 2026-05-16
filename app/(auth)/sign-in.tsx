@@ -95,11 +95,10 @@ export default function SignInScreen() {
                     color: c.text,
                   },
                 ]}
-                placeholder="you@example.com"
+                placeholder="account_name"
                 placeholderTextColor={c.textPlaceholder}
                 value={email}
                 onChangeText={setEmail}
-                keyboardType="email-address"
                 autoCapitalize="none"
                 onFocus={() => setFocusedField("email")}
                 onBlur={() => setFocusedField(null)}

@@ -5,11 +5,15 @@ const MOCK_BRANDING: ClientBranding = {
   primaryColor: "#2563EB",
   secondaryColor: "#7C3AED",
   backgroundColor: "#FFFFFF",
-  orgName: "Admino Sports",
+  orgName: "Admino",
   logoUrl: null,
 };
 
-const MOCK_FEATURES: ClientFeature[] = ["payments", "training_planning", "tracker"];
+const MOCK_FEATURES: ClientFeature[] = [
+  "payments",
+  "training_planning",
+  "tracker",
+];
 
 type ClientState = {
   branding: ClientBranding;
