@@ -73,7 +73,7 @@ type OrgRow = Omit<AdminOrg, "_count"> & {
 
 function toOrgRow(org: AdminOrg): OrgRow {
   const { _count, ...rest } = org;
-  return { ...rest, memberCount: _count.members, clientCount: _count.clients, _original: org };
+  return { ...rest, memberCount: _count?.clientMembers ?? 0, clientCount: _count?.members ?? 0, _original: org };
 }
 
 const ORG_COLUMNS: Column<OrgRow>[] = [
@@ -115,7 +115,7 @@ function OrganizationsTab() {
         await delay(800);
         return mockAdminOrgs;
       }
-      const res = await httpClient<{ data: AdminOrg[] }>("/api/v1/admin/organizations");
+      const res = await httpClient<{ data: AdminOrg[] }>("/admin/clients");
       return res.data;
     },
   });
@@ -139,13 +139,21 @@ function OrganizationsTab() {
           memberPermissions: input.memberPermissions,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-          _count: { members: 1, clients: 0 },
+          _count: { clientMembers: 1, members: 0 },
         };
         return newOrg;
       }
-      const res = await httpClient<{ data: AdminOrg }>("/api/v1/admin/organizations", {
+      const res = await httpClient<{ data: AdminOrg }>("/admin/clients", {
         method: "POST",
-        body: input,
+        body: {
+          name: input.name,
+          slug: input.accountName,
+          tipo: input.tipo,
+          ownerName: input.ownerName,
+          ownerPassword: input.password,
+          clientPermissions: input.clientPermissions,
+          memberPermissions: input.memberPermissions,
+        },
       });
       return res.data;
     },
@@ -163,7 +171,7 @@ function OrganizationsTab() {
         await delay(500);
         return null;
       }
-      const res = await httpClient<{ data: AdminOrg }>(`/api/v1/admin/organizations/${id}`, {
+      const res = await httpClient<{ data: AdminOrg }>(`/admin/clients/${id}`, {
         method: "PATCH",
         body: data,
       });
@@ -187,12 +195,12 @@ function OrganizationsTab() {
         return;
       }
       if (activate) {
-        await httpClient(`/api/v1/admin/organizations/${id}`, {
+        await httpClient(`/admin/clients/${id}`, {
           method: "PATCH",
           body: { isActive: true },
         });
       } else {
-        await httpClient(`/api/v1/admin/organizations/${id}`, { method: "DELETE" });
+        await httpClient(`/admin/clients/${id}`, { method: "DELETE" });
       }
     },
     onSuccess: (_result, { id, activate }) => {
@@ -212,14 +220,14 @@ function OrganizationsTab() {
           token: "mock-impersonation-token",
           user: {
             sub: input.targetId,
-            email: "mock@impersonated.com",
+            username: "mock_impersonated",
             role: "OWNER",
             orgId: "org-1",
             impersonatedBy: "mock-admin-1",
           },
         } as ImpersonateResult;
       }
-      const res = await httpClient<{ data: ImpersonateResult }>("/api/v1/admin/impersonate", {
+      const res = await httpClient<{ data: ImpersonateResult }>("/admin/impersonate", {
         method: "POST",
         body: input,
       });
@@ -231,14 +239,14 @@ function OrganizationsTab() {
         token: result.token,
         user: {
           id: result.user.sub,
-          email: result.user.email,
+          username: result.user.username,
           name: "Usuario impersonado",
           role: result.user.role as import("@/shared/types/auth").UserRole,
           orgId: result.user.orgId,
         },
         isAuthenticated: true,
       });
-      toast.info(`Sesión iniciada como ${result.user.email}. Cierra sesión para volver.`);
+      toast.info(`Sesión iniciada como ${result.user.username}. Cierra sesión para volver.`);
     },
     onError: () => toast.error("Error al impersonar el usuario"),
   });
@@ -253,7 +261,7 @@ function OrganizationsTab() {
         exportData = { ...mockAdminOrgDetail, id: org.id, name: org.name, slug: org.slug };
       } else {
         const res = await httpClient<{ data: unknown }>(
-          `/api/v1/admin/organizations/${org.id}/export`
+          `/admin/clients/${org.id}/export`
         );
         exportData = res.data;
       }
@@ -293,7 +301,7 @@ function OrganizationsTab() {
       return;
     }
     const res = await httpClient<{ data: AdminOrgDetail }>(
-      `/api/v1/admin/organizations/${org.id}`
+      `/admin/clients/${org.id}`
     );
     setSelectedOrgDetail(res.data);
   }
@@ -467,7 +475,7 @@ function AuditLogsTab() {
         await delay(800);
         return mockAuditLogs;
       }
-      const res = await httpClient<{ data: AuditLog[] }>("/api/v1/admin/audit-logs");
+      const res = await httpClient<{ data: AuditLog[] }>("/admin/audit-logs");
       return res.data;
     },
   });

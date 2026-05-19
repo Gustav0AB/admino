@@ -44,6 +44,7 @@ export function ClientFormModal({ open, onClose, org, onSubmit, isLoading }: Pro
   const [tipo, setTipo] = useState<ClientType>("gym");
   const [accountName, setAccountName] = useState("");
   const [accountNameTouched, setAccountNameTouched] = useState(false);
+  const [ownerName, setOwnerName] = useState("");
   const [password, setPassword] = useState("");
   const [clientPermissions, setClientPermissions] = useState<string[]>([]);
   const [memberPermissions, setMemberPermissions] = useState<string[]>([]);
@@ -55,6 +56,7 @@ export function ClientFormModal({ open, onClose, org, onSubmit, isLoading }: Pro
       setTipo((org?.tipo ?? "gym") as ClientType);
       setAccountName(org?.slug ?? "");
       setAccountNameTouched(false);
+      setOwnerName("");
       setPassword("");
       setClientPermissions(org?.clientPermissions ?? []);
       setMemberPermissions(org?.memberPermissions ?? []);
@@ -80,6 +82,7 @@ export function ClientFormModal({ open, onClose, org, onSubmit, isLoading }: Pro
     if (!name.trim()) errs.name = "El nombre es obligatorio";
     if (!accountName.trim()) errs.accountName = "El account name es obligatorio";
     else if (!/^[a-z0-9-]+$/.test(accountName)) errs.accountName = "Solo letras minúsculas, números y guiones";
+    if (!isEditing && !ownerName.trim()) errs.ownerName = "El nombre del propietario es obligatorio";
     if (!isEditing && password.length < 8) errs.password = "Mínimo 8 caracteres";
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -98,6 +101,7 @@ export function ClientFormModal({ open, onClose, org, onSubmit, isLoading }: Pro
         name: name.trim(),
         tipo,
         accountName: accountName.trim(),
+        ownerName: ownerName.trim(),
         password,
         clientPermissions,
         memberPermissions,
@@ -155,6 +159,17 @@ export function ClientFormModal({ open, onClose, org, onSubmit, isLoading }: Pro
             hint="Identificador único del cliente"
             {...fe("accountName")}
           />
+
+          {!isEditing && (
+            <CustomInput
+              label="Nombre del propietario"
+              value={ownerName}
+              onChangeText={setOwnerName}
+              placeholder="Ej. Juan Pérez"
+              autoCapitalize="words"
+              {...fe("ownerName")}
+            />
+          )}
 
           {!isEditing && (
             <CustomInput

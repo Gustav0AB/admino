@@ -12,7 +12,7 @@ export const mockAdminOrgs: AdminOrg[] = [
     memberPermissions: ["tracker"],
     createdAt: "2024-01-15T08:00:00Z",
     updatedAt: "2024-06-01T12:00:00Z",
-    _count: { members: 3, clients: 24 },
+    _count: { clientMembers: 3, members: 24 },
   },
   {
     id: "org-2",
@@ -25,7 +25,7 @@ export const mockAdminOrgs: AdminOrg[] = [
     memberPermissions: ["tracker"],
     createdAt: "2024-02-20T08:00:00Z",
     updatedAt: "2024-05-15T10:00:00Z",
-    _count: { members: 5, clients: 41 },
+    _count: { clientMembers: 5, members: 41 },
   },
   {
     id: "org-3",
@@ -38,7 +38,7 @@ export const mockAdminOrgs: AdminOrg[] = [
     memberPermissions: [],
     createdAt: "2023-11-10T08:00:00Z",
     updatedAt: "2024-04-30T09:00:00Z",
-    _count: { members: 2, clients: 8 },
+    _count: { clientMembers: 2, members: 8 },
   },
 ];
 
@@ -48,7 +48,7 @@ export const mockAdminOrgDetail: AdminOrgDetail = {
     {
       id: "mem-1",
       name: "Sam Coach",
-      email: "coach@fitlife.com",
+      username: "coach@fitlife.com",
       role: "OWNER",
       isActive: true,
       permissions: [],
@@ -56,7 +56,7 @@ export const mockAdminOrgDetail: AdminOrgDetail = {
     {
       id: "mem-2",
       name: "Ana Trainer",
-      email: "ana@fitlife.com",
+      username: "ana@fitlife.com",
       role: "ADMIN",
       isActive: true,
       permissions: ["log_access", "payments"],
@@ -64,7 +64,7 @@ export const mockAdminOrgDetail: AdminOrgDetail = {
     {
       id: "mem-3",
       name: "Luis Helper",
-      email: "luis@fitlife.com",
+      username: "luis@fitlife.com",
       role: "MEMBER",
       isActive: false,
       permissions: ["log_access"],

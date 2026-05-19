@@ -4,10 +4,11 @@ import { useAuth } from "@/shared/hooks/useAuth";
 import { ENV } from "@/shared/config/env";
 import type { UserRole } from "@/shared/types/auth";
 
-const ROLES: UserRole[] = ["SYSTEM_ADMIN", "CLIENT", "MEMBER"];
+const ROLES: UserRole[] = ["SYSTEM_ADMIN", "OWNER", "ADMIN", "MEMBER"];
 const ROLE_LABELS: Record<UserRole, string> = {
-  SYSTEM_ADMIN: "Admin",
-  CLIENT: "Client",
+  SYSTEM_ADMIN: "SysAdmin",
+  OWNER: "Owner",
+  ADMIN: "Admin",
   MEMBER: "Member",
 };
 

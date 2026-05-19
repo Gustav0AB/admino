@@ -71,7 +71,7 @@ export function ClientSettingsScreen() {
         await delay(600);
         return mockOrgMembers;
       }
-      const res = await httpClient<{ data: OrgMember[] }>("/api/v1/organizations/members");
+      const res = await httpClient<{ data: OrgMember[] }>("/clients/members");
       return res.data;
     },
   });
@@ -84,7 +84,7 @@ export function ClientSettingsScreen() {
         const newMember: OrgMember = {
           id: `mem-${Date.now()}`,
           name: data.name,
-          email: data.email,
+          username: data.username,
           role: data.role,
           isActive: true,
           permissions: data.permissions,
@@ -92,7 +92,7 @@ export function ClientSettingsScreen() {
         };
         return newMember;
       }
-      const res = await httpClient<{ data: OrgMember }>("/api/v1/organizations/members", {
+      const res = await httpClient<{ data: OrgMember }>("/clients/members", {
         method: "POST",
         body: JSON.stringify(data),
       });
@@ -110,7 +110,7 @@ export function ClientSettingsScreen() {
         await delay(500);
         return { id, ...data };
       }
-      const res = await httpClient<{ data: OrgMember }>(`/api/v1/organizations/members/${id}`, {
+      const res = await httpClient<{ data: OrgMember }>(`/clients/members/${id}`, {
         method: "PATCH",
         body: JSON.stringify(data),
       });
@@ -131,7 +131,7 @@ export function ClientSettingsScreen() {
         await delay(400);
         return { id, isActive };
       }
-      await httpClient(`/api/v1/organizations/members/${id}`, {
+      await httpClient(`/clients/members/${id}`, {
         method: "PATCH",
         body: JSON.stringify({ isActive }),
       });
@@ -329,7 +329,7 @@ export function ClientSettingsScreen() {
                   />
                 </View>
                 <Text style={[{ color: c.textMuted, fontSize: TYPOGRAPHY.fontSize.xs }]} numberOfLines={1}>
-                  {member.email}
+                  {member.username}
                 </Text>
                 <Text style={[{ color: c.primary, fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "500" }]}>
                   {ROLE_LABEL[member.role] ?? member.role}

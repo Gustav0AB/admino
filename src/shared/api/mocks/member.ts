@@ -10,7 +10,7 @@ export const mockOrgMembers: OrgMember[] = [
   {
     id: "mem-1",
     name: "Sam Coach",
-    email: "coach@fitlife.com",
+    username: "sam_coach",
     role: "OWNER",
     isActive: true,
     permissions: [],
@@ -19,7 +19,7 @@ export const mockOrgMembers: OrgMember[] = [
   {
     id: "mem-2",
     name: "Ana Trainer",
-    email: "ana@fitlife.com",
+    username: "ana_trainer",
     role: "ADMIN",
     isActive: true,
     permissions: ["log_access", "payments"],
@@ -28,7 +28,7 @@ export const mockOrgMembers: OrgMember[] = [
   {
     id: "mem-3",
     name: "Luis Helper",
-    email: "luis@fitlife.com",
+    username: "luis_helper",
     role: "MEMBER",
     isActive: false,
     permissions: ["log_access"],

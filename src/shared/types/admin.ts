@@ -21,13 +21,13 @@ export type AdminOrg = {
   memberPermissions: string[];
   createdAt: string;
   updatedAt: string;
-  _count: { members: number; clients: number };
+  _count: { clientMembers: number; members: number };
 };
 
 export type AdminOrgMember = {
   id: string;
   name: string;
-  email: string;
+  username: string;
   role: "OWNER" | "ADMIN" | "MEMBER";
   isActive: boolean;
   permissions: string[];
@@ -53,6 +53,7 @@ export type CreateOrgInput = {
   name: string;
   tipo: ClientType;
   accountName: string;
+  ownerName: string;
   password: string;
   clientPermissions: string[];
   memberPermissions: string[];
@@ -73,7 +74,7 @@ export type ImpersonateResult = {
   token: string;
   user: {
     sub: string;
-    email: string;
+    username: string;
     role: string;
     orgId: string | null;
     impersonatedBy: string;

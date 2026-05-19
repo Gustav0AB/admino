@@ -1,15 +1,15 @@
-export type UserRole = "SYSTEM_ADMIN" | "CLIENT" | "MEMBER";
+export type UserRole = "SYSTEM_ADMIN" | "OWNER" | "ADMIN" | "MEMBER";
 
 export type User = {
   id: string;
   name: string;
-  email: string;
+  username: string;
   role: UserRole;
   orgId: string | null;
 };
 
 export type LoginCredentials = {
-  email: string;
+  username: string;
   password: string;
 };
 

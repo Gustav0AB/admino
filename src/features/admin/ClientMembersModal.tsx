@@ -95,7 +95,7 @@ export function ClientMembersModal({
                   style={[styles.memberEmail, { color: c.textMuted, fontSize: TYPOGRAPHY.fontSize.xs }]}
                   numberOfLines={1}
                 >
-                  {member.email}
+                  {member.username}
                 </Text>
                 <Text style={[styles.memberRole, { color: c.primary, fontSize: TYPOGRAPHY.fontSize.xs }]}>
                   {ROLE_LABEL[member.role] ?? member.role}

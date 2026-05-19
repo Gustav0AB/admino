@@ -22,11 +22,12 @@ export function useAppLifecycle() {
 
   const queryClient = useQueryClient();
   const isAuthHydrated = useAuthStore((s) => s._hasHydrated);
-  const { isLoaded: isOrgLoaded, loadBranding } = useClientStore();
+  const { isLoaded: isOrgLoaded, loadConfig } = useClientStore();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   useEffect(() => {
-    loadBranding();
-  }, []);
+    loadConfig();
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (!isAuthHydrated || !isOrgLoaded) return;

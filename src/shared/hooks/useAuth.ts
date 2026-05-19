@@ -27,10 +27,10 @@ export function useAuth() {
     hasRole,
     hasAnyRole,
     isAdmin: user?.role === "SYSTEM_ADMIN",
-    isCoach: user?.role === "CLIENT",
+    isCoach: user?.role === "OWNER" || user?.role === "ADMIN",
     isClient: user?.role === "MEMBER",
     isOrganization:
-      user?.role === "CLIENT" || user?.role === "SYSTEM_ADMIN",
+      user?.role === "OWNER" || user?.role === "ADMIN" || user?.role === "SYSTEM_ADMIN",
   } as const;
 }
 

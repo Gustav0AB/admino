@@ -13,21 +13,28 @@ export const MOCK_USERS: Record<UserRole, User> = {
   SYSTEM_ADMIN: {
     id: "mock-admin-1",
     name: "Alex Admin",
-    email: "admin@admino.app",
+    username: "admin@admino.app",
     role: "SYSTEM_ADMIN",
     orgId: null,
   },
-  CLIENT: {
+  OWNER: {
     id: "mock-org-1",
     name: "Sam Coach",
-    email: "coach@admino.app",
-    role: "CLIENT",
+    username: "coach@admino.app",
+    role: "OWNER",
+    orgId: "org-demo-1",
+  },
+  ADMIN: {
+    id: "mock-org-2",
+    name: "Pat Manager",
+    username: "manager@admino.app",
+    role: "ADMIN",
     orgId: "org-demo-1",
   },
   MEMBER: {
     id: "mock-client-1",
     name: "John Athlete",
-    email: "athlete@admino.app",
+    username: "athlete@admino.app",
     role: "MEMBER",
     orgId: "org-demo-1",
   },
@@ -35,7 +42,8 @@ export const MOCK_USERS: Record<UserRole, User> = {
 
 export const MOCK_TOKENS: Record<UserRole, string> = {
   SYSTEM_ADMIN: "mock-token-admin",
-  CLIENT: "mock-token-client",
+  OWNER: "mock-token-owner",
+  ADMIN: "mock-token-admin-member",
   MEMBER: "mock-token-member",
 };
 
@@ -101,6 +109,11 @@ export const useAuthStore = create<AuthState>()(
         isAuthenticated: state.isAuthenticated,
       }),
       onRehydrateStorage: () => (state) => {
+        if (state?.user && !state.user.role) {
+          state.user = null;
+          state.token = null;
+          state.isAuthenticated = false;
+        }
         state?.setHasHydrated(true);
       },
     }

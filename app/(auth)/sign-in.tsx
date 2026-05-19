@@ -27,7 +27,7 @@ export default function SignInScreen() {
   const { login } = useAuth();
   const c = useColors();
   const { primaryColor, orgName } = useClientTheme();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +37,7 @@ export default function SignInScreen() {
     setError(null);
     setLoading(true);
     try {
-      await login({ email, password });
+      await login({ username, password });
       router.replace("/(drawer)");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Login failed");
@@ -95,10 +95,10 @@ export default function SignInScreen() {
                     color: c.text,
                   },
                 ]}
-                placeholder="account_name"
+                placeholder="your_username"
                 placeholderTextColor={c.textPlaceholder}
-                value={email}
-                onChangeText={setEmail}
+                value={username}
+                onChangeText={setUsername}
                 autoCapitalize="none"
                 onFocus={() => setFocusedField("email")}
                 onBlur={() => setFocusedField(null)}
@@ -212,11 +212,10 @@ export default function SignInScreen() {
                   color: c.text,
                 },
               ]}
-              placeholder="you@example.com"
+              placeholder="your_username"
               placeholderTextColor={c.textPlaceholder}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
+              value={username}
+              onChangeText={setUsername}
               autoCapitalize="none"
               onFocus={() => setFocusedField("email")}
               onBlur={() => setFocusedField(null)}

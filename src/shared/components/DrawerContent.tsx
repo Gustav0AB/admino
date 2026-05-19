@@ -62,7 +62,7 @@ export function DrawerContent(props: DrawerContentComponentProps) {
       label: "Dashboard",
       href: "/(drawer)",
       icon: (color) => <MaterialIcons name="dashboard" size={20} color={color} />,
-      roles: ["SYSTEM_ADMIN", "CLIENT"],
+      roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN", "MEMBER"],
     },
     {
       label: "Admin",
@@ -74,49 +74,49 @@ export function DrawerContent(props: DrawerContentComponentProps) {
       label: "Payments",
       href: "/(drawer)/payments",
       icon: (color) => <MaterialIcons name="attach-money" size={20} color={color} />,
-      roles: ["SYSTEM_ADMIN", "CLIENT"],
+      roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN"],
       feature: "payments",
     },
     {
       label: "Training Planning",
       href: "/(drawer)/training-planning",
       icon: (color) => <MaterialCommunityIcons name="weight-lifter" size={20} color={color} />,
-      roles: ["SYSTEM_ADMIN", "CLIENT"],
+      roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN"],
       feature: "training_planning",
     },
     {
       label: "Tracker",
       href: "/(drawer)/tracker",
       icon: (color) => <FontAwesome5 name="running" size={20} color={color} />,
-      roles: ["SYSTEM_ADMIN", "CLIENT", "MEMBER"],
+      roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN", "MEMBER"],
       feature: "tracker",
     },
     {
       label: "Patients",
       href: "/(drawer)/patients",
       icon: (color) => <MaterialIcons name="food-bank" size={20} color={color} />,
-      roles: ["SYSTEM_ADMIN", "CLIENT"],
+      roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN"],
       feature: "patients",
     },
     {
       label: "Log Access",
       href: "/(drawer)/log-access",
       icon: (color) => <AntDesign name="qrcode" size={20} color={color} />,
-      roles: ["SYSTEM_ADMIN", "CLIENT"],
+      roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN"],
       feature: "log_access",
     },
     {
       label: "Nutritionist Planning",
       href: "/(drawer)/nutritionist-planning",
       icon: (color) => <FontAwesome6 name="weight-scale" size={20} color={color} />,
-      roles: ["SYSTEM_ADMIN", "CLIENT"],
+      roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN"],
       feature: "nutritionist_planning",
     },
     {
       label: "Configuración",
       href: "/(drawer)/client-settings",
       icon: (color) => <Feather name="sliders" size={20} color={color} />,
-      roles: ["CLIENT"],
+      roles: ["OWNER", "ADMIN"],
     },
   ];
 
@@ -180,7 +180,7 @@ export function DrawerContent(props: DrawerContentComponentProps) {
             {user?.name ?? ""}
           </Text>
           <Text style={[styles.userRole, { color: c.textPlaceholder }]}>
-            {user?.role.replace("_", " ")}
+            {user?.role?.replace("_", " ")}
           </Text>
         </View>
       )}

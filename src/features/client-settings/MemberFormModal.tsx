@@ -18,14 +18,14 @@ export function MemberFormModal({ open, onClose, member, onSubmit, isLoading }: 
   const isEditing = !!member;
 
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [username, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (open) {
       setName(member?.name ?? "");
-      setEmail(member?.email ?? "");
+      setEmail(member?.username ?? "");
       setPassword("");
       setErrors({});
     }
@@ -38,7 +38,7 @@ export function MemberFormModal({ open, onClose, member, onSubmit, isLoading }: 
     const errs: Record<string, string> = {};
     if (!name.trim()) errs.name = "El nombre es obligatorio";
     if (!isEditing) {
-      if (!/^[a-zA-Z0-9_.-]+$/.test(email.trim())) errs.email = "Solo letras, números, puntos, guiones y _";
+      if (!/^[a-zA-Z0-9_.-]+$/.test(username.trim())) errs.username = "Solo letras, números, puntos, guiones y _";
       if (password.length < 8) errs.password = "Mínimo 8 caracteres";
     }
     setErrors(errs);
@@ -50,7 +50,7 @@ export function MemberFormModal({ open, onClose, member, onSubmit, isLoading }: 
     if (isEditing) {
       onSubmit({ name: name.trim() } as UpdateMemberInput);
     } else {
-      onSubmit({ name: name.trim(), email: email.trim(), password, role: "MEMBER", permissions: [] } as CreateMemberInput);
+      onSubmit({ name: name.trim(), username: username.trim(), password, role: "MEMBER", permissions: [] } as CreateMemberInput);
     }
   }
 
@@ -85,11 +85,11 @@ export function MemberFormModal({ open, onClose, member, onSubmit, isLoading }: 
           <>
             <CustomInput
               label="Account name"
-              value={email}
+              value={username}
               onChangeText={setEmail}
               placeholder="ej. john_doe"
               autoCapitalize="none"
-              {...fe("email")}
+              {...fe("username")}
             />
             <CustomInput
               label="Contraseña"
