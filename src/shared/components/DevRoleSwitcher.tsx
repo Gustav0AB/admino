@@ -1,20 +1,22 @@
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useColors } from "@/shared/hooks/useColors";
 import { useAuth } from "@/shared/hooks/useAuth";
+import { ENV } from "@/shared/config/env";
 import type { UserRole } from "@/shared/types/auth";
 
-const ROLES: UserRole[] = ["SYSTEM_ADMIN", "ORGANIZATION", "CLIENT"];
+const ROLES: UserRole[] = ["SYSTEM_ADMIN", "OWNER", "ADMIN", "MEMBER"];
 const ROLE_LABELS: Record<UserRole, string> = {
-  SYSTEM_ADMIN: "Admin",
-  ORGANIZATION: "Org",
-  CLIENT: "Client",
+  SYSTEM_ADMIN: "SysAdmin",
+  OWNER: "Owner",
+  ADMIN: "Admin",
+  MEMBER: "Member",
 };
 
 export function DevRoleSwitcher() {
   const c = useColors();
   const { user, switchRole } = useAuth();
 
-  if (!__DEV__) return null;
+  if (!__DEV__ || !ENV.USE_MOCK) return null;
 
   return (
     <View style={[styles.container, { borderTopColor: c.border }]}>

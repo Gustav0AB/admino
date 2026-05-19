@@ -30,6 +30,15 @@ export type Plan = {
   athleteCount: number;
 };
 
+export type CheckIn = {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  orgId: string;
+  checkedInAt: string;
+};
+
 export class ApiError extends Error {
   constructor(
     public readonly status: number,

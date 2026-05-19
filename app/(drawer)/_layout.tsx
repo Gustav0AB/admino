@@ -63,8 +63,38 @@ export default function DrawerLayout() {
         options={{ title: "Gastos", drawerLabel: "Gastos" }}
       />
       <Drawer.Screen
-        name="layout-example"
-        options={{ title: "Layout Example", drawerLabel: "Layout Example" }}
+        name="payments"
+        options={{ title: "Payments", drawerLabel: "Payments" }}
+      />
+      <Drawer.Screen
+        name="training-planning"
+        options={{
+          title: "Training Planning",
+          drawerLabel: "Training Planning",
+        }}
+      />
+      <Drawer.Screen
+        name="tracker"
+        options={{ title: "Tracker", drawerLabel: "Tracker" }}
+      />
+      <Drawer.Screen
+        name="patients"
+        options={{ title: "Patients", drawerLabel: "Patients" }}
+      />
+      <Drawer.Screen
+        name="log-access"
+        options={{ title: "Log Access", drawerLabel: "Log Access" }}
+      />
+      <Drawer.Screen
+        name="nutritionist-planning"
+        options={{
+          title: "Nutritionist Planning",
+          drawerLabel: "Nutritionist Planning",
+        }}
+      />
+      <Drawer.Screen
+        name="client-settings"
+        options={{ title: "Configuración", drawerLabel: "Configuración" }}
       />
     </Drawer>
   );

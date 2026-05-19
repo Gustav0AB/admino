@@ -1,46 +1,53 @@
 import { useEffect, useRef, useState } from "react";
-import { AppState, type AppStateStatus } from "react-native";
+import { AppState, Platform, type AppStateStatus } from "react-native";
 import * as SplashScreen from "expo-splash-screen";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/shared/store/authStore";
-import { useOrgStore } from "@/shared/store/orgStore";
+import { useClientStore } from "@/shared/store/clientStore";
 
 const FOREGROUND_SPLASH_DURATION_MS = 1500;
+const isWeb = Platform.OS === "web";
 
 export function useAppLifecycle() {
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(!isWeb);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   const splashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Safety fallback: dismiss splash after max 4s regardless of store hydration
   useEffect(() => {
+    if (isWeb) return;
     const fallback = setTimeout(() => setShowSplash(false), 4000);
     return () => clearTimeout(fallback);
   }, []);
 
   const queryClient = useQueryClient();
   const isAuthHydrated = useAuthStore((s) => s._hasHydrated);
-  const { isLoaded: isOrgLoaded, loadBranding } = useOrgStore();
+  const { isLoaded: isOrgLoaded, loadConfig } = useClientStore();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   useEffect(() => {
-    loadBranding();
-  }, []);
+    loadConfig();
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (!isAuthHydrated || !isOrgLoaded) return;
 
-    SplashScreen.hideAsync();
+    if (!isWeb) {
+      SplashScreen.hideAsync();
 
-    splashTimerRef.current = setTimeout(() => {
-      setShowSplash(false);
-    }, FOREGROUND_SPLASH_DURATION_MS);
+      splashTimerRef.current = setTimeout(() => {
+        setShowSplash(false);
+      }, FOREGROUND_SPLASH_DURATION_MS);
 
-    return () => {
-      if (splashTimerRef.current) clearTimeout(splashTimerRef.current);
-    };
+      return () => {
+        if (splashTimerRef.current) clearTimeout(splashTimerRef.current);
+      };
+    }
   }, [isAuthHydrated, isOrgLoaded]);
 
   useEffect(() => {
+    if (isWeb) return;
+
     const subscription = AppState.addEventListener(
       "change",
       (nextState: AppStateStatus) => {
