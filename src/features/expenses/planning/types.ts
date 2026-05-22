@@ -17,6 +17,20 @@ export type VacationDay = {
   estimatedCost: number;
 };
 
+export type VacationTask = {
+  id: string;
+  task: string;
+  done: boolean;
+};
+
+export type VacationPayment = {
+  id: string;
+  description: string;
+  amount: number;
+  perPerson: boolean;
+  done: boolean;
+};
+
 export type VacationPlan = {
   id: string;
   name: string;
@@ -27,6 +41,9 @@ export type VacationPlan = {
   notes: string;
   status: VacationStatus;
   days: VacationDay[];
+  persons: string[];
+  tasks: VacationTask[];
+  payments: VacationPayment[];
 };
 
 export type ScheduledExpense = {

@@ -7,8 +7,15 @@ import type { AuthSession, LoginCredentials, User, UserRole } from "@/shared/typ
 
 function getExpensesStore() {
   try {
-    // Lazy import to avoid circular dep at module init time
     return require("@/features/expenses/store").useExpensesStore;
+  } catch {
+    return null;
+  }
+}
+
+function getPlanningStore() {
+  try {
+    return require("@/features/expenses/planning/store").usePlanningStore;
   } catch {
     return null;
   }
@@ -89,10 +96,14 @@ export const useAuthStore = create<AuthState>()(
         });
         const expensesStore = getExpensesStore();
         if (expensesStore) await expensesStore.getState().rehydrate();
+        const planningStore = getPlanningStore();
+        if (planningStore) await planningStore.getState().rehydrate();
       },
       logout: () => {
         const expensesStore = getExpensesStore();
         if (expensesStore) expensesStore.getState().clearAll();
+        const planningStore = getPlanningStore();
+        if (planningStore) planningStore.getState().clearAll();
         set({
           user: null,
           token: null,

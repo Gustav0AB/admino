@@ -21,11 +21,13 @@ import {
   TYPOGRAPHY,
 } from "@/shared/theme/tokens";
 import { useExpensesStore } from "../store";
+import { usePlanningStore } from "@/features/expenses/planning/store";
 import { getFilteredExpenses, MESES_LIST, formatMXN } from "../helpers";
 import { ExpenseRow } from "./ExpenseRow";
 import { ExpenseModal } from "./ExpenseModal";
 import { UpcomingSection } from "./UpcomingSection";
 import type { Estado, Expense } from "../types";
+import type { ScheduledExpense } from "@/features/expenses/planning/types";
 
 const ESTADO_OPTIONS: { label: string; value: Estado }[] = [
   { label: "Pagado", value: "pagado" },
@@ -68,6 +70,16 @@ export function ExpenseList() {
     addExpenseFromModal,
     updateExpenseFromModal,
   } = useExpensesStore();
+
+  const { scheduledExpenses } = usePlanningStore();
+
+  const activeScheduled = useMemo(
+    () =>
+      scheduledExpenses
+        .filter((e) => e.status !== "cancelled")
+        .sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate)),
+    [scheduledExpenses],
+  );
 
   const filtered = useMemo(
     () =>
@@ -568,6 +580,7 @@ export function ExpenseList() {
               ))}
             </View>
           ))}
+          <ScheduledSection expenses={activeScheduled} />
         </TableShell>
       </View>
     );
@@ -583,6 +596,7 @@ export function ExpenseList() {
         {filtered.map((e) => (
           <ExpenseRow key={e.id} {...makeRowProps(e)} />
         ))}
+        <ScheduledSection expenses={activeScheduled} />
       </TableShell>
     </View>
   );
@@ -663,4 +677,165 @@ const localStyles = StyleSheet.create({
     gap: SPACING.sm,
     justifyContent: "flex-end",
   },
+  scheduledGroupHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  scheduledRow: {
+    flexDirection: "row",
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    alignItems: "center",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    opacity: 0.85,
+  },
+  scheduledCell: { justifyContent: "center" },
+  scheduledText: { fontSize: TYPOGRAPHY.fontSize.xs },
+  scheduledBold: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "600" },
+  statusDot: { width: 8, height: 8, borderRadius: 4 },
 });
+
+const MONTH_NAMES = [
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+];
+
+const STATUS_DOT_COLOR: Record<string, string> = {
+  pending: "#f59e0b",
+  done: "#22c55e",
+  cancelled: "#9ca3af",
+};
+
+const CATEGORY_ICON: Record<string, string> = {
+  mechanic: "🔧",
+  insurance: "🛡",
+  medical: "🏥",
+  utilities: "💡",
+  subscription: "📅",
+  other: "📌",
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  pending: "Pendiente",
+  done: "Completado",
+  cancelled: "Cancelado",
+};
+
+function scheduledDateToMes(date: string): string {
+  const m = parseInt(date.split("-")[1] ?? "1", 10) - 1;
+  return MONTH_NAMES[m] ?? "—";
+}
+
+function scheduledDateToDay(date: string): string {
+  return date.split("-")[2]?.replace(/^0/, "") ?? "—";
+}
+
+function ScheduledSection({ expenses }: { expenses: ScheduledExpense[] }) {
+  const c = useColors();
+  if (expenses.length === 0) return null;
+
+  const knownTotal = expenses
+    .filter((e) => e.amountKnown && e.status !== "cancelled")
+    .reduce((s, e) => s + e.amount, 0);
+
+  return (
+    <View>
+      <View
+        style={[
+          localStyles.scheduledGroupHeader,
+          { backgroundColor: c.backgroundStrong, borderBottomColor: c.border, borderTopColor: c.border },
+        ]}
+      >
+        <Text style={[localStyles.groupTitle, { color: c.textMuted }]}>📅 Programados</Text>
+        <Text style={[localStyles.groupTotal, { color: c.textMuted }]}>
+          {knownTotal > 0 ? `$${formatMXN(knownTotal)}` : `${expenses.length} eventos`}
+        </Text>
+      </View>
+
+      {expenses.map((e) => {
+        const dotColor = STATUS_DOT_COLOR[e.status] ?? "#9ca3af";
+        const statusLabel = STATUS_LABEL[e.status] ?? e.status;
+        return (
+          <View
+            key={e.id}
+            style={[
+              localStyles.scheduledRow,
+              { borderBottomColor: c.border },
+              e.status === "cancelled" && { opacity: 0.45 },
+            ]}
+          >
+            {/* checkbox-width placeholder */}
+            <View style={{ width: 40, alignItems: "center" }}>
+              <Text style={{ fontSize: 14 }}>{CATEGORY_ICON[e.category] ?? "📌"}</Text>
+            </View>
+
+            {/* Mes */}
+            <View style={[localStyles.scheduledCell, { flex: 1 }]}>
+              <Text style={[localStyles.scheduledText, { color: c.textMuted }]} numberOfLines={1}>
+                {scheduledDateToMes(e.scheduledDate)}
+              </Text>
+            </View>
+
+            {/* Descripción */}
+            <View style={[localStyles.scheduledCell, { flex: 2 }]}>
+              <Text style={[localStyles.scheduledBold, { color: c.text }]} numberOfLines={1}>
+                {e.title}
+              </Text>
+              {e.notes ? (
+                <Text style={[localStyles.scheduledText, { color: c.textMuted }]} numberOfLines={1}>
+                  {e.notes}
+                </Text>
+              ) : null}
+            </View>
+
+            {/* Monto */}
+            <View style={[localStyles.scheduledCell, { flex: 1 }]}>
+              <Text style={[localStyles.scheduledText, { color: c.text, textAlign: "right" }]}>
+                {e.amountKnown ? `$${formatMXN(e.amount)}` : "Por definir"}
+              </Text>
+            </View>
+
+            {/* Método placeholder */}
+            <View style={[localStyles.scheduledCell, { flex: 1 }]} />
+
+            {/* Frec. */}
+            <View style={[localStyles.scheduledCell, { flex: 1 }]}>
+              <Text style={[localStyles.scheduledText, { color: c.textMuted }]}>Único</Text>
+            </View>
+
+            {/* Fecha */}
+            <View style={[localStyles.scheduledCell, { width: 70 }]}>
+              <Text style={[localStyles.scheduledText, { color: c.text }]}>
+                {scheduledDateToDay(e.scheduledDate)}
+              </Text>
+              {e.time ? (
+                <Text style={[localStyles.scheduledText, { color: c.textMuted }]}>{e.time}</Text>
+              ) : null}
+            </View>
+
+            {/* Nota */}
+            <View style={[localStyles.scheduledCell, { flex: 1 }]}>
+              <Text style={[localStyles.scheduledText, { color: c.textMuted }]} numberOfLines={1}>
+                {e.scheduledDate}
+              </Text>
+            </View>
+
+            {/* Estado */}
+            <View style={[localStyles.scheduledCell, { flex: 1, flexDirection: "row", alignItems: "center", gap: 4 }]}>
+              <View style={[localStyles.statusDot, { backgroundColor: dotColor }]} />
+              <Text style={[localStyles.scheduledText, { color: c.textMuted }]}>{statusLabel}</Text>
+            </View>
+
+            {/* Actions placeholder */}
+            <View style={{ width: 56 }} />
+          </View>
+        );
+      })}
+    </View>
+  );
+}

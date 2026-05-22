@@ -56,4 +56,5 @@ export type AppData = {
   savedAt?: string;
   creditCards?: CreditCard[];
   initialCreditDebt?: number;
+  planningData?: import("./planning/types").PlanningData;
 };

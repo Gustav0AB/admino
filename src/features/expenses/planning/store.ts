@@ -7,11 +7,8 @@ import { useAuthStore } from "@/shared/store/authStore";
 import type {
   PlanningData,
   ScheduledExpense,
-  ScheduledExpenseCategory,
-  ScheduledExpenseStatus,
   VacationDay,
   VacationPlan,
-  VacationStatus,
 } from "./types";
 
 function getUserId() {
@@ -56,6 +53,8 @@ type PlanningState = {
   // Persist helpers
   getPlanningData: () => PlanningData;
   loadPlanningData: (data: PlanningData) => void;
+  clearAll: () => void;
+  rehydrate: () => Promise<void>;
 };
 
 export const usePlanningStore = create<PlanningState>()(
@@ -66,7 +65,17 @@ export const usePlanningStore = create<PlanningState>()(
 
       addVacation: (plan) =>
         set((s) => ({
-          vacations: [...s.vacations, { ...plan, id: randomUUID(), days: [] }],
+          vacations: [
+            ...s.vacations,
+            {
+              ...plan,
+              id: randomUUID(),
+              days: [],
+              persons: plan.persons ?? [],
+              tasks: plan.tasks ?? [],
+              payments: plan.payments ?? [],
+            },
+          ],
         })),
 
       updateVacation: (id, patch) =>
@@ -138,6 +147,12 @@ export const usePlanningStore = create<PlanningState>()(
           vacations: data.vacations ?? [],
           scheduledExpenses: data.scheduledExpenses ?? [],
         }),
+
+      clearAll: () => set({ vacations: [], scheduledExpenses: [] }),
+
+      rehydrate: async () => {
+        await usePlanningStore.persist.rehydrate();
+      },
     }),
     {
       name: "planning",

@@ -11,8 +11,9 @@ import { CustomButton } from "@/shared/components/inputs/CustomButton";
 import { CustomModal } from "@/shared/components/feedback/CustomModal";
 import { useColors } from "@/shared/hooks/useColors";
 import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
+import { randomUUID } from "expo-crypto";
 import { usePlanningStore } from "../store";
-import type { VacationDay, VacationPlan, VacationStatus } from "../types";
+import type { VacationDay, VacationPayment, VacationPlan, VacationStatus, VacationTask } from "../types";
 
 const STATUS_LABELS: Record<VacationStatus, string> = {
   planning: "Planeando",
@@ -38,6 +39,14 @@ type PlanFormState = {
   budget: string;
   notes: string;
   status: VacationStatus;
+  persons: string[];
+  tasks: VacationTask[];
+  payments: VacationPayment[];
+  newPerson: string;
+  newTask: string;
+  newPaymentDescription: string;
+  newPaymentAmount: string;
+  newPaymentPerPerson: boolean;
 };
 
 type DayFormState = {
@@ -54,9 +63,23 @@ const blankPlanForm = (): PlanFormState => ({
   budget: "",
   notes: "",
   status: "planning",
+  persons: [],
+  tasks: [],
+  payments: [],
+  newPerson: "",
+  newTask: "",
+  newPaymentDescription: "",
+  newPaymentAmount: "",
+  newPaymentPerPerson: false,
 });
 
 const blankDayForm = (): DayFormState => ({ date: "", activity: "", estimatedCost: "" });
+
+function calcPaymentTotal(payments: VacationPayment[], personCount: number): number {
+  return payments
+    .filter((p) => !p.done)
+    .reduce((sum, p) => sum + p.amount * (p.perPerson ? Math.max(personCount, 1) : 1), 0);
+}
 
 export function VacationPlanner() {
   const c = useColors();
@@ -77,10 +100,9 @@ export function VacationPlanner() {
     .filter((v) => v.status !== "cancelled")
     .reduce((sum, v) => sum + v.budget, 0);
 
-  const totalDaysCost = vacations
+  const totalPaymentsPending = vacations
     .filter((v) => v.status !== "cancelled")
-    .flatMap((v) => v.days)
-    .reduce((sum, d) => sum + d.estimatedCost, 0);
+    .reduce((sum, v) => sum + calcPaymentTotal(v.payments ?? [], v.persons?.length ?? 0), 0);
 
   // ── Plan modal ───────────────────────────────────────────────────────────────
   const openAddPlan = () => {
@@ -99,6 +121,14 @@ export function VacationPlanner() {
       budget: plan.budget > 0 ? String(plan.budget) : "",
       notes: plan.notes,
       status: plan.status,
+      persons: plan.persons ?? [],
+      tasks: plan.tasks ?? [],
+      payments: plan.payments ?? [],
+      newPerson: "",
+      newTask: "",
+      newPaymentDescription: "",
+      newPaymentAmount: "",
+      newPaymentPerPerson: false,
     });
     setPlanModalOpen(true);
   };
@@ -113,6 +143,9 @@ export function VacationPlanner() {
       budget: parseFloat(planForm.budget) || 0,
       notes: planForm.notes.trim(),
       status: planForm.status,
+      persons: planForm.persons,
+      tasks: planForm.tasks,
+      payments: planForm.payments,
     };
     if (editingPlanId) {
       updateVacation(editingPlanId, payload);
@@ -131,6 +164,62 @@ export function VacationPlanner() {
 
   const setPlanField = <K extends keyof PlanFormState>(key: K, value: PlanFormState[K]) =>
     setPlanForm((f) => ({ ...f, [key]: value }));
+
+  // ── Persons helpers ──────────────────────────────────────────────────────────
+  const handleAddPerson = () => {
+    const p = planForm.newPerson.trim();
+    if (!p || planForm.persons.includes(p)) return;
+    setPlanForm((f) => ({ ...f, persons: [...f.persons, p], newPerson: "" }));
+  };
+
+  const handleRemovePerson = (person: string) =>
+    setPlanForm((f) => ({ ...f, persons: f.persons.filter((p) => p !== person) }));
+
+  // ── Tasks helpers ────────────────────────────────────────────────────────────
+  const handleAddTask = () => {
+    const task = planForm.newTask.trim();
+    if (!task) return;
+    setPlanForm((f) => ({
+      ...f,
+      tasks: [...f.tasks, { id: randomUUID(), task, done: false }],
+      newTask: "",
+    }));
+  };
+
+  const handleToggleTask = (id: string) =>
+    setPlanForm((f) => ({
+      ...f,
+      tasks: f.tasks.map((t) => (t.id === id ? { ...t, done: !t.done } : t)),
+    }));
+
+  const handleRemoveTask = (id: string) =>
+    setPlanForm((f) => ({ ...f, tasks: f.tasks.filter((t) => t.id !== id) }));
+
+  // ── Payments helpers ─────────────────────────────────────────────────────────
+  const handleAddPayment = () => {
+    const desc = planForm.newPaymentDescription.trim();
+    if (!desc) return;
+    const amount = parseFloat(planForm.newPaymentAmount) || 0;
+    setPlanForm((f) => ({
+      ...f,
+      payments: [
+        ...f.payments,
+        { id: randomUUID(), description: desc, amount, perPerson: f.newPaymentPerPerson, done: false },
+      ],
+      newPaymentDescription: "",
+      newPaymentAmount: "",
+      newPaymentPerPerson: false,
+    }));
+  };
+
+  const handleTogglePayment = (id: string) =>
+    setPlanForm((f) => ({
+      ...f,
+      payments: f.payments.map((p) => (p.id === id ? { ...p, done: !p.done } : p)),
+    }));
+
+  const handleRemovePayment = (id: string) =>
+    setPlanForm((f) => ({ ...f, payments: f.payments.filter((p) => p.id !== id) }));
 
   // ── Day modal ────────────────────────────────────────────────────────────────
   const openAddDay = (vacationId: string) => {
@@ -160,32 +249,38 @@ export function VacationPlanner() {
     return diff > 0 ? diff : null;
   };
 
+  // ── Form payment total (for modal preview) ───────────────────────────────────
+  const formPaymentTotal = calcPaymentTotal(planForm.payments, planForm.persons.length);
+  const formPaymentDoneTotal = planForm.payments
+    .filter((p) => p.done)
+    .reduce((sum, p) => sum + p.amount * (p.perPerson ? Math.max(planForm.persons.length, 1) : 1), 0);
+
   return (
     <View style={styles.root}>
       {/* Summary */}
       <View style={[styles.summaryBar, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
         <View style={styles.summaryItem}>
           <Text style={[styles.summaryValue, { color: c.text }]}>{vacations.length}</Text>
-          <Text style={[styles.summaryLabel, { color: c.textMuted }]}>Viajes planeados</Text>
+          <Text style={[styles.summaryLabel, { color: c.textMuted }]}>Viajes</Text>
         </View>
         <View style={[styles.summaryDivider, { backgroundColor: c.border }]} />
         <View style={styles.summaryItem}>
           <Text style={[styles.summaryValue, { color: c.text }]}>
             ${totalBudget.toLocaleString("es-MX", { minimumFractionDigits: 0 })}
           </Text>
-          <Text style={[styles.summaryLabel, { color: c.textMuted }]}>Presupuesto total</Text>
+          <Text style={[styles.summaryLabel, { color: c.textMuted }]}>Presupuesto</Text>
         </View>
         <View style={[styles.summaryDivider, { backgroundColor: c.border }]} />
         <View style={styles.summaryItem}>
           <Text style={[styles.summaryValue, { color: c.text }]}>
-            ${totalDaysCost.toLocaleString("es-MX", { minimumFractionDigits: 0 })}
+            ${totalPaymentsPending.toLocaleString("es-MX", { minimumFractionDigits: 0 })}
           </Text>
-          <Text style={[styles.summaryLabel, { color: c.textMuted }]}>Costo días</Text>
+          <Text style={[styles.summaryLabel, { color: c.textMuted }]}>Por pagar</Text>
         </View>
       </View>
 
       {/* Add */}
-      <View style={styles.addRow}>
+      <View style={styles.addViajeRow}>
         <CustomButton variant="primary" size="sm" onPress={openAddPlan}>
           + Agregar viaje
         </CustomButton>
@@ -197,7 +292,7 @@ export function VacationPlanner() {
           <Text style={styles.emptyIcon}>✈️</Text>
           <Text style={[styles.emptyText, { color: c.textMuted }]}>No hay viajes planeados</Text>
           <Text style={[styles.emptyHint, { color: c.textPlaceholder }]}>
-            Agrega tu próximas vacaciones y lleva el control de días y gastos
+            Agrega tus próximas vacaciones y lleva el control de tareas y pagos
           </Text>
         </View>
       ) : (
@@ -206,7 +301,13 @@ export function VacationPlanner() {
             {vacations.map((plan) => {
               const isExpanded = expandedId === plan.id;
               const days = calcDays(plan.startDate, plan.endDate);
-              const daysCost = plan.days.reduce((s, d) => s + d.estimatedCost, 0);
+              const personCount = (plan.persons ?? []).length;
+              const pendingPaymentTotal = calcPaymentTotal(plan.payments ?? [], personCount);
+              const donePaymentTotal = (plan.payments ?? [])
+                .filter((p) => p.done)
+                .reduce((sum, p) => sum + p.amount * (p.perPerson ? Math.max(personCount, 1) : 1), 0);
+              const tasksDone = (plan.tasks ?? []).filter((t) => t.done).length;
+              const tasksTotal = (plan.tasks ?? []).length;
 
               return (
                 <View
@@ -236,18 +337,22 @@ export function VacationPlanner() {
                         </View>
                       </View>
                       <Text style={[styles.cardSub, { color: c.textMuted }]}>
-                        {plan.destination
-                          ? `📍 ${plan.destination}`
-                          : "Sin destino"}{" "}
+                        {plan.destination ? `📍 ${plan.destination}` : "Sin destino"}
                         {plan.startDate && plan.endDate
-                          ? `· ${plan.startDate} → ${plan.endDate}${days ? ` (${days} días)` : ""}`
+                          ? ` · ${plan.startDate} → ${plan.endDate}${days ? ` (${days} días)` : ""}`
                           : ""}
+                        {personCount > 0 ? ` · 👥 ${personCount}` : ""}
                       </Text>
                     </View>
                     <View style={styles.cardHeaderRight}>
-                      {plan.budget > 0 && (
+                      {pendingPaymentTotal > 0 && (
                         <Text style={[styles.budgetText, { color: c.text }]}>
-                          ${plan.budget.toLocaleString("es-MX", { minimumFractionDigits: 0 })}
+                          ${pendingPaymentTotal.toLocaleString("es-MX", { minimumFractionDigits: 0 })}
+                        </Text>
+                      )}
+                      {tasksTotal > 0 && (
+                        <Text style={[styles.progressText, { color: c.textMuted }]}>
+                          ✅ {tasksDone}/{tasksTotal}
                         </Text>
                       )}
                       <Text style={[styles.chevron, { color: c.textMuted }]}>
@@ -263,10 +368,109 @@ export function VacationPlanner() {
                         <Text style={[styles.notesText, { color: c.textMuted }]}>{plan.notes}</Text>
                       ) : null}
 
+                      {/* Persons */}
+                      {personCount > 0 && (
+                        <View>
+                          <Text style={[styles.sectionLabel, { color: c.text, marginBottom: 4 }]}>
+                            👥 Personas ({personCount})
+                          </Text>
+                          <View style={styles.tagRow}>
+                            {plan.persons.map((p) => (
+                              <View key={p} style={[styles.tag, { backgroundColor: c.background, borderColor: c.border }]}>
+                                <Text style={[styles.tagText, { color: c.text }]}>{p}</Text>
+                              </View>
+                            ))}
+                          </View>
+                        </View>
+                      )}
+
+                      {/* Tasks checklist */}
+                      {tasksTotal > 0 && (
+                        <View>
+                          <View style={styles.sectionHeaderRow}>
+                            <Text style={[styles.sectionLabel, { color: c.text }]}>📋 Por hacer</Text>
+                            <Text style={[styles.sectionMeta, { color: c.textMuted }]}>
+                              {tasksDone}/{tasksTotal}
+                            </Text>
+                          </View>
+                          {plan.tasks.map((t) => (
+                            <TouchableOpacity
+                              key={t.id}
+                              style={[styles.checkRow, { borderBottomColor: c.border }]}
+                              onPress={() => {
+                                const updated = plan.tasks.map((x) =>
+                                  x.id === t.id ? { ...x, done: !x.done } : x
+                                );
+                                updateVacation(plan.id, { tasks: updated });
+                              }}
+                              activeOpacity={0.75}
+                            >
+                              <View style={[styles.checkBox, { borderColor: t.done ? c.primary : c.border, backgroundColor: t.done ? c.primary : "transparent" }]}>
+                                {t.done && <Text style={{ color: c.background, fontSize: 10 }}>✓</Text>}
+                              </View>
+                              <Text style={[styles.checkText, { color: t.done ? c.textMuted : c.text, textDecorationLine: t.done ? "line-through" : "none" }]}>
+                                {t.task}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      )}
+
+                      {/* Payments checklist */}
+                      {(plan.payments ?? []).length > 0 && (
+                        <View>
+                          <View style={styles.sectionHeaderRow}>
+                            <Text style={[styles.sectionLabel, { color: c.text }]}>💳 Por pagar</Text>
+                            <Text style={[styles.sectionMeta, { color: c.textMuted }]}>
+                              Pagado: ${donePaymentTotal.toLocaleString("es-MX")}
+                            </Text>
+                          </View>
+                          {plan.payments.map((p) => {
+                            const itemTotal = p.amount * (p.perPerson ? Math.max(personCount, 1) : 1);
+                            return (
+                              <TouchableOpacity
+                                key={p.id}
+                                style={[styles.paymentRow, { borderBottomColor: c.border }, p.done && styles.rowDone]}
+                                onPress={() => {
+                                  const updated = plan.payments.map((x) =>
+                                    x.id === p.id ? { ...x, done: !x.done } : x
+                                  );
+                                  updateVacation(plan.id, { payments: updated });
+                                }}
+                                activeOpacity={0.75}
+                              >
+                                <View style={[styles.checkBox, { borderColor: p.done ? "#16A34A" : c.border, backgroundColor: p.done ? "#16A34A" : "transparent" }]}>
+                                  {p.done && <Text style={{ color: "#fff", fontSize: 10 }}>✓</Text>}
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                  <Text style={[styles.checkText, { color: p.done ? c.textMuted : c.text, textDecorationLine: p.done ? "line-through" : "none" }]}>
+                                    {p.description}
+                                  </Text>
+                                  {p.perPerson && personCount > 0 && (
+                                    <Text style={[styles.paymentSub, { color: c.textMuted }]}>
+                                      ${p.amount.toLocaleString("es-MX")} × {personCount} personas
+                                    </Text>
+                                  )}
+                                </View>
+                                <Text style={[styles.paymentAmount, { color: p.done ? c.textMuted : c.text }]}>
+                                  ${itemTotal.toLocaleString("es-MX")}
+                                </Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                          <View style={[styles.paymentTotal, { borderTopColor: c.border }]}>
+                            <Text style={[styles.paymentTotalLabel, { color: c.textMuted }]}>Por pagar</Text>
+                            <Text style={[styles.paymentTotalAmount, { color: c.text }]}>
+                              ${pendingPaymentTotal.toLocaleString("es-MX")}
+                            </Text>
+                          </View>
+                        </View>
+                      )}
+
                       {/* Days */}
-                      <View style={styles.daysHeader}>
+                      <View style={styles.sectionHeaderRow}>
                         <Text style={[styles.sectionLabel, { color: c.text }]}>
-                          Actividades del viaje
+                          🗓 Actividades del viaje
                         </Text>
                         <CustomButton variant="outline" size="sm" onPress={() => openAddDay(plan.id)}>
                           + Día
@@ -280,14 +484,9 @@ export function VacationPlanner() {
                       ) : (
                         <View style={styles.daysList}>
                           {plan.days.map((day) => (
-                            <View
-                              key={day.id}
-                              style={[styles.dayRow, { borderBottomColor: c.border }]}
-                            >
+                            <View key={day.id} style={[styles.dayRow, { borderBottomColor: c.border }]}>
                               <View style={{ flex: 1, gap: 2 }}>
-                                <Text style={[styles.dayActivity, { color: c.text }]}>
-                                  {day.activity}
-                                </Text>
+                                <Text style={[styles.dayActivity, { color: c.text }]}>{day.activity}</Text>
                                 {day.date ? (
                                   <Text style={[styles.daySub, { color: c.textMuted }]}>{day.date}</Text>
                                 ) : null}
@@ -307,11 +506,6 @@ export function VacationPlanner() {
                               </View>
                             </View>
                           ))}
-                          {plan.days.length > 0 && (
-                            <Text style={[styles.daysTotalText, { color: c.textMuted }]}>
-                              Total actividades: ${daysCost.toLocaleString("es-MX", { minimumFractionDigits: 0 })}
-                            </Text>
-                          )}
                         </View>
                       )}
 
@@ -330,7 +524,7 @@ export function VacationPlanner() {
         </ScrollView>
       )}
 
-      {/* Plan Modal */}
+      {/* ── Plan Modal ──────────────────────────────────────────────────────────── */}
       <CustomModal
         open={planModalOpen}
         onOpenChange={setPlanModalOpen}
@@ -356,6 +550,7 @@ export function VacationPlanner() {
           </>
         }
       >
+        {/* Basic info */}
         <FormField label="Nombre del viaje *">
           <StyledInput
             value={planForm.name}
@@ -416,6 +611,148 @@ export function VacationPlanner() {
           </View>
         </FormField>
 
+        {/* Personas */}
+        <FormField label="👥 Personas">
+          <View style={styles.inlineAddRow}>
+            <StyledInput
+              value={planForm.newPerson}
+              onChangeText={(v) => setPlanField("newPerson", v)}
+              placeholder="Nombre"
+              style={{ flex: 1 }}
+              onSubmitEditing={handleAddPerson}
+              returnKeyType="done"
+            />
+            <CustomButton variant="outline" size="sm" onPress={handleAddPerson}>
+              + Agregar
+            </CustomButton>
+          </View>
+          {planForm.persons.length > 0 && (
+            <View style={styles.tagRow}>
+              {planForm.persons.map((p) => (
+                <View key={p} style={[styles.tag, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
+                  <Text style={[styles.tagText, { color: c.text }]}>{p}</Text>
+                  <TouchableOpacity onPress={() => handleRemovePerson(p)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                    <Text style={{ color: c.textPlaceholder, fontSize: 12 }}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+        </FormField>
+
+        {/* Tasks checklist */}
+        <FormField label="📋 Por hacer">
+          <View style={styles.inlineAddRow}>
+            <StyledInput
+              value={planForm.newTask}
+              onChangeText={(v) => setPlanField("newTask", v)}
+              placeholder="Ej: Reservar hotel, Pasaportes..."
+              style={{ flex: 1 }}
+              onSubmitEditing={handleAddTask}
+              returnKeyType="done"
+            />
+            <CustomButton variant="outline" size="sm" onPress={handleAddTask}>
+              + Agregar
+            </CustomButton>
+          </View>
+          {planForm.tasks.length > 0 && (
+            <View style={styles.checkList}>
+              {planForm.tasks.map((t) => (
+                <View key={t.id} style={[styles.checkRow, { borderBottomColor: c.border }]}>
+                  <TouchableOpacity onPress={() => handleToggleTask(t.id)} style={styles.checkRowLeft}>
+                    <View style={[styles.checkBox, { borderColor: t.done ? c.primary : c.border, backgroundColor: t.done ? c.primary : "transparent" }]}>
+                      {t.done && <Text style={{ color: c.background, fontSize: 10 }}>✓</Text>}
+                    </View>
+                    <Text style={[styles.checkText, { color: t.done ? c.textMuted : c.text, textDecorationLine: t.done ? "line-through" : "none" }]}>
+                      {t.task}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleRemoveTask(t.id)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                    <Text style={{ color: c.textPlaceholder, fontSize: 12 }}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+        </FormField>
+
+        {/* Payments checklist */}
+        <FormField label="💳 Por pagar">
+          <View style={styles.paymentAddBlock}>
+            <View style={styles.inlineAddRow}>
+              <StyledInput
+                value={planForm.newPaymentDescription}
+                onChangeText={(v) => setPlanField("newPaymentDescription", v)}
+                placeholder="Ej: Boletos de avión"
+                style={{ flex: 2 }}
+              />
+              <StyledInput
+                value={planForm.newPaymentAmount}
+                onChangeText={(v) => setPlanField("newPaymentAmount", v)}
+                placeholder="$0"
+                keyboardType="decimal-pad"
+                style={{ flex: 1 }}
+              />
+            </View>
+            <View style={styles.inlineAddRow}>
+              <TouchableOpacity
+                style={[styles.perPersonChip, { borderColor: planForm.newPaymentPerPerson ? c.primary : c.border, backgroundColor: planForm.newPaymentPerPerson ? c.primary + "22" : "transparent" }]}
+                onPress={() => setPlanField("newPaymentPerPerson", !planForm.newPaymentPerPerson)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.perPersonText, { color: planForm.newPaymentPerPerson ? c.primary : c.textMuted }]}>
+                  👤 Por persona {planForm.newPaymentPerPerson && planForm.persons.length > 0 ? `(×${planForm.persons.length})` : ""}
+                </Text>
+              </TouchableOpacity>
+              <CustomButton variant="outline" size="sm" onPress={handleAddPayment}>
+                + Agregar
+              </CustomButton>
+            </View>
+          </View>
+
+          {planForm.payments.length > 0 && (
+            <View style={styles.checkList}>
+              {planForm.payments.map((p) => {
+                const perCount = planForm.persons.length;
+                const itemTotal = p.amount * (p.perPerson ? Math.max(perCount, 1) : 1);
+                return (
+                  <View key={p.id} style={[styles.paymentRow, { borderBottomColor: c.border }]}>
+                    <TouchableOpacity onPress={() => handleTogglePayment(p.id)} style={styles.checkRowLeft}>
+                      <View style={[styles.checkBox, { borderColor: p.done ? "#16A34A" : c.border, backgroundColor: p.done ? "#16A34A" : "transparent" }]}>
+                        {p.done && <Text style={{ color: "#fff", fontSize: 10 }}>✓</Text>}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.checkText, { color: p.done ? c.textMuted : c.text, textDecorationLine: p.done ? "line-through" : "none" }]}>
+                          {p.description}
+                        </Text>
+                        {p.perPerson && perCount > 0 && (
+                          <Text style={[styles.paymentSub, { color: c.textMuted }]}>
+                            ${p.amount.toLocaleString("es-MX")} × {perCount}
+                          </Text>
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                    <Text style={[styles.paymentAmount, { color: p.done ? c.textMuted : c.text }]}>
+                      ${itemTotal.toLocaleString("es-MX")}
+                    </Text>
+                    <TouchableOpacity onPress={() => handleRemovePayment(p.id)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                      <Text style={{ color: c.textPlaceholder, fontSize: 12 }}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+              <View style={[styles.paymentTotal, { borderTopColor: c.border }]}>
+                <Text style={[styles.paymentTotalLabel, { color: c.textMuted }]}>
+                  Pagado: ${formPaymentDoneTotal.toLocaleString("es-MX")} · Pendiente:
+                </Text>
+                <Text style={[styles.paymentTotalAmount, { color: c.text }]}>
+                  ${formPaymentTotal.toLocaleString("es-MX")}
+                </Text>
+              </View>
+            </View>
+          )}
+        </FormField>
+
         <FormField label="Notas">
           <StyledInput
             value={planForm.notes}
@@ -426,7 +763,7 @@ export function VacationPlanner() {
         </FormField>
       </CustomModal>
 
-      {/* Day Modal */}
+      {/* ── Day Modal ───────────────────────────────────────────────────────────── */}
       <CustomModal
         open={dayModalOpen}
         onOpenChange={setDayModalOpen}
@@ -450,7 +787,6 @@ export function VacationPlanner() {
             placeholder="Ej: Visita a la playa, Cena en restaurante"
           />
         </FormField>
-
         <FormField label="Fecha">
           <StyledInput
             value={dayForm.date}
@@ -458,7 +794,6 @@ export function VacationPlanner() {
             placeholder="YYYY-MM-DD"
           />
         </FormField>
-
         <FormField label="Costo estimado ($)">
           <StyledInput
             value={dayForm.estimatedCost}
@@ -486,7 +821,7 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
   );
 }
 
-function StyledInput(props: React.ComponentProps<typeof TextInput>) {
+function StyledInput(props: React.ComponentProps<typeof TextInput> & { style?: object }) {
   const c = useColors();
   return (
     <TextInput
@@ -494,6 +829,7 @@ function StyledInput(props: React.ComponentProps<typeof TextInput>) {
         styles.input,
         { color: c.text, borderColor: c.border, backgroundColor: c.backgroundStrong },
         props.multiline && { minHeight: 72, textAlignVertical: "top" },
+        props.style,
       ]}
       placeholderTextColor={c.textPlaceholder}
       {...props}
@@ -525,6 +861,8 @@ function ToggleChip({
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   root: { flex: 1, padding: SPACING.md, gap: SPACING.md },
 
@@ -539,7 +877,7 @@ const styles = StyleSheet.create({
   summaryLabel: { fontSize: TYPOGRAPHY.fontSize.xs, textAlign: "center" },
   summaryDivider: { width: 1 },
 
-  addRow: { alignItems: "flex-start" },
+  addViajeRow: { alignItems: "flex-start" },
 
   empty: { flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 60, gap: 8 },
   emptyIcon: { fontSize: 40 },
@@ -548,23 +886,15 @@ const styles = StyleSheet.create({
 
   list: { gap: SPACING.sm, paddingBottom: SPACING.lg },
 
-  card: {
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    overflow: "hidden",
-  },
-  cardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: SPACING.md,
-    gap: SPACING.sm,
-  },
+  card: { borderRadius: BORDER_RADIUS.md, borderWidth: 1, overflow: "hidden" },
+  cardHeader: { flexDirection: "row", alignItems: "center", padding: SPACING.md, gap: SPACING.sm },
   cardHeaderLeft: { flex: 1, gap: 4 },
   cardTitleRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   cardTitle: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "700", flex: 1 },
   cardSub: { fontSize: TYPOGRAPHY.fontSize.xs },
   cardHeaderRight: { alignItems: "flex-end", gap: 4 },
   budgetText: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "700" },
+  progressText: { fontSize: TYPOGRAPHY.fontSize.xs },
   chevron: { fontSize: 10 },
 
   statusBadge: {
@@ -575,30 +905,79 @@ const styles = StyleSheet.create({
   },
   statusBadgeText: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "600" },
 
-  cardBody: {
-    padding: SPACING.md,
-    borderTopWidth: 1,
-    gap: SPACING.sm,
-  },
+  cardBody: { padding: SPACING.md, borderTopWidth: 1, gap: SPACING.sm },
   notesText: { fontSize: TYPOGRAPHY.fontSize.sm, fontStyle: "italic" },
 
-  daysHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
   sectionLabel: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "600" },
-  noDays: { fontSize: TYPOGRAPHY.fontSize.xs, fontStyle: "italic" },
+  sectionMeta: { fontSize: TYPOGRAPHY.fontSize.xs },
 
-  daysList: { gap: 0 },
-  dayRow: {
+  tagRow: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.xs },
+  tag: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1,
+  },
+  tagText: { fontSize: TYPOGRAPHY.fontSize.xs },
+
+  checkList: { gap: 0 },
+  checkRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: SPACING.xs,
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: SPACING.sm,
   },
+  checkRowLeft: { flex: 1, flexDirection: "row", alignItems: "center", gap: SPACING.sm },
+  checkBox: {
+    width: 18,
+    height: 18,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkText: { flex: 1, fontSize: TYPOGRAPHY.fontSize.sm },
+  rowDone: { opacity: 0.6 },
+
+  paymentRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: SPACING.xs,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: SPACING.sm,
+  },
+  paymentSub: { fontSize: TYPOGRAPHY.fontSize.xs },
+  paymentAmount: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "600", minWidth: 60, textAlign: "right" },
+  paymentTotal: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingTop: SPACING.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    marginTop: SPACING.xs,
+  },
+  paymentTotalLabel: { fontSize: TYPOGRAPHY.fontSize.xs },
+  paymentTotalAmount: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "700" },
+
+  noDays: { fontSize: TYPOGRAPHY.fontSize.xs, fontStyle: "italic" },
+  daysList: { gap: 0 },
+  dayRow: { flexDirection: "row", alignItems: "center", paddingVertical: SPACING.xs, borderBottomWidth: 1 },
   dayActivity: { fontSize: TYPOGRAPHY.fontSize.sm },
   daySub: { fontSize: TYPOGRAPHY.fontSize.xs },
   dayRight: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
   dayCost: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "600" },
-  daysTotalText: { fontSize: TYPOGRAPHY.fontSize.xs, textAlign: "right", marginTop: 4 },
 
+  // Form
   input: {
     borderWidth: 1,
     borderRadius: BORDER_RADIUS.sm,
@@ -606,7 +985,6 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.xs,
     fontSize: TYPOGRAPHY.fontSize.sm,
   },
-
   twoCol: { flexDirection: "row", gap: SPACING.sm },
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.xs },
   chip: {
@@ -616,6 +994,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   chipText: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "500" },
+
+  inlineAddRow: { flexDirection: "row", gap: SPACING.xs, alignItems: "center" },
+  paymentAddBlock: { gap: SPACING.xs },
+  perPersonChip: {
+    flex: 1,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 8,
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1,
+    alignItems: "center",
+  },
+  perPersonText: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "500" },
 
   modalFooterRight: { flexDirection: "row", gap: SPACING.sm },
 });

@@ -6,6 +6,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import { useAuthStore } from "@/shared/store/authStore";
 import { currentMonthName, buildAppData } from "./helpers";
 import type { AppData, CreditCard, Estado, Expense, Frecuencia, MetodoPago } from "./types";
+import { usePlanningStore } from "./planning/store";
 
 function getUserId() {
   return useAuthStore.getState().user?.id ?? "anonymous";
@@ -250,13 +251,15 @@ export const useExpensesStore = create<ExpensesState>()(
 
       getAppData: () => {
         const s = get();
+        const planningData = usePlanningStore.getState().getPlanningData();
         return buildAppData(
           s.expenses,
           s.initialCreditDebt,
           s.creditDebtMes,
           s.creditCutDay,
           s.creditPayDay,
-          s.creditCards
+          s.creditCards,
+          planningData
         );
       },
 
@@ -284,6 +287,9 @@ export const useExpensesStore = create<ExpensesState>()(
           creditPayDay: data.creditPayDay ?? 0,
           creditCards,
         });
+        if (data.planningData) {
+          usePlanningStore.getState().loadPlanningData(data.planningData);
+        }
       },
 
       clearAll: () =>

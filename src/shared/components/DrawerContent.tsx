@@ -59,12 +59,6 @@ export function DrawerContent(props: DrawerContentComponentProps) {
 
   const NAV_ITEMS: NavItem[] = [
     {
-      label: "Finanzas",
-      href: "/(drawer)/expenses",
-      icon: (color) => <Feather name="settings" size={20} color={color} />,
-      roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN", "MEMBER"],
-    },
-    {
       label: "Dashboard",
       href: "/(drawer)",
       icon: (color) => (
@@ -86,6 +80,14 @@ export function DrawerContent(props: DrawerContentComponentProps) {
       ),
       roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN"],
       feature: "payments",
+    },
+    {
+      label: "Finanzas",
+      href: "/(drawer)/expenses",
+      icon: (color) => (
+        <MaterialIcons name="attach-money" size={20} color={color} />
+      ),
+      roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN", "MEMBER"],
     },
     {
       label: "Training Planning",

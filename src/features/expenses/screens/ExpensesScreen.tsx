@@ -13,6 +13,7 @@ import { CustomButton } from "@/shared/components/inputs/CustomButton";
 import { useColors } from "@/shared/hooks/useColors";
 import { useToast } from "@/shared/components/feedback/Toast";
 import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
+import { useAuthStore } from "@/shared/store/authStore";
 import { expensesApi } from "../api";
 import { parseCsv, sheetsUrlToCsvUrl } from "../csvParser";
 import { ExpenseFilters } from "../components/ExpenseFilters";
@@ -38,6 +39,8 @@ export function ExpensesScreen() {
 
   const [activeTab, setActiveTab] = useState("gastos");
 
+  const userId = useAuthStore((s) => s.user?.id);
+
   const {
     expenses,
     initialCreditDebt,
@@ -52,21 +55,30 @@ export function ExpensesScreen() {
   const [sheetsModalOpen, setSheetsModalOpen] = useState(false);
   const [sheetsUrl, setSheetsUrl] = useState("");
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Prevents auto-save from firing immediately after loading from API
+  const skipNextAutoSave = useRef(false);
 
-  // Load from API on mount
+  // Load from API on mount and whenever the logged-in user changes
   useEffect(() => {
+    if (!userId) return;
     expensesApi
       .get()
       .then((data) => {
-        if (data && "expenses" in data && Array.isArray((data as AppData).expenses)) {
-          loadAppData(data as AppData);
+        const appData = data as AppData;
+        if (appData && Array.isArray(appData.expenses)) {
+          skipNextAutoSave.current = true;
+          loadAppData(appData);
         }
       })
-      .catch(() => {});
-  }, []);
+      .catch((err) => console.error("[ExpensesScreen] Fetch error:", err));
+  }, [userId]);
 
   // Auto-save debounced
   useEffect(() => {
+    if (skipNextAutoSave.current) {
+      skipNextAutoSave.current = false;
+      return;
+    }
     if (expenses.length === 0) return;
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(() => {
