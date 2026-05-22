@@ -1,14 +1,208 @@
 /* eslint-disable */
-import * as Router from 'expo-router';
+import * as Router from "expo-router";
 
-export * from 'expo-router';
+export * from "expo-router";
 
-declare module 'expo-router' {
+declare module "expo-router" {
   export namespace ExpoRouter {
     export interface __routes<T extends string | object = string> {
-      hrefInputParams: { pathname: Router.RelativePathString, params?: Router.UnknownInputParams } | { pathname: Router.ExternalPathString, params?: Router.UnknownInputParams } | { pathname: `/`; params?: Router.UnknownInputParams; } | { pathname: `/_sitemap`; params?: Router.UnknownInputParams; } | { pathname: `${'/(auth)'}/sign-in` | `/sign-in`; params?: Router.UnknownInputParams; } | { pathname: `${'/(drawer)'}/admin` | `/admin`; params?: Router.UnknownInputParams; } | { pathname: `${'/(drawer)'}` | `/`; params?: Router.UnknownInputParams; } | { pathname: `${'/(drawer)'}/log-access` | `/log-access`; params?: Router.UnknownInputParams; } | { pathname: `${'/(drawer)'}/nutritionist-planning` | `/nutritionist-planning`; params?: Router.UnknownInputParams; } | { pathname: `${'/(drawer)'}/patients` | `/patients`; params?: Router.UnknownInputParams; } | { pathname: `${'/(drawer)'}/payments` | `/payments`; params?: Router.UnknownInputParams; } | { pathname: `${'/(drawer)'}/planning` | `/planning`; params?: Router.UnknownInputParams; } | { pathname: `${'/(drawer)'}/tracker` | `/tracker`; params?: Router.UnknownInputParams; } | { pathname: `${'/(drawer)'}/training-planning` | `/training-planning`; params?: Router.UnknownInputParams; } | { pathname: `${'/(drawer)'}/checkin` | `/checkin`; params?: Router.UnknownInputParams; } | { pathname: `${'/(drawer)'}/events` | `/events`; params?: Router.UnknownInputParams; } | { pathname: `${'/(drawer)'}/analytics` | `/analytics`; params?: Router.UnknownInputParams; } | { pathname: `${'/(drawer)'}/injuries` | `/injuries`; params?: Router.UnknownInputParams; };
-      hrefOutputParams: { pathname: Router.RelativePathString, params?: Router.UnknownOutputParams } | { pathname: Router.ExternalPathString, params?: Router.UnknownOutputParams } | { pathname: `/`; params?: Router.UnknownOutputParams; } | { pathname: `/_sitemap`; params?: Router.UnknownOutputParams; } | { pathname: `${'/(auth)'}/sign-in` | `/sign-in`; params?: Router.UnknownOutputParams; } | { pathname: `${'/(drawer)'}/admin` | `/admin`; params?: Router.UnknownOutputParams; } | { pathname: `${'/(drawer)'}` | `/`; params?: Router.UnknownOutputParams; } | { pathname: `${'/(drawer)'}/log-access` | `/log-access`; params?: Router.UnknownOutputParams; } | { pathname: `${'/(drawer)'}/nutritionist-planning` | `/nutritionist-planning`; params?: Router.UnknownOutputParams; } | { pathname: `${'/(drawer)'}/patients` | `/patients`; params?: Router.UnknownOutputParams; } | { pathname: `${'/(drawer)'}/payments` | `/payments`; params?: Router.UnknownOutputParams; } | { pathname: `${'/(drawer)'}/planning` | `/planning`; params?: Router.UnknownOutputParams; } | { pathname: `${'/(drawer)'}/tracker` | `/tracker`; params?: Router.UnknownOutputParams; } | { pathname: `${'/(drawer)'}/training-planning` | `/training-planning`; params?: Router.UnknownOutputParams; } | { pathname: `${'/(drawer)'}/checkin` | `/checkin`; params?: Router.UnknownOutputParams; } | { pathname: `${'/(drawer)'}/events` | `/events`; params?: Router.UnknownOutputParams; } | { pathname: `${'/(drawer)'}/analytics` | `/analytics`; params?: Router.UnknownOutputParams; } | { pathname: `${'/(drawer)'}/injuries` | `/injuries`; params?: Router.UnknownOutputParams; };
-      href: Router.RelativePathString | Router.ExternalPathString | `/${`?${string}` | `#${string}` | ''}` | `/_sitemap${`?${string}` | `#${string}` | ''}` | `${'/(auth)'}/sign-in${`?${string}` | `#${string}` | ''}` | `/sign-in${`?${string}` | `#${string}` | ''}` | `${'/(drawer)'}/admin${`?${string}` | `#${string}` | ''}` | `/admin${`?${string}` | `#${string}` | ''}` | `${'/(drawer)'}${`?${string}` | `#${string}` | ''}` | `/${`?${string}` | `#${string}` | ''}` | `${'/(drawer)'}/log-access${`?${string}` | `#${string}` | ''}` | `/log-access${`?${string}` | `#${string}` | ''}` | `${'/(drawer)'}/nutritionist-planning${`?${string}` | `#${string}` | ''}` | `/nutritionist-planning${`?${string}` | `#${string}` | ''}` | `${'/(drawer)'}/patients${`?${string}` | `#${string}` | ''}` | `/patients${`?${string}` | `#${string}` | ''}` | `${'/(drawer)'}/payments${`?${string}` | `#${string}` | ''}` | `/payments${`?${string}` | `#${string}` | ''}` | `${'/(drawer)'}/planning${`?${string}` | `#${string}` | ''}` | `/planning${`?${string}` | `#${string}` | ''}` | `${'/(drawer)'}/tracker${`?${string}` | `#${string}` | ''}` | `/tracker${`?${string}` | `#${string}` | ''}` | `${'/(drawer)'}/training-planning${`?${string}` | `#${string}` | ''}` | `/training-planning${`?${string}` | `#${string}` | ''}` | `${'/(drawer)'}/checkin${`?${string}` | `#${string}` | ''}` | `/checkin${`?${string}` | `#${string}` | ''}` | `${'/(drawer)'}/events${`?${string}` | `#${string}` | ''}` | `/events${`?${string}` | `#${string}` | ''}` | `${'/(drawer)'}/analytics${`?${string}` | `#${string}` | ''}` | `/analytics${`?${string}` | `#${string}` | ''}` | `${'/(drawer)'}/injuries${`?${string}` | `#${string}` | ''}` | `/injuries${`?${string}` | `#${string}` | ''}` | { pathname: Router.RelativePathString, params?: Router.UnknownInputParams } | { pathname: Router.ExternalPathString, params?: Router.UnknownInputParams } | { pathname: `/`; params?: Router.UnknownInputParams; } | { pathname: `/_sitemap`; params?: Router.UnknownInputParams; } | { pathname: `${'/(auth)'}/sign-in` | `/sign-in`; params?: Router.UnknownInputParams; } | { pathname: `${'/(drawer)'}/admin` | `/admin`; params?: Router.UnknownInputParams; } | { pathname: `${'/(drawer)'}` | `/`; params?: Router.UnknownInputParams; } | { pathname: `${'/(drawer)'}/log-access` | `/log-access`; params?: Router.UnknownInputParams; } | { pathname: `${'/(drawer)'}/nutritionist-planning` | `/nutritionist-planning`; params?: Router.UnknownInputParams; } | { pathname: `${'/(drawer)'}/patients` | `/patients`; params?: Router.UnknownInputParams; } | { pathname: `${'/(drawer)'}/payments` | `/payments`; params?: Router.UnknownInputParams; } | { pathname: `${'/(drawer)'}/planning` | `/planning`; params?: Router.UnknownInputParams; } | { pathname: `${'/(drawer)'}/tracker` | `/tracker`; params?: Router.UnknownInputParams; } | { pathname: `${'/(drawer)'}/training-planning` | `/training-planning`; params?: Router.UnknownInputParams; } | { pathname: `${'/(drawer)'}/checkin` | `/checkin`; params?: Router.UnknownInputParams; } | { pathname: `${'/(drawer)'}/events` | `/events`; params?: Router.UnknownInputParams; } | { pathname: `${'/(drawer)'}/analytics` | `/analytics`; params?: Router.UnknownInputParams; } | { pathname: `${'/(drawer)'}/injuries` | `/injuries`; params?: Router.UnknownInputParams; };
+      hrefInputParams:
+        | {
+            pathname: Router.RelativePathString;
+            params?: Router.UnknownInputParams;
+          }
+        | {
+            pathname: Router.ExternalPathString;
+            params?: Router.UnknownInputParams;
+          }
+        | { pathname: `/`; params?: Router.UnknownInputParams }
+        | { pathname: `/_sitemap`; params?: Router.UnknownInputParams }
+        | {
+            pathname: `${"/(auth)"}/sign-in` | `/sign-in`;
+            params?: Router.UnknownInputParams;
+          }
+        | {
+            pathname: `${"/(drawer)"}/admin` | `/admin`;
+            params?: Router.UnknownInputParams;
+          }
+        | {
+            pathname: `${"/(drawer)"}/client-settings` | `/client-settings`;
+            params?: Router.UnknownInputParams;
+          }
+        | {
+            pathname: `${"/(drawer)"}` | `/`;
+            params?: Router.UnknownInputParams;
+          }
+        | {
+            pathname: `${"/(drawer)"}/log-access` | `/log-access`;
+            params?: Router.UnknownInputParams;
+          }
+        | {
+            pathname:
+              | `${"/(drawer)"}/nutritionist-planning`
+              | `/nutritionist-planning`;
+            params?: Router.UnknownInputParams;
+          }
+        | {
+            pathname: `${"/(drawer)"}/patients` | `/patients`;
+            params?: Router.UnknownInputParams;
+          }
+        | {
+            pathname: `${"/(drawer)"}/payments` | `/payments`;
+            params?: Router.UnknownInputParams;
+          }
+        | {
+            pathname: `${"/(drawer)"}/planning` | `/planning`;
+            params?: Router.UnknownInputParams;
+          }
+        | {
+            pathname: `${"/(drawer)"}/tracker` | `/tracker`;
+            params?: Router.UnknownInputParams;
+          }
+        | {
+            pathname: `${"/(drawer)"}/training-planning` | `/training-planning`;
+            params?: Router.UnknownInputParams;
+          };
+      hrefOutputParams:
+        | {
+            pathname: Router.RelativePathString;
+            params?: Router.UnknownOutputParams;
+          }
+        | {
+            pathname: Router.ExternalPathString;
+            params?: Router.UnknownOutputParams;
+          }
+        | { pathname: `/`; params?: Router.UnknownOutputParams }
+        | { pathname: `/_sitemap`; params?: Router.UnknownOutputParams }
+        | {
+            pathname: `${"/(auth)"}/sign-in` | `/sign-in`;
+            params?: Router.UnknownOutputParams;
+          }
+        | {
+            pathname: `${"/(drawer)"}/admin` | `/admin`;
+            params?: Router.UnknownOutputParams;
+          }
+        | {
+            pathname: `${"/(drawer)"}/client-settings` | `/client-settings`;
+            params?: Router.UnknownOutputParams;
+          }
+        | {
+            pathname: `${"/(drawer)"}` | `/`;
+            params?: Router.UnknownOutputParams;
+          }
+        | {
+            pathname: `${"/(drawer)"}/log-access` | `/log-access`;
+            params?: Router.UnknownOutputParams;
+          }
+        | {
+            pathname:
+              | `${"/(drawer)"}/nutritionist-planning`
+              | `/nutritionist-planning`;
+            params?: Router.UnknownOutputParams;
+          }
+        | {
+            pathname: `${"/(drawer)"}/patients` | `/patients`;
+            params?: Router.UnknownOutputParams;
+          }
+        | {
+            pathname: `${"/(drawer)"}/payments` | `/payments`;
+            params?: Router.UnknownOutputParams;
+          }
+        | {
+            pathname: `${"/(drawer)"}/planning` | `/planning`;
+            params?: Router.UnknownOutputParams;
+          }
+        | {
+            pathname: `${"/(drawer)"}/tracker` | `/tracker`;
+            params?: Router.UnknownOutputParams;
+          }
+        | {
+            pathname: `${"/(drawer)"}/training-planning` | `/training-planning`;
+            params?: Router.UnknownOutputParams;
+          };
+      href:
+        | Router.RelativePathString
+        | Router.ExternalPathString
+        | `/${`?${string}` | `#${string}` | ""}`
+        | `/_sitemap${`?${string}` | `#${string}` | ""}`
+        | `${"/(auth)"}/sign-in${`?${string}` | `#${string}` | ""}`
+        | `/sign-in${`?${string}` | `#${string}` | ""}`
+        | `${"/(drawer)"}/admin${`?${string}` | `#${string}` | ""}`
+        | `/admin${`?${string}` | `#${string}` | ""}`
+        | `${"/(drawer)"}/client-settings${`?${string}` | `#${string}` | ""}`
+        | `/client-settings${`?${string}` | `#${string}` | ""}`
+        | `${"/(drawer)"}${`?${string}` | `#${string}` | ""}`
+        | `/${`?${string}` | `#${string}` | ""}`
+        | `${"/(drawer)"}/log-access${`?${string}` | `#${string}` | ""}`
+        | `/log-access${`?${string}` | `#${string}` | ""}`
+        | `${"/(drawer)"}/nutritionist-planning${`?${string}` | `#${string}` | ""}`
+        | `/nutritionist-planning${`?${string}` | `#${string}` | ""}`
+        | `${"/(drawer)"}/patients${`?${string}` | `#${string}` | ""}`
+        | `/patients${`?${string}` | `#${string}` | ""}`
+        | `${"/(drawer)"}/payments${`?${string}` | `#${string}` | ""}`
+        | `/payments${`?${string}` | `#${string}` | ""}`
+        | `${"/(drawer)"}/planning${`?${string}` | `#${string}` | ""}`
+        | `/planning${`?${string}` | `#${string}` | ""}`
+        | `${"/(drawer)"}/tracker${`?${string}` | `#${string}` | ""}`
+        | `/tracker${`?${string}` | `#${string}` | ""}`
+        | `${"/(drawer)"}/training-planning${`?${string}` | `#${string}` | ""}`
+        | `/training-planning${`?${string}` | `#${string}` | ""}`
+        | {
+            pathname: Router.RelativePathString;
+            params?: Router.UnknownInputParams;
+          }
+        | {
+            pathname: Router.ExternalPathString;
+            params?: Router.UnknownInputParams;
+          }
+        | { pathname: `/`; params?: Router.UnknownInputParams }
+        | { pathname: `/_sitemap`; params?: Router.UnknownInputParams }
+        | {
+            pathname: `${"/(auth)"}/sign-in` | `/sign-in`;
+            params?: Router.UnknownInputParams;
+          }
+        | {
+            pathname: `${"/(drawer)"}/admin` | `/admin`;
+            params?: Router.UnknownInputParams;
+          }
+        | {
+            pathname: `${"/(drawer)"}/client-settings` | `/client-settings`;
+            params?: Router.UnknownInputParams;
+          }
+        | {
+            pathname: `${"/(drawer)"}` | `/`;
+            params?: Router.UnknownInputParams;
+          }
+        | {
+            pathname: `${"/(drawer)"}/log-access` | `/log-access`;
+            params?: Router.UnknownInputParams;
+          }
+        | {
+            pathname:
+              | `${"/(drawer)"}/nutritionist-planning`
+              | `/nutritionist-planning`;
+            params?: Router.UnknownInputParams;
+          }
+        | {
+            pathname: `${"/(drawer)"}/patients` | `/patients`;
+            params?: Router.UnknownInputParams;
+          }
+        | {
+            pathname: `${"/(drawer)"}/payments` | `/payments`;
+            params?: Router.UnknownInputParams;
+          }
+        | {
+            pathname: `${"/(drawer)"}/planning` | `/planning`;
+            params?: Router.UnknownInputParams;
+          }
+        | {
+            pathname: `${"/(drawer)"}/tracker` | `/tracker`;
+            params?: Router.UnknownInputParams;
+          }
+        | {
+            pathname: `${"/(drawer)"}/training-planning` | `/training-planning`;
+            params?: Router.UnknownInputParams;
+          };
     }
   }
 }

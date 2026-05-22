@@ -15,7 +15,7 @@ const resolveApiMode = (): ApiMode => {
 const API_MODE = resolveApiMode();
 
 export const ENV = {
-  API_URL: process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000",
+  API_URL: process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000/api/v1",
   API_MODE,
   USE_MOCK: API_MODE === "MOCK",
   VERSION: process.env.EXPO_PUBLIC_VERSION ?? "1.0.0",

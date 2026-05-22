@@ -1,11 +1,24 @@
 import { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  Platform,
+  KeyboardAvoidingView,
+  ScrollView,
+} from "react-native";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { useColors } from "@/shared/hooks/useColors";
-import { useOrgTheme } from "@/shared/theme/useOrgTheme";
+import { useClientTheme } from "@/shared/theme/useClientTheme";
+import { FONTS, BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
+
+const isWeb = Platform.OS === "web";
 
 export default function SignInScreen() {
   const { t } = useTranslation();
@@ -13,17 +26,18 @@ export default function SignInScreen() {
   const insets = useSafeAreaInsets();
   const { login } = useAuth();
   const c = useColors();
-  const { primaryColor } = useOrgTheme();
-  const [email, setEmail] = useState("");
+  const { primaryColor, orgName } = useClientTheme();
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [focusedField, setFocusedField] = useState<"email" | "password" | null>(null);
 
   const handleSignIn = async () => {
     setError(null);
     setLoading(true);
     try {
-      await login({ email, password });
+      await login({ username, password });
       router.replace("/(drawer)");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Login failed");
@@ -32,72 +46,451 @@ export default function SignInScreen() {
     }
   };
 
+  if (isWeb) {
+    return (
+      <View style={[webStyles.root, { backgroundColor: c.backgroundStrong }]}>
+        {/* Left branding panel */}
+        <View style={[webStyles.panel, { backgroundColor: primaryColor }]}>
+          <View style={webStyles.panelContent}>
+            <View style={webStyles.logoMark}>
+              <Text style={webStyles.logoMarkText}>
+                {orgName ? orgName.charAt(0).toUpperCase() : "A"}
+              </Text>
+            </View>
+            <Text style={webStyles.panelOrg}>{orgName ?? "Admino"}</Text>
+            <Text style={webStyles.panelTagline}>
+              Your all-in-one admin platform
+            </Text>
+            <View style={webStyles.panelDots}>
+              <View style={[webStyles.dot, { opacity: 1 }]} />
+              <View style={[webStyles.dot, { opacity: 0.4 }]} />
+              <View style={[webStyles.dot, { opacity: 0.4 }]} />
+            </View>
+          </View>
+        </View>
+
+        {/* Right form panel */}
+        <ScrollView
+          contentContainerStyle={webStyles.formScroll}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={[webStyles.card, { backgroundColor: c.background, borderColor: c.border }]}>
+            <Text style={[webStyles.cardTitle, { color: c.text, fontFamily: FONTS.heading.bold }]}>
+              Welcome back
+            </Text>
+            <Text style={[webStyles.cardSubtitle, { color: c.textMuted }]}>
+              Sign in to your account to continue
+            </Text>
+
+            <View style={webStyles.fieldGroup}>
+              <Text style={[webStyles.label, { color: c.textMuted }]}>
+                {t("auth.email")}
+              </Text>
+              <TextInput
+                style={[
+                  webStyles.input,
+                  {
+                    borderColor: focusedField === "email" ? primaryColor : c.border,
+                    backgroundColor: c.background,
+                    color: c.text,
+                  },
+                ]}
+                placeholder="your_username"
+                placeholderTextColor={c.textPlaceholder}
+                value={username}
+                onChangeText={setUsername}
+                autoCapitalize="none"
+                onFocus={() => setFocusedField("email")}
+                onBlur={() => setFocusedField(null)}
+              />
+            </View>
+
+            <View style={webStyles.fieldGroup}>
+              <View style={webStyles.labelRow}>
+                <Text style={[webStyles.label, { color: c.textMuted }]}>
+                  {t("auth.password")}
+                </Text>
+                <TouchableOpacity>
+                  <Text style={[webStyles.forgotLink, { color: primaryColor }]}>
+                    Forgot password?
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <TextInput
+                style={[
+                  webStyles.input,
+                  {
+                    borderColor: focusedField === "password" ? primaryColor : c.border,
+                    backgroundColor: c.background,
+                    color: c.text,
+                  },
+                ]}
+                placeholder="••••••••"
+                placeholderTextColor={c.textPlaceholder}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                onFocus={() => setFocusedField("password")}
+                onBlur={() => setFocusedField(null)}
+              />
+            </View>
+
+            {error !== null && (
+              <View style={[webStyles.errorBanner, { backgroundColor: "#FEF2F2", borderColor: "#FECACA" }]}>
+                <Text style={[webStyles.errorText, { color: "#B91C1C" }]}>{error}</Text>
+              </View>
+            )}
+
+            <TouchableOpacity
+              style={[webStyles.button, { backgroundColor: primaryColor, opacity: loading ? 0.7 : 1 }]}
+              onPress={handleSignIn}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={webStyles.buttonText}>{t("auth.signIn")}</Text>
+              )}
+            </TouchableOpacity>
+
+            <Text style={[webStyles.footerText, { color: c.textMuted }]}>
+              By signing in, you agree to our{" "}
+              <Text style={{ color: primaryColor }}>Terms of Service</Text>
+              {" "}and{" "}
+              <Text style={{ color: primaryColor }}>Privacy Policy</Text>.
+            </Text>
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
+
+  // Mobile layout
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: c.background,
-          paddingTop: insets.top + 24,
-          paddingBottom: insets.bottom + 24,
-        },
-      ]}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <Text style={[styles.title, { color: c.text }]}>{t("auth.signIn")}</Text>
-      <TextInput
-        style={[styles.input, { borderColor: c.border, backgroundColor: c.background, color: c.text }]}
-        placeholder={t("auth.email")}
-        placeholderTextColor={c.textPlaceholder}
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
-      <TextInput
-        style={[styles.input, { borderColor: c.border, backgroundColor: c.background, color: c.text }]}
-        placeholder={t("auth.password")}
-        placeholderTextColor={c.textPlaceholder}
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
-      {error !== null && (
-        <Text style={[styles.errorText, { color: c.textMuted }]}>{error}</Text>
-      )}
-      <TouchableOpacity
-        style={[styles.button, { backgroundColor: primaryColor, opacity: loading ? 0.7 : 1 }]}
-        onPress={handleSignIn}
-        activeOpacity={0.85}
-        accessibilityRole="button"
-        disabled={loading}
+      <ScrollView
+        contentContainerStyle={[
+          mobileStyles.container,
+          {
+            backgroundColor: c.background,
+            paddingTop: insets.top + 32,
+            paddingBottom: insets.bottom + 24,
+          },
+        ]}
+        keyboardShouldPersistTaps="handled"
       >
-        {loading ? (
-          <ActivityIndicator color="#FFFFFF" />
-        ) : (
-          <Text style={styles.buttonText}>{t("auth.signIn")}</Text>
-        )}
-      </TouchableOpacity>
-    </View>
+        <View style={mobileStyles.header}>
+          <View style={[mobileStyles.logoMark, { backgroundColor: primaryColor }]}>
+            <Text style={mobileStyles.logoMarkText}>
+              {orgName ? orgName.charAt(0).toUpperCase() : "A"}
+            </Text>
+          </View>
+          <Text style={[mobileStyles.title, { color: c.text, fontFamily: FONTS.heading.bold }]}>
+            Welcome back
+          </Text>
+          <Text style={[mobileStyles.subtitle, { color: c.textMuted }]}>
+            Sign in to {orgName ?? "your account"}
+          </Text>
+        </View>
+
+        <View style={mobileStyles.form}>
+          <View style={mobileStyles.fieldGroup}>
+            <Text style={[mobileStyles.label, { color: c.textMuted }]}>
+              {t("auth.email")}
+            </Text>
+            <TextInput
+              style={[
+                mobileStyles.input,
+                {
+                  borderColor: focusedField === "email" ? primaryColor : c.border,
+                  backgroundColor: c.backgroundStrong,
+                  color: c.text,
+                },
+              ]}
+              placeholder="your_username"
+              placeholderTextColor={c.textPlaceholder}
+              value={username}
+              onChangeText={setUsername}
+              autoCapitalize="none"
+              onFocus={() => setFocusedField("email")}
+              onBlur={() => setFocusedField(null)}
+            />
+          </View>
+
+          <View style={mobileStyles.fieldGroup}>
+            <View style={mobileStyles.labelRow}>
+              <Text style={[mobileStyles.label, { color: c.textMuted }]}>
+                {t("auth.password")}
+              </Text>
+              <TouchableOpacity>
+                <Text style={[mobileStyles.forgotLink, { color: primaryColor }]}>
+                  Forgot?
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={[
+                mobileStyles.input,
+                {
+                  borderColor: focusedField === "password" ? primaryColor : c.border,
+                  backgroundColor: c.backgroundStrong,
+                  color: c.text,
+                },
+              ]}
+              placeholder="••••••••"
+              placeholderTextColor={c.textPlaceholder}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              onFocus={() => setFocusedField("password")}
+              onBlur={() => setFocusedField(null)}
+            />
+          </View>
+
+          {error !== null && (
+            <View style={[mobileStyles.errorBanner, { backgroundColor: "#FEF2F2", borderColor: "#FECACA" }]}>
+              <Text style={[mobileStyles.errorText, { color: "#B91C1C" }]}>{error}</Text>
+            </View>
+          )}
+
+          <TouchableOpacity
+            style={[mobileStyles.button, { backgroundColor: primaryColor, opacity: loading ? 0.7 : 1 }]}
+            onPress={handleSignIn}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={mobileStyles.buttonText}>{t("auth.signIn")}</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", paddingHorizontal: 24, gap: 16 },
-  title: { fontSize: 32, fontWeight: "700", marginBottom: 8 },
+const webStyles = StyleSheet.create({
+  root: {
+    flex: 1,
+    flexDirection: "row",
+    minHeight: "100%" as any,
+  },
+  panel: {
+    width: "40%" as any,
+    minHeight: "100%" as any,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  panelContent: {
+    alignItems: "center",
+    gap: SPACING.lg,
+    paddingHorizontal: SPACING.xxl,
+  },
+  logoMark: {
+    width: 72,
+    height: 72,
+    borderRadius: BORDER_RADIUS.xl,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: SPACING.sm,
+  },
+  logoMarkText: {
+    fontSize: 32,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  panelOrg: {
+    fontSize: TYPOGRAPHY.fontSize.xxl,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    letterSpacing: -0.5,
+  },
+  panelTagline: {
+    fontSize: TYPOGRAPHY.fontSize.md,
+    color: "rgba(255,255,255,0.75)",
+    textAlign: "center",
+    lineHeight: 24,
+  },
+  panelDots: {
+    flexDirection: "row",
+    gap: SPACING.sm,
+    marginTop: SPACING.lg,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#FFFFFF",
+  },
+  formScroll: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: SPACING.xxl,
+    paddingHorizontal: SPACING.xl,
+  },
+  card: {
+    width: "100%" as any,
+    maxWidth: 420,
+    borderRadius: BORDER_RADIUS.xl,
+    borderWidth: 1,
+    padding: SPACING.xxl,
+    gap: SPACING.lg,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+  },
+  cardTitle: {
+    fontSize: TYPOGRAPHY.fontSize.xxxl,
+    fontWeight: "700",
+    letterSpacing: -0.5,
+  },
+  cardSubtitle: {
+    fontSize: TYPOGRAPHY.fontSize.md,
+    marginTop: -SPACING.sm,
+  },
+  fieldGroup: {
+    gap: SPACING.xs,
+  },
+  label: {
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontWeight: "500",
+  },
+  labelRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  forgotLink: {
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontWeight: "500",
+  },
+  input: {
+    height: 44,
+    borderWidth: 1.5,
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    fontSize: TYPOGRAPHY.fontSize.md,
+    // @ts-ignore — valid on web, suppresses browser focus ring (border handles focus state)
+    outline: "none",
+  },
+  errorBanner: {
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+  },
+  errorText: {
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontWeight: "500",
+  },
+  button: {
+    height: 44,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: SPACING.xs,
+  },
+  buttonText: {
+    color: "#FFFFFF",
+    fontSize: TYPOGRAPHY.fontSize.md,
+    fontWeight: "600",
+  },
+  footerText: {
+    fontSize: TYPOGRAPHY.fontSize.xs,
+    textAlign: "center",
+    lineHeight: 18,
+  },
+});
+
+const mobileStyles = StyleSheet.create({
+  container: {
+    flexGrow: 1,
+    justifyContent: "center",
+    paddingHorizontal: SPACING.lg,
+    gap: SPACING.xl,
+  },
+  header: {
+    alignItems: "center",
+    gap: SPACING.sm,
+  },
+  logoMark: {
+    width: 64,
+    height: 64,
+    borderRadius: BORDER_RADIUS.xl,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: SPACING.xs,
+  },
+  logoMarkText: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  title: {
+    fontSize: TYPOGRAPHY.fontSize.xxxl,
+    fontWeight: "700",
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: TYPOGRAPHY.fontSize.md,
+  },
+  form: {
+    gap: SPACING.md,
+  },
+  fieldGroup: {
+    gap: SPACING.xs,
+  },
+  label: {
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontWeight: "500",
+  },
+  labelRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  forgotLink: {
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontWeight: "500",
+  },
   input: {
     height: 48,
     borderWidth: 1.5,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    fontSize: 16,
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    fontSize: TYPOGRAPHY.fontSize.md,
   },
-  errorText: { fontSize: 13, marginTop: -8 },
+  errorBanner: {
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+  },
+  errorText: {
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontWeight: "500",
+  },
   button: {
-    height: 48,
-    borderRadius: 8,
+    height: 50,
+    borderRadius: BORDER_RADIUS.md,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 8,
+    marginTop: SPACING.xs,
   },
-  buttonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "600" },
+  buttonText: {
+    color: "#FFFFFF",
+    fontSize: TYPOGRAPHY.fontSize.md,
+    fontWeight: "600",
+  },
 });

@@ -6,12 +6,12 @@ export { useColors } from "./hooks/useColors";
 export { useUrlState } from "./hooks/useUrlState";
 
 export { useAuthStore, MOCK_USERS } from "./store/authStore";
-export { useOrgStore } from "./store/orgStore";
+export { useClientStore } from "./store/clientStore";
 export { useSidebarStore } from "./store/sidebarStore";
 export { useThemeStore } from "./store/themeStore";
 
 export { DynamicThemeProvider } from "./theme/DynamicThemeProvider";
-export { useOrgTheme } from "./theme/useOrgTheme";
+export { useClientTheme } from "./theme/useClientTheme";
 export { lightColors, darkColors } from "./theme/colors";
 export type { AppColors } from "./theme/colors";
 export {
@@ -31,4 +31,4 @@ export {
 export { commonStyles, createVariantStyles, createResponsiveStyles, componentStyles } from "./theme/styles";
 
 export type { UserRole, User, LoginCredentials, AuthSession } from "./types/auth";
-export type { OrgBranding } from "./types/organization";
+export type { ClientBranding } from "./types/client";

@@ -1,7 +1,7 @@
-import type { OrgBranding } from "@/shared/types/organization";
+import type { ClientBranding } from "@/shared/types/client";
 import type { ApiResponse } from "@/shared/types/api";
 
-export const mockGetOrganizationBranding: ApiResponse<OrgBranding> = {
+export const mockGetOrganizationBranding: ApiResponse<ClientBranding> = {
   status: 200,
   message: "OK",
   data: {

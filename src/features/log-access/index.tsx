@@ -14,7 +14,7 @@ import * as Sharing from "expo-sharing";
 import QRCode from "react-native-qrcode-svg";
 import { useColors } from "@/shared/hooks/useColors";
 import { useAuth } from "@/shared/hooks/useAuth";
-import { useOrgStore } from "@/shared/store/orgStore";
+import { useClientStore } from "@/shared/store/clientStore";
 import { useApiQuery, useApiMutation } from "@/shared/api/useApiQuery";
 import { mockCheckIn, mockGetCheckIns } from "@/shared/api/mocks/logAccess";
 import type { CheckIn } from "@/shared/types/api";
@@ -196,7 +196,7 @@ function buildQrHtml(dataUrl: string, orgName: string): string {
 
 function AdminCheckIns() {
   const c = useColors();
-  const { branding } = useOrgStore();
+  const { branding } = useClientStore();
   const qrRef = useRef<{ toDataURL: (cb: (data: string) => void) => void } | null>(null);
   const [generatingPdf, setGeneratingPdf] = useState(false);
 

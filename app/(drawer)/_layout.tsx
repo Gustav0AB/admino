@@ -104,6 +104,10 @@ export default function DrawerLayout() {
         name="injuries"
         options={{ title: "Injuries", drawerLabel: "Injuries" }}
       />
+      <Drawer.Screen
+        name="client-settings"
+        options={{ title: "Configuración", drawerLabel: "Configuración" }}
+      />
     </Drawer>
   );
 }
