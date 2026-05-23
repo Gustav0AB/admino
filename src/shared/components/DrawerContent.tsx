@@ -82,8 +82,8 @@ export function DrawerContent(props: DrawerContentComponentProps) {
       feature: "payments",
     },
     {
-      label: "Training Planning",
-      href: "/(drawer)/training-planning",
+      label: "Athlete Dashboard",
+      href: "/(drawer)/athlete-dashboard",
       icon: (color) => (
         <MaterialCommunityIcons name="weight-lifter" size={20} color={color} />
       ),
@@ -130,35 +130,6 @@ export function DrawerContent(props: DrawerContentComponentProps) {
       ),
       roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN"],
       feature: "checkin",
-    },
-    {
-      label: "Events",
-      href: "/(drawer)/events",
-      icon: (color) => <MaterialIcons name="event" size={20} color={color} />,
-      roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN"],
-      feature: "events",
-    },
-    {
-      label: "Analytics",
-      href: "/(drawer)/analytics",
-      icon: (color) => (
-        <MaterialCommunityIcons
-          name="chart-timeline-variant"
-          size={20}
-          color={color}
-        />
-      ),
-      roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN"],
-      feature: "analytics",
-    },
-    {
-      label: "Injuries",
-      href: "/(drawer)/injuries",
-      icon: (color) => (
-        <MaterialCommunityIcons name="bandage" size={20} color={color} />
-      ),
-      roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN"],
-      feature: "injuries",
     },
     {
       label: "Configuración",

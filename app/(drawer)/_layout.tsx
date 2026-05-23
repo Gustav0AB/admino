@@ -63,10 +63,10 @@ export default function DrawerLayout() {
         options={{ title: "Payments", drawerLabel: "Payments" }}
       />
       <Drawer.Screen
-        name="training-planning"
+        name="athlete-dashboard"
         options={{
-          title: "Training Planning",
-          drawerLabel: "Training Planning",
+          title: "Athlete Dashboard",
+          drawerLabel: "Athlete Dashboard",
         }}
       />
       <Drawer.Screen
@@ -91,18 +91,6 @@ export default function DrawerLayout() {
       <Drawer.Screen
         name="checkin"
         options={{ title: "Check-in", drawerLabel: "Check-in" }}
-      />
-      <Drawer.Screen
-        name="events"
-        options={{ title: "Events", drawerLabel: "Events" }}
-      />
-      <Drawer.Screen
-        name="analytics"
-        options={{ title: "Analytics", drawerLabel: "Analytics" }}
-      />
-      <Drawer.Screen
-        name="injuries"
-        options={{ title: "Injuries", drawerLabel: "Injuries" }}
       />
       <Drawer.Screen
         name="client-settings"

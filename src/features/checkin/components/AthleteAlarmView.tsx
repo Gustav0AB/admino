@@ -8,7 +8,7 @@ import {
   Platform,
 } from "react-native";
 import { useColors } from "@/shared/hooks/useColors";
-import { useOrgTheme } from "@/shared/theme/useOrgTheme";
+import { useClientTheme } from "@/shared/theme/useClientTheme";
 import { CustomButton } from "@/shared/components/inputs/CustomButton";
 import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
 import { useCheckinStore, GYM_LOCATION } from "../store/checkinStore";
@@ -22,7 +22,7 @@ const MOCK_TRAINING_OFFSET_MS = 5 * 1000;
 
 export function AthleteAlarmView() {
   const c = useColors();
-  const { primaryColor } = useOrgTheme();
+  const { primaryColor } = useClientTheme();
   const { locationPermission, isInsideGym, trainingTimeISO } = useCheckinStore();
   const { requestPermissions, startGeofence, checkCurrentPosition } = useGeofence();
   const { activateAlarm, cancelAlarm, scheduleAlarmForTime, alarmStatus } =
