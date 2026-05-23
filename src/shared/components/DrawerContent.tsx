@@ -90,8 +90,8 @@ export function DrawerContent(props: DrawerContentComponentProps) {
       roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN", "MEMBER"],
     },
     {
-      label: "Training Planning",
-      href: "/(drawer)/training-planning",
+      label: "Athlete Dashboard",
+      href: "/(drawer)/athlete-dashboard",
       icon: (color) => (
         <MaterialCommunityIcons name="weight-lifter" size={20} color={color} />
       ),
@@ -129,6 +129,15 @@ export function DrawerContent(props: DrawerContentComponentProps) {
       ),
       roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN"],
       feature: "nutritionist_planning",
+    },
+    {
+      label: "Check-in",
+      href: "/(drawer)/checkin",
+      icon: (color) => (
+        <MaterialIcons name="location-on" size={20} color={color} />
+      ),
+      roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN"],
+      feature: "checkin",
     },
     {
       label: "Configuración",

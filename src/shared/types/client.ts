@@ -12,4 +12,8 @@ export type ClientFeature =
   | "tracker"
   | "patients"
   | "log_access"
-  | "nutritionist_planning";
+  | "nutritionist_planning"
+  | "checkin"
+  | "events"
+  | "analytics"
+  | "injuries";
