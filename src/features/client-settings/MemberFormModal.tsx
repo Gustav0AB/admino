@@ -84,7 +84,7 @@ export function MemberFormModal({ open, onClose, member, onSubmit, isLoading }: 
         {!isEditing && (
           <>
             <CustomInput
-              label="Account name"
+              label="Nombre de usuario"
               value={username}
               onChangeText={setEmail}
               placeholder="ej. john_doe"

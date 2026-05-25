@@ -147,14 +147,12 @@ export function buildAppData(
   creditCutDay: number,
   creditPayDay: number,
   creditCards?: import("./types").CreditCard[],
+  recurringExpenses?: import("./types").RecurringExpense[],
   planningData?: import("./planning/types").PlanningData
 ): AppData {
   const base: AppData = { expenses, creditDebt, creditDebtMes, creditCutDay, creditPayDay };
-  if (creditCards && creditCards.length > 0) {
-    base.creditCards = creditCards;
-  }
-  if (planningData) {
-    base.planningData = planningData;
-  }
+  if (creditCards && creditCards.length > 0) base.creditCards = creditCards;
+  if (recurringExpenses && recurringExpenses.length > 0) base.recurringExpenses = recurringExpenses;
+  if (planningData) base.planningData = planningData;
   return base;
 }

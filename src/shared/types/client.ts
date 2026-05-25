@@ -7,13 +7,14 @@ export type ClientBranding = {
 };
 
 export type ClientFeature =
-  | "payments"
-  | "training_planning"
-  | "tracker"
-  | "patients"
-  | "log_access"
-  | "nutritionist_planning"
-  | "checkin"
+  | "athlete_dashboard"
+  | "athlete_tracker"
+  | "finanzas"
   | "events"
   | "analytics"
-  | "injuries";
+  | "injuries"
+  // not yet ready — kept for future
+  | "payments"
+  | "patients"
+  | "log_access"
+  | "nutritionist_planning";

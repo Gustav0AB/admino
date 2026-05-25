@@ -18,8 +18,6 @@ import {
   Feather,
   MaterialCommunityIcons,
   FontAwesome5,
-  AntDesign,
-  FontAwesome6,
 } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/shared/hooks/useColors";
@@ -67,19 +65,10 @@ export function DrawerContent(props: DrawerContentComponentProps) {
       roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN", "MEMBER"],
     },
     {
-      label: "Admin",
+      label: "Administración",
       href: "/(drawer)/admin",
       icon: (color) => <Feather name="settings" size={20} color={color} />,
       roles: ["SYSTEM_ADMIN"],
-    },
-    {
-      label: "Payments",
-      href: "/(drawer)/payments",
-      icon: (color) => (
-        <MaterialIcons name="attach-money" size={20} color={color} />
-      ),
-      roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN"],
-      feature: "payments",
     },
     {
       label: "Finanzas",
@@ -87,58 +76,54 @@ export function DrawerContent(props: DrawerContentComponentProps) {
       icon: (color) => (
         <MaterialIcons name="attach-money" size={20} color={color} />
       ),
-      roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN", "MEMBER"],
+      roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN"],
+      feature: "finanzas",
     },
     {
-      label: "Athlete Dashboard",
+      label: "Gestión Atletas",
       href: "/(drawer)/athlete-dashboard",
       icon: (color) => (
         <MaterialCommunityIcons name="weight-lifter" size={20} color={color} />
       ),
       roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN"],
-      feature: "training_planning",
+      feature: "athlete_dashboard",
     },
     {
-      label: "Tracker",
-      href: "/(drawer)/tracker",
+      label: "Mi Entrenamiento",
+      href: "/(drawer)/athlete-tracker",
       icon: (color) => <FontAwesome5 name="running" size={20} color={color} />,
-      roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN", "MEMBER"],
-      feature: "tracker",
+      roles: ["MEMBER"],
+      feature: "athlete_tracker",
     },
-    {
-      label: "Patients",
-      href: "/(drawer)/patients",
-      icon: (color) => (
-        <MaterialIcons name="food-bank" size={20} color={color} />
-      ),
-      roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN"],
-      feature: "patients",
-    },
-    {
-      label: "Log Access",
-      href: "/(drawer)/log-access",
-      icon: (color) => <AntDesign name="qrcode" size={20} color={color} />,
-      roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN"],
-      feature: "log_access",
-    },
-    {
-      label: "Nutritionist Planning",
-      href: "/(drawer)/nutritionist-planning",
-      icon: (color) => (
-        <FontAwesome6 name="weight-scale" size={20} color={color} />
-      ),
-      roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN"],
-      feature: "nutritionist_planning",
-    },
-    {
-      label: "Check-in",
-      href: "/(drawer)/checkin",
-      icon: (color) => (
-        <MaterialIcons name="location-on" size={20} color={color} />
-      ),
-      roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN"],
-      feature: "checkin",
-    },
+    // Payments, Patients, Log Access, Nutritionist Planning — not yet ready
+    // {
+    //   label: "Payments",
+    //   href: "/(drawer)/payments",
+    //   icon: (color) => <MaterialIcons name="attach-money" size={20} color={color} />,
+    //   roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN"],
+    //   feature: "payments",
+    // },
+    // {
+    //   label: "Patients",
+    //   href: "/(drawer)/patients",
+    //   icon: (color) => <MaterialIcons name="food-bank" size={20} color={color} />,
+    //   roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN"],
+    //   feature: "patients",
+    // },
+    // {
+    //   label: "Log Access",
+    //   href: "/(drawer)/log-access",
+    //   icon: (color) => <AntDesign name="qrcode" size={20} color={color} />,
+    //   roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN"],
+    //   feature: "log_access",
+    // },
+    // {
+    //   label: "Nutritionist Planning",
+    //   href: "/(drawer)/nutritionist-planning",
+    //   icon: (color) => <FontAwesome6 name="weight-scale" size={20} color={color} />,
+    //   roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN"],
+    //   feature: "nutritionist_planning",
+    // },
     {
       label: "Configuración",
       href: "/(drawer)/client-settings",

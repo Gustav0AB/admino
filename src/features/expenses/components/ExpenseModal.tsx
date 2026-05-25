@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { CustomModal } from "@/shared/components/feedback/CustomModal";
 import { CustomButton } from "@/shared/components/inputs/CustomButton";
+import { CustomSelect } from "@/shared/components/inputs/CustomSelect";
 import { useColors } from "@/shared/hooks/useColors";
 import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
 import { useExpensesStore } from "../store";
@@ -35,7 +36,12 @@ type Props = {
   onDelete?: () => void;
 };
 
-const MES_ABBR = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+const MES_OPTIONS = MESES_LIST.map((m) => ({ label: m, value: m }));
+
+const FECHA_OPTIONS = [
+  { label: "Sin fecha", value: 0 },
+  ...Array.from({ length: 31 }, (_, i) => ({ label: String(i + 1), value: i + 1 })),
+];
 
 function blankForm(): FormState {
   return {
@@ -78,6 +84,12 @@ export function ExpenseModal({ open, onClose, expense, onSave, onDelete }: Props
     }
   }, [open, expense]);
 
+  useEffect(() => {
+    if (creditCards.length === 0 && form.metodoPago === "credito") {
+      patch({ metodoPago: "efectivo" });
+    }
+  }, [creditCards.length]);
+
   function patch(update: Partial<FormState>) {
     setForm((prev) => ({ ...prev, ...update }));
   }
@@ -93,11 +105,14 @@ export function ExpenseModal({ open, onClose, expense, onSave, onDelete }: Props
       fechaMaxima: form.fechaMaxima,
       estado: form.estado,
     };
-    if (form.creditCardId) {
-      data.creditCardId = form.creditCardId;
-    }
+    if (form.creditCardId) data.creditCardId = form.creditCardId;
     onSave(data);
   }
+
+  const cardOptions = [
+    { label: "Ninguna", value: "" },
+    ...creditCards.map((c) => ({ label: c.name, value: c.id })),
+  ];
 
   const footer = (
     <View style={styles.footerRow}>
@@ -128,6 +143,7 @@ export function ExpenseModal({ open, onClose, expense, onSave, onDelete }: Props
       footer={footer}
     >
       <ScrollView showsVerticalScrollIndicator={false} style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+
         <FormSection label="Descripción">
           <TextInput
             style={[styles.textInput, { color: c.text, borderColor: c.border, backgroundColor: c.backgroundStrong }]}
@@ -139,14 +155,12 @@ export function ExpenseModal({ open, onClose, expense, onSave, onDelete }: Props
         </FormSection>
 
         <FormSection label="Mes">
-          <View style={styles.chipRow}>
-            {MESES_LIST.map((mes, i) => {
-              const sel = form.mes === mes;
-              return (
-                <Chip key={mes} label={MES_ABBR[i] ?? mes} selected={sel} onPress={() => patch({ mes })} c={c} />
-              );
-            })}
-          </View>
+          <CustomSelect
+            value={form.mes}
+            options={MES_OPTIONS}
+            onChange={(v) => patch({ mes: String(v) })}
+            placeholder="Seleccionar mes"
+          />
         </FormSection>
 
         <FormSection label="Monto">
@@ -166,35 +180,20 @@ export function ExpenseModal({ open, onClose, expense, onSave, onDelete }: Props
         <FormSection label="Método de pago">
           <View style={styles.chipRow}>
             <Chip label="Efectivo" selected={form.metodoPago === "efectivo"} onPress={() => patch({ metodoPago: "efectivo" })} c={c} />
-            <Chip label="Crédito" selected={form.metodoPago === "credito"} onPress={() => patch({ metodoPago: "credito" })} c={c} />
+            {creditCards.length > 0 && (
+              <Chip label="Crédito" selected={form.metodoPago === "credito"} onPress={() => patch({ metodoPago: "credito" })} c={c} />
+            )}
           </View>
         </FormSection>
 
-        {form.metodoPago === "credito" && (
-          <FormSection label="Tarjeta">
-            {creditCards.length === 0 ? (
-              <Text style={[styles.noteText, { color: c.textMuted }]}>
-                Configura tus tarjetas en el panel de Crédito
-              </Text>
-            ) : (
-              <View style={styles.chipRow}>
-                <Chip
-                  label="Ninguna"
-                  selected={form.creditCardId === ""}
-                  onPress={() => patch({ creditCardId: "" })}
-                  c={c}
-                />
-                {creditCards.map((card) => (
-                  <Chip
-                    key={card.id}
-                    label={card.name}
-                    selected={form.creditCardId === card.id}
-                    onPress={() => patch({ creditCardId: card.id })}
-                    c={c}
-                  />
-                ))}
-              </View>
-            )}
+        {creditCards.length > 0 && (
+          <FormSection label="Tarjeta de crédito">
+            <CustomSelect
+              value={form.creditCardId}
+              options={cardOptions}
+              onChange={(v) => patch({ creditCardId: String(v) })}
+              placeholder="Ninguna"
+            />
           </FormSection>
         )}
 
@@ -207,30 +206,12 @@ export function ExpenseModal({ open, onClose, expense, onSave, onDelete }: Props
         </FormSection>
 
         <FormSection label="Fecha de cobro">
-          <Text style={[styles.rangeLabel, { color: c.textMuted }]}>Primera quincena</Text>
-          <View style={styles.dayGrid}>
-            {Array.from({ length: 15 }, (_, i) => i + 1).map((day) => (
-              <DayChip
-                key={day}
-                day={day}
-                selected={form.fecha === day}
-                onPress={() => patch({ fecha: form.fecha === day ? 0 : day })}
-                c={c}
-              />
-            ))}
-          </View>
-          <Text style={[styles.rangeLabel, { color: c.textMuted, marginTop: SPACING.xs }]}>Segunda quincena</Text>
-          <View style={styles.dayGrid}>
-            {Array.from({ length: 16 }, (_, i) => i + 16).map((day) => (
-              <DayChip
-                key={day}
-                day={day}
-                selected={form.fecha === day}
-                onPress={() => patch({ fecha: form.fecha === day ? 0 : day })}
-                c={c}
-              />
-            ))}
-          </View>
+          <CustomSelect
+            value={form.fecha}
+            options={FECHA_OPTIONS}
+            onChange={(v) => patch({ fecha: Number(v) })}
+            placeholder="Sin fecha"
+          />
         </FormSection>
 
         <FormSection label="Estado">
@@ -251,6 +232,7 @@ export function ExpenseModal({ open, onClose, expense, onSave, onDelete }: Props
             placeholderTextColor={c.textPlaceholder}
           />
         </FormSection>
+
       </ScrollView>
     </CustomModal>
   );
@@ -267,61 +249,22 @@ function FormSection({ label, children }: { label: string; children: React.React
 }
 
 function Chip({
-  label,
-  selected,
-  onPress,
-  c,
+  label, selected, onPress, c,
 }: {
-  label: string;
-  selected: boolean;
-  onPress: () => void;
-  c: ReturnType<typeof useColors>;
+  label: string; selected: boolean; onPress: () => void; c: ReturnType<typeof useColors>;
 }) {
   return (
     <TouchableOpacity
       onPress={onPress}
-      style={[
-        styles.chip,
-        {
-          borderColor: selected ? c.primary : c.border,
-          backgroundColor: selected ? `${c.primary}20` : "transparent",
-        },
-      ]}
+      style={[styles.chip, { borderColor: selected ? c.primary : c.border, backgroundColor: selected ? `${c.primary}20` : "transparent" }]}
     >
       <Text style={[styles.chipText, { color: selected ? c.primary : c.text }]}>{label}</Text>
     </TouchableOpacity>
   );
 }
 
-function DayChip({
-  day,
-  selected,
-  onPress,
-  c,
-}: {
-  day: number;
-  selected: boolean;
-  onPress: () => void;
-  c: ReturnType<typeof useColors>;
-}) {
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      style={[
-        styles.dayChip,
-        {
-          borderColor: selected ? c.primary : c.border,
-          backgroundColor: selected ? c.primary : "transparent",
-        },
-      ]}
-    >
-      <Text style={[styles.dayChipText, { color: selected ? c.primaryForeground : c.text }]}>{day}</Text>
-    </TouchableOpacity>
-  );
-}
-
 const styles = StyleSheet.create({
-  scroll: { maxHeight: 500 },
+  scroll: { maxHeight: 520 },
   scrollContent: { gap: SPACING.md, paddingBottom: SPACING.sm },
   formSection: { gap: SPACING.xs },
   sectionLabel: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "600", textTransform: "uppercase" },
@@ -336,25 +279,8 @@ const styles = StyleSheet.create({
   montoPrefix: { fontSize: TYPOGRAPHY.fontSize.md, fontWeight: "600" },
   montoInput: { flex: 1 },
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.xs },
-  chip: {
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
-    borderRadius: BORDER_RADIUS.full,
-    borderWidth: 1,
-  },
+  chip: { paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs, borderRadius: BORDER_RADIUS.full, borderWidth: 1 },
   chipText: { fontSize: TYPOGRAPHY.fontSize.xs },
-  rangeLabel: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "500" },
-  dayGrid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.xs },
-  dayChip: {
-    width: 32,
-    height: 32,
-    borderRadius: BORDER_RADIUS.sm,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  dayChipText: { fontSize: TYPOGRAPHY.fontSize.xs },
-  noteText: { fontSize: TYPOGRAPHY.fontSize.xs, fontStyle: "italic" },
   footerRow: { flexDirection: "row", justifyContent: "space-between", flex: 1 },
   footerLeft: {},
   footerRight: { flexDirection: "row", gap: SPACING.sm },

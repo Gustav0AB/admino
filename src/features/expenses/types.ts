@@ -1,6 +1,18 @@
 export type MetodoPago = "efectivo" | "credito";
 export type Frecuencia = "mes" | "quincenal" | "unico";
 export type Estado = "pagado" | "no pagado" | "guardado" | "no guardado";
+export type RecurringCategory = "basico" | "servicio";
+
+export type RecurringExpense = {
+  id: string;
+  title: string;
+  amount: number;
+  days: number[];            // one or more days of month 1–31
+  category: RecurringCategory;
+  metodoPago: MetodoPago;
+  creditCardId?: string;
+  cancelledMonths: string[]; // e.g. ["Enero", "Marzo"] — skipped those months
+};
 
 export type CreditCard = {
   id: string;
@@ -56,5 +68,6 @@ export type AppData = {
   savedAt?: string;
   creditCards?: CreditCard[];
   initialCreditDebt?: number;
+  recurringExpenses?: RecurringExpense[];
   planningData?: import("./planning/types").PlanningData;
 };

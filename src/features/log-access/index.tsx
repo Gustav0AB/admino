@@ -32,7 +32,7 @@ function ClientCheckIn() {
   const { mutate: checkIn, isPending } = useApiMutation<
     typeof mockCheckIn,
     { qrData: string }
-  >("/api/log-access/check-in", mockCheckIn, { method: "POST" }, {
+  >("/log-access/check-in", mockCheckIn, { method: "POST" }, {
     onSuccess: () => {
       setScanState("success");
     },
@@ -202,7 +202,7 @@ function AdminCheckIns() {
 
   const { data, isLoading, refetch } = useApiQuery(
     ["check-ins"],
-    "/api/log-access/check-ins",
+    "/log-access/check-ins",
     mockGetCheckIns,
     { refetchInterval: 30_000 }
   );

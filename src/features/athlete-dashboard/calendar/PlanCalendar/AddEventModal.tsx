@@ -39,9 +39,9 @@ export function AddEventModal({ open, onClose, onSave }: AddEventModalProps) {
 
   function handleSave() {
     let valid = true;
-    if (!name.trim()) { setNameError("Event name required"); valid = false; }
+    if (!name.trim()) { setNameError("El nombre es obligatorio"); valid = false; }
     else setNameError("");
-    if (!date) { setDateError("Date required"); valid = false; }
+    if (!date) { setDateError("La fecha es obligatoria"); valid = false; }
     else setDateError("");
     if (!valid) return;
 
@@ -53,31 +53,31 @@ export function AddEventModal({ open, onClose, onSave }: AddEventModalProps) {
     <CustomModal
       open={open}
       onOpenChange={handleClose}
-      title="Add Event"
+      title="Agregar evento"
       size="sm"
       footer={
         <View style={styles.footer}>
-          <CustomButton variant="ghost" size="sm" onPress={handleClose}>Cancel</CustomButton>
-          <CustomButton variant="primary" size="sm" onPress={handleSave}>Save Event</CustomButton>
+          <CustomButton variant="ghost" size="sm" onPress={handleClose}>Cancelar</CustomButton>
+          <CustomButton variant="primary" size="sm" onPress={handleSave}>Guardar evento</CustomButton>
         </View>
       }
     >
       <CustomInput
-        label="Event name"
+        label="Nombre del evento"
         value={name}
         onChangeText={setName}
-        placeholder="e.g. Campeonato Regional"
+        placeholder="Ej. Campeonato Regional"
         {...(nameError ? { error: nameError } : {})}
       />
       <CalendarPicker
-        label="Date"
+        label="Fecha"
         value={date}
         onChange={setDate}
-        placeholder="Select date"
+        placeholder="Seleccionar fecha"
         {...(dateError ? { error: dateError } : {})}
       />
       <CustomSelect
-        label="Type"
+        label="Tipo"
         options={EVENT_TYPE_OPTIONS}
         value={type}
         onChange={(v) => setType(v as EventType)}

@@ -56,22 +56,19 @@ export default function DrawerLayout() {
       />
       <Drawer.Screen
         name="admin"
-        options={{ title: "Admin", drawerLabel: "Admin" }}
+        options={{ title: "Administración", drawerLabel: "Administración" }}
       />
       <Drawer.Screen
         name="expenses"
-        options={{ title: "Gastos", drawerLabel: "Gastos" }}
+        options={{ title: "Finanzas", drawerLabel: "Finanzas" }}
       />
       <Drawer.Screen
         name="payments"
-        options={{ title: "Payments", drawerLabel: "Payments" }}
+        options={{ title: "Pagos", drawerLabel: "Pagos" }}
       />
       <Drawer.Screen
         name="athlete-dashboard"
-        options={{
-          title: "Athlete Dashboard",
-          drawerLabel: "Athlete Dashboard",
-        }}
+        options={{ title: "Gestión Atletas", drawerLabel: "Gestión Atletas" }}
       />
       <Drawer.Screen
         name="tracker"
@@ -79,22 +76,19 @@ export default function DrawerLayout() {
       />
       <Drawer.Screen
         name="patients"
-        options={{ title: "Patients", drawerLabel: "Patients" }}
+        options={{ title: "Pacientes", drawerLabel: "Pacientes" }}
       />
       <Drawer.Screen
         name="log-access"
-        options={{ title: "Log Access", drawerLabel: "Log Access" }}
+        options={{ title: "Control de Acceso", drawerLabel: "Control de Acceso" }}
       />
       <Drawer.Screen
         name="nutritionist-planning"
-        options={{
-          title: "Nutritionist Planning",
-          drawerLabel: "Nutritionist Planning",
-        }}
+        options={{ title: "Planificación Nutricional", drawerLabel: "Planificación Nutricional" }}
       />
       <Drawer.Screen
-        name="checkin"
-        options={{ title: "Check-in", drawerLabel: "Check-in" }}
+        name="athlete-tracker"
+        options={{ title: "Mi Entrenamiento", drawerLabel: "Mi Entrenamiento" }}
       />
       <Drawer.Screen
         name="client-settings"

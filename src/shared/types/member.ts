@@ -16,6 +16,64 @@ export type OrgClient = {
   joinedAt: string;
 };
 
+export type AthleteCategory = "principiante" | "intermedio" | "avanzado" | "semi-profesional" | "profesional";
+
+export type EndUserMember = {
+  id: string;
+  name: string;
+  lastname: string;
+  birthdate: string | null;
+  username: string | null;
+  email: string;
+  peso: number | null;
+  altura: number | null;
+  categoria: AthleteCategory | null;
+  grado: string | null;
+  isActive: boolean;
+  joinedAt: string;
+};
+
+export type TrainingPlan = {
+  id: string;
+  name: string;
+  clientId: string;
+  startDate: string | null;
+  endDate: string | null;
+  cells: Record<string, string>;
+  createdAt: string;
+  updatedAt: string;
+  events?: TrainingEvent[];
+  _count?: { assignments: number };
+};
+
+export type TrainingEvent = {
+  id: string;
+  name: string;
+  date: string;
+  type: "competition" | "seminar" | "vacation";
+  clientId: string;
+  planId: string | null;
+};
+
+export type CreateEndUserMemberInput = {
+  name: string;
+  lastname: string;
+  birthdate: string;
+  username?: string;
+  password?: string;
+};
+
+export type UpdateEndUserMemberInput = {
+  name?: string;
+  lastname?: string;
+  birthdate?: string;
+  isActive?: boolean;
+  peso?: number | null;
+  altura?: number | null;
+  categoria?: AthleteCategory | null;
+  grado?: string | null;
+};
+
 export type ClientRole = {
   id: string;
   name: string;
@@ -73,12 +131,14 @@ export type SendNotificationInput = {
 };
 
 export const SECTION_PERMISSIONS = [
-  { key: "log_access", label: "Log Access / QR" },
-  { key: "payments", label: "Pagos" },
-  { key: "training_planning", label: "Planificación de Entrenamientos" },
-  { key: "tracker", label: "Tracker" },
-  { key: "patients", label: "Pacientes" },
-  { key: "nutritionist_planning", label: "Planificación Nutricional" },
+  { key: "finanzas", label: "Finanzas" },
+  { key: "athlete_dashboard", label: "Athlete Dashboard (admins)" },
+  { key: "athlete_tracker", label: "Athlete Tracker (miembros)" },
   { key: "notifications", label: "Notificaciones" },
   { key: "client_roles", label: "Roles de Clientes" },
+  // Not yet ready — coming soon
+  // { key: "payments", label: "Pagos" },
+  // { key: "patients", label: "Pacientes" },
+  // { key: "log_access", label: "Log Access / QR" },
+  // { key: "nutritionist_planning", label: "Planificación Nutricional" },
 ] as const;

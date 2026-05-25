@@ -27,6 +27,9 @@ type Props = {
   isLoading?: boolean;
 };
 
+const DEFAULT_CLIENT_PERMISSIONS = ["finanzas", "athlete_dashboard"];
+const DEFAULT_MEMBER_PERMISSIONS = ["finanzas", "athlete_tracker"];
+
 function slugify(text: string): string {
   return text
     .toLowerCase()
@@ -58,11 +61,11 @@ export function ClientFormModal({ open, onClose, org, onSubmit, isLoading }: Pro
       setAccountNameTouched(false);
       setOwnerName("");
       setPassword("");
-      setClientPermissions(org?.clientPermissions ?? []);
-      setMemberPermissions(org?.memberPermissions ?? []);
+      setClientPermissions(org?.clientPermissions ?? DEFAULT_CLIENT_PERMISSIONS);
+      setMemberPermissions(org?.memberPermissions ?? DEFAULT_MEMBER_PERMISSIONS);
       setErrors({});
     }
-  }, [open, org]);
+  }, [open, org]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!accountNameTouched && !isEditing) {
@@ -80,7 +83,7 @@ export function ClientFormModal({ open, onClose, org, onSubmit, isLoading }: Pro
   function validate(): boolean {
     const errs: Record<string, string> = {};
     if (!name.trim()) errs.name = "El nombre es obligatorio";
-    if (!accountName.trim()) errs.accountName = "El account name es obligatorio";
+    if (!accountName.trim()) errs.accountName = "El nombre de cuenta es obligatorio";
     else if (!/^[a-z0-9-]+$/.test(accountName)) errs.accountName = "Solo letras minúsculas, números y guiones";
     if (!isEditing && !ownerName.trim()) errs.ownerName = "El nombre del propietario es obligatorio";
     if (!isEditing && password.length < 8) errs.password = "Mínimo 8 caracteres";
@@ -148,7 +151,7 @@ export function ClientFormModal({ open, onClose, org, onSubmit, isLoading }: Pro
           )}
 
           <CustomInput
-            label="Account name"
+            label="Nombre de cuenta"
             value={accountName}
             onChangeText={(v) => {
               setAccountNameTouched(true);
@@ -156,7 +159,7 @@ export function ClientFormModal({ open, onClose, org, onSubmit, isLoading }: Pro
             }}
             placeholder="fitlife-studio"
             autoCapitalize="none"
-            hint="Identificador único del cliente"
+            hint="Identificador único del cliente (solo minúsculas, números y guiones)"
             {...fe("accountName")}
           />
 

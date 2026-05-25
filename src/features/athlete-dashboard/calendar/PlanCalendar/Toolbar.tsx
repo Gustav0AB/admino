@@ -40,7 +40,7 @@ export function Toolbar({
   const isMobile = width < 768;
 
   const planOptions = [
-    { label: "No plan selected", value: "" },
+    { label: "Sin plan", value: "" },
     ...plans.map((p) => ({ label: p.name, value: p.id })),
   ];
 
@@ -57,16 +57,16 @@ export function Toolbar({
             options={planOptions}
             value={selectedPlanId ?? ""}
             onChange={(v) => onSelectPlan(v ? String(v) : null)}
-            placeholder="Select plan..."
+            placeholder="Seleccionar plan..."
             style={styles.selectorField}
           />
         </View>
         <View style={styles.btnGroup}>
-          <CustomButton variant="outline" size="sm" onPress={onNewPlan}>+ New Plan</CustomButton>
+          <CustomButton variant="outline" size="sm" onPress={onNewPlan}>+ Nuevo plan</CustomButton>
           {showSave && (
-            <CustomButton variant="primary" size="sm" onPress={onSave}>Save Plan</CustomButton>
+            <CustomButton variant="primary" size="sm" onPress={onSave}>Guardar plan</CustomButton>
           )}
-          <CustomButton variant="outline" size="sm" onPress={onAddEvent}>+ Add Event</CustomButton>
+          <CustomButton variant="outline" size="sm" onPress={onAddEvent}>+ Evento</CustomButton>
           {showPdf && (
             <TouchableOpacity
               onPress={onDownloadPdf}
@@ -82,24 +82,24 @@ export function Toolbar({
       {showForm && (
         <View style={[styles.row, isMobile && styles.rowWrap, styles.formRow]}>
           <CustomInput
-            label="Plan name"
+            label="Nombre del plan"
             value={draftName}
             onChangeText={onDraftNameChange}
-            placeholder="e.g. Macrociclo Mayo"
+            placeholder="Ej. Macrociclo Mayo"
             containerStyle={styles.nameField}
           />
           <CalendarPicker
-            label="Start date"
+            label="Fecha inicio"
             value={draftStartDate ? isoToLocalDate(draftStartDate) : null}
             onChange={(d) => onDraftStartChange(toIso(d))}
-            placeholder="Start"
+            placeholder="Inicio"
             style={styles.dateField}
           />
           <CalendarPicker
-            label="End date"
+            label="Fecha fin"
             value={draftEndDate ? isoToLocalDate(draftEndDate) : null}
             onChange={(d) => onDraftEndChange(toIso(d))}
-            placeholder="End"
+            placeholder="Fin"
             {...(draftStartDate ? { minimumDate: isoToLocalDate(draftStartDate) } : {})}
             style={styles.dateField}
           />

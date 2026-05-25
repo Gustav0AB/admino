@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from "react-native";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   mockCalendarPlans, mockCalendarEvents, getWeeksForRange, defaultWeeks,
   calcTotalWeeks, weeksToNextEvent, buildPlanHtml, toIso, isoToLocalDate,
@@ -12,12 +13,14 @@ import { AddEventModal } from "./AddEventModal";
 import { CellEditModal } from "./CellEditModal";
 import { useColors } from "@/shared/hooks/useColors";
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS } from "@/shared/theme/tokens";
+import { httpClient } from "@/shared/api/client";
+import { ENV } from "@/shared/config/env";
 import type { CalendarPlan, CalendarEvent } from "./types";
 import type { EditMode } from "./Toolbar";
 
 const PAGE_SIZE = 4;
 
-const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MONTH_NAMES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
 
 function formatCellLabel(dateIso: string): string {
   const d = isoToLocalDate(dateIso);
@@ -26,8 +29,67 @@ function formatCellLabel(dateIso: string): string {
 
 export function PlanCalendar() {
   const c = useColors();
-  const [plans, setPlans] = useState<CalendarPlan[]>(mockCalendarPlans);
-  const [events, setEvents] = useState<CalendarEvent[]>(mockCalendarEvents);
+  const queryClient = useQueryClient();
+
+  const { data: backendPlans = [] } = useQuery<CalendarPlan[]>({
+    queryKey: ["training-plans"],
+    queryFn: async () => {
+      if (ENV.USE_MOCK) return mockCalendarPlans;
+      const res = await httpClient<{ data: { id: string; name: string; startDate: string | null; endDate: string | null; cells: Record<string, string> }[] }>("/training-plans");
+      return res.data.map((p) => ({ id: p.id, name: p.name, startDate: p.startDate ?? "", endDate: p.endDate ?? "", cells: p.cells }));
+    },
+  });
+
+  const { data: backendEvents = [] } = useQuery<CalendarEvent[]>({
+    queryKey: ["training-events"],
+    queryFn: async () => {
+      if (ENV.USE_MOCK) return mockCalendarEvents;
+      const res = await httpClient<{ data: { id: string; name: string; date: string; type: string }[] }>("/training-events");
+      return res.data.map((e) => ({ id: e.id, name: e.name, date: e.date.slice(0, 10), type: e.type as CalendarEvent["type"] }));
+    },
+  });
+
+  const savePlanMutation = useMutation({
+    mutationFn: async (draft: CalendarPlan & { isNew: boolean }) => {
+      if (ENV.USE_MOCK) return draft;
+      if (draft.isNew) {
+        const res = await httpClient<{ data: { id: string } }>("/training-plans", {
+          method: "POST",
+          body: { name: draft.name, startDate: draft.startDate, endDate: draft.endDate, cells: draft.cells },
+        });
+        return { ...draft, id: res.data.id };
+      } else {
+        await httpClient(`/training-plans/${draft.id}`, {
+          method: "PATCH",
+          body: { name: draft.name, startDate: draft.startDate, endDate: draft.endDate, cells: draft.cells },
+        });
+        return draft;
+      }
+    },
+    onSuccess: (saved) => {
+      const { isNew, ...plan } = saved;
+      queryClient.setQueryData<CalendarPlan[]>(["training-plans"], (old = []) => {
+        if (isNew) return [...old, plan];
+        return old.map((p) => (p.id === plan.id ? plan : p));
+      });
+      queryClient.invalidateQueries({ queryKey: ["training-plans"] });
+    },
+  });
+
+  const addEventMutation = useMutation({
+    mutationFn: async (event: Omit<CalendarEvent, "id">) => {
+      if (ENV.USE_MOCK) return { ...event, id: `ev-${Date.now()}` };
+      const res = await httpClient<{ data: { id: string } }>("/training-events", {
+        method: "POST",
+        body: { name: event.name, date: event.date, type: event.type },
+      });
+      return { ...event, id: res.data.id };
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["training-events"] }),
+  });
+
+  const plans = backendPlans;
+  const events = backendEvents;
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [editMode, setEditMode] = useState<EditMode>("view");
   const [draftPlan, setDraftPlan] = useState<CalendarPlan | null>(null);
@@ -98,12 +160,17 @@ export function PlanCalendar() {
 
   function handleSave() {
     if (!draftPlan) return;
-    if (editMode === "new") setPlans((prev) => [...prev, draftPlan]);
-    else setPlans((prev) => prev.map((p) => (p.id === draftPlan.id ? draftPlan : p)));
-    setSelectedPlanId(draftPlan.id); setEditMode("view"); setDraftPlan(null);
+    const isNew = editMode === "new";
+    savePlanMutation.mutate({ ...draftPlan, isNew }, {
+      onSuccess: (saved) => {
+        setSelectedPlanId(saved.id); setEditMode("view"); setDraftPlan(null);
+      },
+    });
   }
 
-  function handleAddEvent(event: CalendarEvent) { setEvents((prev) => [...prev, event]); }
+  function handleAddEvent(event: CalendarEvent) {
+    addEventMutation.mutate({ name: event.name, date: event.date, type: event.type });
+  }
 
   async function handleDownloadPdf() {
     if (!activePlan) return;
@@ -145,7 +212,7 @@ export function PlanCalendar() {
             style={[styles.pageBtn, { borderColor: c.border, opacity: safePage === 0 ? 0.35 : 1 }]}
             activeOpacity={0.7}
           >
-            <Text style={[styles.pageBtnText, { color: c.text }]}>‹ Prev</Text>
+            <Text style={[styles.pageBtnText, { color: c.text }]}>‹ Anterior</Text>
           </TouchableOpacity>
           <View style={styles.pageInfo}>
             {Array.from({ length: totalPages }, (_, i) => (
@@ -161,7 +228,7 @@ export function PlanCalendar() {
             style={[styles.pageBtn, { borderColor: c.border, opacity: safePage === totalPages - 1 ? 0.35 : 1 }]}
             activeOpacity={0.7}
           >
-            <Text style={[styles.pageBtnText, { color: c.text }]}>Next ›</Text>
+            <Text style={[styles.pageBtnText, { color: c.text }]}>Siguiente ›</Text>
           </TouchableOpacity>
         </View>
       )}

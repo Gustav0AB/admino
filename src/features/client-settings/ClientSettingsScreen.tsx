@@ -27,21 +27,26 @@ import type {
   OrgMember,
   CreateMemberInput,
   UpdateMemberInput,
+  EndUserMember,
+  CreateEndUserMemberInput,
+  UpdateEndUserMemberInput,
 } from "@/shared/types/member";
 import { MemberFormModal } from "./MemberFormModal";
+import { EndUserFormModal } from "./EndUserFormModal";
 import { ChangePasswordSection } from "@/shared/components/inputs/ChangePasswordSection";
 
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 const TABS = [
-  { key: "branding", label: "Branding" },
+  { key: "branding", label: "Apariencia" },
   { key: "members", label: "Usuarios" },
+  { key: "endusers", label: "Miembros" },
   { key: "security", label: "Seguridad" },
 ];
 
 const ROLE_LABEL: Record<string, string> = {
-  OWNER: "Owner",
-  ADMIN: "Admin",
+  OWNER: "Propietario",
+  ADMIN: "Administrador",
   MEMBER: "Miembro",
 };
 
@@ -59,9 +64,13 @@ export function ClientSettingsScreen() {
   const [brandingSaved, setBrandingSaved] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Members
+  // Staff members (ClientMember)
   const [memberModalOpen, setMemberModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<OrgMember | null>(null);
+
+  // End-user members (Member)
+  const [endUserModalOpen, setEndUserModalOpen] = useState(false);
+  const [editingEndUser, setEditingEndUser] = useState<EndUserMember | null>(null);
 
   // ── Queries ────────────────────────────────────────────────────────────────
   const { data: members = [], isLoading: membersLoading } = useQuery<OrgMember[]>({
@@ -94,7 +103,7 @@ export function ClientSettingsScreen() {
       }
       const res = await httpClient<{ data: OrgMember }>("/clients/members", {
         method: "POST",
-        body: JSON.stringify(data),
+        body: data,
       });
       return res.data;
     },
@@ -112,7 +121,7 @@ export function ClientSettingsScreen() {
       }
       const res = await httpClient<{ data: OrgMember }>(`/clients/members/${id}`, {
         method: "PATCH",
-        body: JSON.stringify(data),
+        body: data,
       });
       return res.data;
     },
@@ -133,7 +142,7 @@ export function ClientSettingsScreen() {
       }
       await httpClient(`/clients/members/${id}`, {
         method: "PATCH",
-        body: JSON.stringify({ isActive }),
+        body: { isActive },
       });
       return { id, isActive };
     },
@@ -143,6 +152,186 @@ export function ClientSettingsScreen() {
       );
     },
   });
+
+  // ── End-user member queries & mutations ───────────────────────────────────
+  const { data: endUsers = [], isLoading: endUsersLoading } = useQuery<EndUserMember[]>({
+    queryKey: ["end-user-members"],
+    queryFn: async () => {
+      if (ENV.USE_MOCK) {
+        await delay(600);
+        return [];
+      }
+      const res = await httpClient<{ data: EndUserMember[] }>("/members");
+      return res.data;
+    },
+  });
+
+  const createEndUser = useMutation({
+    mutationFn: async (data: CreateEndUserMemberInput) => {
+      if (ENV.USE_MOCK) {
+        await delay(700);
+        return { id: `eu-${Date.now()}`, ...data, email: "", isActive: true, joinedAt: new Date().toISOString() } as EndUserMember;
+      }
+      const res = await httpClient<{ data: EndUserMember }>("/members", { method: "POST", body: data });
+      return res.data;
+    },
+    onSuccess: (newMember) => {
+      queryClient.setQueryData<EndUserMember[]>(["end-user-members"], (old = []) => [newMember, ...old]);
+      setEndUserModalOpen(false);
+    },
+  });
+
+  const updateEndUser = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: UpdateEndUserMemberInput }) => {
+      if (ENV.USE_MOCK) {
+        await delay(500);
+        return { id, ...data } as EndUserMember;
+      }
+      const res = await httpClient<{ data: EndUserMember }>(`/members/${id}`, { method: "PATCH", body: data });
+      return res.data;
+    },
+    onSuccess: (updated, { id }) => {
+      queryClient.setQueryData<EndUserMember[]>(["end-user-members"], (old = []) =>
+        old.map((m) => (m.id === id ? { ...m, ...updated } : m))
+      );
+      setEndUserModalOpen(false);
+      setEditingEndUser(null);
+    },
+  });
+
+  const toggleEndUserActive = useMutation({
+    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
+      if (ENV.USE_MOCK) { await delay(400); return { id, isActive }; }
+      await httpClient(`/members/${id}`, { method: "PATCH", body: { isActive } });
+      return { id, isActive };
+    },
+    onSuccess: (_, { id, isActive }) => {
+      queryClient.setQueryData<EndUserMember[]>(["end-user-members"], (old = []) =>
+        old.map((m) => (m.id === id ? { ...m, isActive } : m))
+      );
+    },
+  });
+
+  function openEditEndUser(member: EndUserMember) {
+    setEditingEndUser(member);
+    setEndUserModalOpen(true);
+  }
+
+  function openCreateEndUser() {
+    setEditingEndUser(null);
+    setEndUserModalOpen(true);
+  }
+
+  function handleEndUserSubmit(data: CreateEndUserMemberInput | UpdateEndUserMemberInput) {
+    if (editingEndUser) {
+      updateEndUser.mutate({ id: editingEndUser.id, data: data as UpdateEndUserMemberInput });
+    } else {
+      createEndUser.mutate(data as CreateEndUserMemberInput);
+    }
+  }
+
+  function confirmToggleEndUser(member: EndUserMember) {
+    const action = member.isActive ? "desactivar" : "activar";
+    Alert.alert(
+      `¿${member.isActive ? "Desactivar" : "Activar"} miembro?`,
+      `Esto ${action}á a ${member.name} ${member.lastname}.`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: member.isActive ? "Desactivar" : "Activar",
+          style: member.isActive ? "destructive" : "default",
+          onPress: () => toggleEndUserActive.mutate({ id: member.id, isActive: !member.isActive }),
+        },
+      ]
+    );
+  }
+
+  function calcAge(birthdate: string | null): number | null {
+    if (!birthdate) return null;
+    const dob = new Date(birthdate);
+    if (isNaN(dob.getTime())) return null;
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const m = today.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+    return age >= 0 ? age : null;
+  }
+
+  const renderEndUsers = () => (
+    <View style={styles.tabContent}>
+      {endUsersLoading ? (
+        <View style={styles.center}>
+          <ActivityIndicator color={c.primary} />
+        </View>
+      ) : (
+        <View style={styles.memberList}>
+          {endUsers.length === 0 && (
+            <Text style={{ color: c.textMuted, textAlign: "center", paddingVertical: SPACING.xl }}>
+              Sin miembros
+            </Text>
+          )}
+          {endUsers.map((member) => {
+            const age = calcAge(member.birthdate);
+            return (
+              <View
+                key={member.id}
+                style={[
+                  styles.memberRow,
+                  { backgroundColor: c.backgroundStrong, borderColor: c.border, opacity: member.isActive ? 1 : 0.6 },
+                ]}
+              >
+                <Avatar name={`${member.name} ${member.lastname}`} size="sm" />
+                <View style={styles.memberInfo}>
+                  <View style={styles.memberNameRow}>
+                    <Text style={[styles.memberName, { color: c.text }]} numberOfLines={1}>
+                      {member.name} {member.lastname}
+                    </Text>
+                    <StatusBadge
+                      status={member.isActive ? "active" : "cancelled"}
+                      customLabel={member.isActive ? "Activo" : "Inactivo"}
+                      size="sm"
+                    />
+                  </View>
+                  {age !== null && (
+                    <Text style={{ color: c.textMuted, fontSize: TYPOGRAPHY.fontSize.xs }}>
+                      {age} años
+                    </Text>
+                  )}
+                  {member.username && (
+                    <Text style={{ color: c.primary, fontSize: TYPOGRAPHY.fontSize.xs }}>
+                      @{member.username}
+                    </Text>
+                  )}
+                </View>
+                <View style={styles.memberActions}>
+                  <TouchableOpacity
+                    style={[styles.actionBtn, { borderColor: c.border, backgroundColor: c.background }]}
+                    onPress={() => openEditEndUser(member)}
+                  >
+                    <Text style={[styles.actionBtnText, { color: c.text }]}>Editar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.actionBtn,
+                      {
+                        borderColor: member.isActive ? c.danger + "60" : c.border,
+                        backgroundColor: member.isActive ? c.danger + "10" : c.background,
+                      },
+                    ]}
+                    onPress={() => confirmToggleEndUser(member)}
+                  >
+                    <Text style={[styles.actionBtnText, { color: member.isActive ? c.danger : c.textMuted }]}>
+                      {member.isActive ? "Desactivar" : "Activar"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      )}
+    </View>
+  );
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   function openEdit(member: OrgMember) {
@@ -214,7 +403,6 @@ export function ClientSettingsScreen() {
     <View style={styles.tabContent}>
       {/* Hidden web file input */}
       {Platform.OS === "web" && (
-        // @ts-expect-error – web-only
         <input
           ref={fileInputRef}
           type="file"
@@ -248,7 +436,7 @@ export function ClientSettingsScreen() {
                 )}
               </View>
               <View style={styles.logoActions}>
-                <CustomButton onPress={openFilePicker} type="secondary">
+                <CustomButton onPress={openFilePicker} variant="secondary">
                   Subir imagen (JPG/PNG)
                 </CustomButton>
                 {logoPreview && (
@@ -384,14 +572,22 @@ export function ClientSettingsScreen() {
         saveActions={
           activeTab === "members"
             ? [{ label: "Agregar usuario", type: "primary", onClick: openCreate }]
+            : activeTab === "endusers"
+            ? [{ label: "Agregar miembro", type: "primary", onClick: openCreateEndUser }]
             : []
         }
       >
-        {activeTab === "branding" ? renderBranding() : activeTab === "members" ? renderMembers() : (
-          <View style={styles.tabContent}>
-            <ChangePasswordSection />
-          </View>
-        )}
+        {activeTab === "branding"
+          ? renderBranding()
+          : activeTab === "members"
+          ? renderMembers()
+          : activeTab === "endusers"
+          ? renderEndUsers()
+          : (
+            <View style={styles.tabContent}>
+              <ChangePasswordSection />
+            </View>
+          )}
       </FeatureShell>
 
       <MemberFormModal
@@ -403,6 +599,17 @@ export function ClientSettingsScreen() {
         member={editingMember}
         onSubmit={handleMemberSubmit}
         isLoading={createMember.isPending || updateMember.isPending}
+      />
+
+      <EndUserFormModal
+        open={endUserModalOpen}
+        onClose={() => {
+          setEndUserModalOpen(false);
+          setEditingEndUser(null);
+        }}
+        member={editingEndUser}
+        onSubmit={handleEndUserSubmit}
+        isLoading={createEndUser.isPending || updateEndUser.isPending}
       />
     </>
   );

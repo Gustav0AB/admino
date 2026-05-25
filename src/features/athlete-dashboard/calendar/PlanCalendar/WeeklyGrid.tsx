@@ -130,7 +130,7 @@ export function WeeklyGrid({ weeks, cells, events, editable, planStartDate, plan
 
         {weeks.length === 0 && (
           <View style={[styles.emptyState, { borderColor: c.border }]}>
-            <Text style={[styles.emptyText, { color: c.textMuted }]}>Select a plan or add one to see the calendar.</Text>
+            <Text style={[styles.emptyText, { color: c.textMuted }]}>Selecciona un plan o crea uno para ver el calendario.</Text>
           </View>
         )}
       </View>

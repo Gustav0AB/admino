@@ -5,8 +5,17 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { useAuthStore } from "@/shared/store/authStore";
 import { currentMonthName, buildAppData } from "./helpers";
-import type { AppData, CreditCard, Estado, Expense, Frecuencia, MetodoPago } from "./types";
+import type { AppData, CreditCard, Estado, Expense, Frecuencia, MetodoPago, RecurringExpense } from "./types";
 import { usePlanningStore } from "./planning/store";
+
+// Migrate records saved before the day→days rename
+function migrateRecurring(items: RecurringExpense[]): RecurringExpense[] {
+  return items.map((r) => {
+    if (Array.isArray(r.days)) return r;
+    const legacy = r as unknown as { day?: number };
+    return { ...r, days: legacy.day != null ? [legacy.day] : [1] };
+  });
+}
 
 function getUserId() {
   return useAuthStore.getState().user?.id ?? "anonymous";
@@ -55,6 +64,7 @@ type ExpensesState = {
   creditCutDay: number;
   creditPayDay: number;
   creditCards: CreditCard[];
+  recurringExpenses: RecurringExpense[];
 
   setExpenses: (expenses: Expense[]) => void;
   setFilterMes: (v: string) => void;
@@ -68,6 +78,11 @@ type ExpensesState = {
   addCreditCard: (card: Omit<CreditCard, "id">) => void;
   updateCreditCard: (id: string, patch: Partial<CreditCard>) => void;
   removeCreditCard: (id: string) => void;
+
+  addRecurringExpense: (item: Omit<RecurringExpense, "id" | "cancelledMonths">) => void;
+  updateRecurringExpense: (id: string, patch: Partial<Omit<RecurringExpense, "id">>) => void;
+  removeRecurringExpense: (id: string) => void;
+  toggleCancelMonth: (id: string, mes: string) => void;
 
   addExpense: () => void;
   removeExpense: (id: string) => void;
@@ -98,6 +113,7 @@ export const useExpensesStore = create<ExpensesState>()(
       creditCutDay: 0,
       creditPayDay: 0,
       creditCards: [],
+      recurringExpenses: [],
 
       setExpenses: (expenses) => set({ expenses }),
       setFilterMes: (filterMes) => set({ filterMes }),
@@ -123,6 +139,40 @@ export const useExpensesStore = create<ExpensesState>()(
       removeCreditCard: (id) =>
         set((s) => ({
           creditCards: s.creditCards.filter((c) => c.id !== id),
+        })),
+
+      addRecurringExpense: (item) =>
+        set((s) => ({
+          recurringExpenses: [
+            ...s.recurringExpenses,
+            { ...item, id: randomUUID(), cancelledMonths: [] },
+          ],
+        })),
+
+      updateRecurringExpense: (id, patch) =>
+        set((s) => ({
+          recurringExpenses: s.recurringExpenses.map((r) =>
+            r.id === id ? { ...r, ...patch } : r
+          ),
+        })),
+
+      removeRecurringExpense: (id) =>
+        set((s) => ({
+          recurringExpenses: s.recurringExpenses.filter((r) => r.id !== id),
+        })),
+
+      toggleCancelMonth: (id, mes) =>
+        set((s) => ({
+          recurringExpenses: s.recurringExpenses.map((r) => {
+            if (r.id !== id) return r;
+            const already = r.cancelledMonths.includes(mes);
+            return {
+              ...r,
+              cancelledMonths: already
+                ? r.cancelledMonths.filter((m) => m !== mes)
+                : [...r.cancelledMonths, mes],
+            };
+          }),
         })),
 
       addExpense: () =>
@@ -259,6 +309,7 @@ export const useExpensesStore = create<ExpensesState>()(
           s.creditCutDay,
           s.creditPayDay,
           s.creditCards,
+          s.recurringExpenses,
           planningData
         );
       },
@@ -286,6 +337,7 @@ export const useExpensesStore = create<ExpensesState>()(
           creditCutDay: data.creditCutDay ?? 0,
           creditPayDay: data.creditPayDay ?? 0,
           creditCards,
+          recurringExpenses: migrateRecurring(data.recurringExpenses ?? []),
         });
         if (data.planningData) {
           usePlanningStore.getState().loadPlanningData(data.planningData);
@@ -303,6 +355,7 @@ export const useExpensesStore = create<ExpensesState>()(
           creditCutDay: 0,
           creditPayDay: 0,
           creditCards: [],
+          recurringExpenses: [],
         }),
 
       rehydrate: async () => {
@@ -312,6 +365,11 @@ export const useExpensesStore = create<ExpensesState>()(
     {
       name: "expenses",
       storage: userScopedStorage,
+      onRehydrateStorage: () => (state) => {
+        if (state?.recurringExpenses) {
+          state.recurringExpenses = migrateRecurring(state.recurringExpenses);
+        }
+      },
     }
   )
 );

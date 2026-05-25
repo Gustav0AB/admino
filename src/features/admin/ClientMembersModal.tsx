@@ -17,8 +17,8 @@ type Props = {
 };
 
 const ROLE_LABEL: Record<string, string> = {
-  OWNER: "Owner",
-  ADMIN: "Admin",
+  OWNER: "Propietario",
+  ADMIN: "Administrador",
   MEMBER: "Miembro",
 };
 
