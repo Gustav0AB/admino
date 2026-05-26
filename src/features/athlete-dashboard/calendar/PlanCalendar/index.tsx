@@ -36,7 +36,7 @@ export function PlanCalendar() {
     queryFn: async () => {
       if (ENV.USE_MOCK) return mockCalendarPlans;
       const res = await httpClient<{ data: { id: string; name: string; startDate: string | null; endDate: string | null; cells: Record<string, string> }[] }>("/training-plans");
-      return res.data.map((p) => ({ id: p.id, name: p.name, startDate: p.startDate ?? "", endDate: p.endDate ?? "", cells: p.cells }));
+      return res.data.map((p) => ({ id: p.id, name: p.name, startDate: p.startDate ? p.startDate.slice(0, 10) : "", endDate: p.endDate ? p.endDate.slice(0, 10) : "", cells: p.cells }));
     },
   });
 
@@ -93,6 +93,7 @@ export function PlanCalendar() {
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [editMode, setEditMode] = useState<EditMode>("view");
   const [draftPlan, setDraftPlan] = useState<CalendarPlan | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [addEventOpen, setAddEventOpen] = useState(false);
   const [cellModalDateIso, setCellModalDateIso] = useState<string | null>(null);
   const [page, setPage] = useState(0);
@@ -135,13 +136,13 @@ export function PlanCalendar() {
   }
 
   function handleDraftNameChange(v: string) {
-    setDraftPlan((prev) => prev ? { ...prev, name: v } : prev);
+    setDraftPlan((prev) => prev ? { ...prev, name: v } : prev); setSaveError(null);
   }
   function handleDraftStartChange(v: string) {
-    setDraftPlan((prev) => prev ? { ...prev, startDate: v } : prev); setPage(0);
+    setDraftPlan((prev) => prev ? { ...prev, startDate: v } : prev); setPage(0); setSaveError(null);
   }
   function handleDraftEndChange(v: string) {
-    setDraftPlan((prev) => prev ? { ...prev, endDate: v } : prev);
+    setDraftPlan((prev) => prev ? { ...prev, endDate: v } : prev); setSaveError(null);
   }
 
   function applyCellText(dateIso: string, text: string) {
@@ -160,10 +161,18 @@ export function PlanCalendar() {
 
   function handleSave() {
     if (!draftPlan) return;
+    if (!draftPlan.name.trim()) { setSaveError("El nombre del plan es obligatorio"); return; }
+    if (!draftPlan.startDate) { setSaveError("La fecha de inicio es obligatoria"); return; }
+    if (!draftPlan.endDate) { setSaveError("La fecha de fin es obligatoria"); return; }
+    setSaveError(null);
     const isNew = editMode === "new";
     savePlanMutation.mutate({ ...draftPlan, isNew }, {
       onSuccess: (saved) => {
-        setSelectedPlanId(saved.id); setEditMode("view"); setDraftPlan(null);
+        setSelectedPlanId(saved.id); setEditMode("view"); setDraftPlan(null); setSaveError(null);
+      },
+      onError: (err: unknown) => {
+        const msg = err instanceof Error ? err.message : "Error al guardar el plan";
+        setSaveError(msg);
       },
     });
   }
@@ -192,6 +201,7 @@ export function PlanCalendar() {
         plans={plans} selectedPlanId={selectedPlanId} editMode={editMode}
         draftName={draftName} draftStartDate={draftStartDate} draftEndDate={draftEndDate}
         totalWeeks={totalWeeks} weeksToNext={editMode !== "view" ? null : weeksToNext}
+        saveError={saveError} isSaving={savePlanMutation.isPending}
         onSelectPlan={handleSelectPlan} onNewPlan={handleNewPlan}
         onDraftNameChange={handleDraftNameChange} onDraftStartChange={handleDraftStartChange}
         onDraftEndChange={handleDraftEndChange} onSave={handleSave}

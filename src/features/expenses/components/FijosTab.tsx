@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -13,11 +13,12 @@ import { useColors } from "@/shared/hooks/useColors";
 import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
 import { usePlanningStore } from "@/features/expenses/planning/store";
 import { useExpensesStore } from "../store";
+import type { InstallmentPayment } from "@/features/expenses/planning/types";
 import { currentMonthName, formatMXN, MESES_LIST } from "../helpers";
 import type { RecurringCategory, RecurringExpense } from "../types";
 import type { ScheduledExpenseCategory } from "../planning/types";
 
-const SUB_TABS = ["Básicos", "Servicios", "Agendados"] as const;
+const SUB_TABS = ["Básicos", "Servicios", "Agendados", "Pagos a meses", "Simulación"] as const;
 type SubTab = (typeof SUB_TABS)[number];
 
 const MES_OPTIONS = [
@@ -82,10 +83,17 @@ export function FijosTab() {
   const [subTab, setSubTab] = useState<SubTab>("Básicos");
   const [selectedMes, setSelectedMes] = useState(currentMonthName());
 
+  const showMonthFilter = subTab === "Básicos" || subTab === "Servicios";
+
   return (
     <View style={styles.root}>
-      {/* Sub-tab bar */}
-      <View style={[styles.subTabBar, { borderBottomColor: c.border }]}>
+      {/* Sub-tab bar — scrollable for 5 tabs */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={[styles.subTabBar, { borderBottomColor: c.border }]}
+        contentContainerStyle={{ flexDirection: "row" }}
+      >
         {SUB_TABS.map((t) => (
           <TouchableOpacity
             key={t}
@@ -95,10 +103,10 @@ export function FijosTab() {
             <Text style={[styles.subTabLabel, { color: subTab === t ? c.primary : c.textMuted }]}>{t}</Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
 
       {/* Month filter for Básicos / Servicios */}
-      {subTab !== "Agendados" && (
+      {showMonthFilter && (
         <View style={[styles.monthBar, { borderBottomColor: c.border }]}>
           <CustomSelect
             value={selectedMes}
@@ -112,6 +120,8 @@ export function FijosTab() {
       {subTab === "Básicos" && <RecurringList category="basico" selectedMes={selectedMes} c={c} />}
       {subTab === "Servicios" && <RecurringList category="servicio" selectedMes={selectedMes} c={c} />}
       {subTab === "Agendados" && <AgendadosList c={c} />}
+      {subTab === "Pagos a meses" && <PagosMesesTab c={c} />}
+      {subTab === "Simulación" && <SimulacionTab c={c} />}
     </View>
   );
 }
@@ -140,6 +150,35 @@ function RecurringList({
   const [form, setForm] = useState<RecurringForm>(blankRecurring());
 
   const items = recurringExpenses.filter((r) => r.category === category);
+
+  // Auto-sync recurring expenses into Todos los gastos when month changes
+  const lastSyncedRef = useRef<string>("");
+  useEffect(() => {
+    if (selectedMes === "__all__" || selectedMes === lastSyncedRef.current) return;
+    lastSyncedRef.current = selectedMes;
+    const { expenses: currentExpenses, addExpenseFromModal: addFromModal } = useExpensesStore.getState();
+    for (const r of useExpensesStore.getState().recurringExpenses.filter((r) => r.category === category)) {
+      if (r.cancelledMonths.includes(selectedMes)) continue;
+      for (const day of r.days) {
+        const exists = currentExpenses.some(
+          (e) => e.mes === selectedMes && e.gastos === r.title && e.fecha === day
+        );
+        if (!exists) {
+          addFromModal({
+            mes: selectedMes,
+            gastos: r.title,
+            monto: r.amount,
+            metodoPago: r.metodoPago,
+            frecuencia: "mes",
+            fecha: day,
+            fechaMaxima: "",
+            estado: "no pagado",
+            ...(r.creditCardId ? { creditCardId: r.creditCardId } : {}),
+          });
+        }
+      }
+    }
+  }, [selectedMes]);
 
   const cardOptions = [
     { label: "Sin tarjeta", value: "" },
@@ -603,13 +642,412 @@ function AgendadosList({ c }: { c: ReturnType<typeof useColors> }) {
   );
 }
 
+// ─── Pagos a meses ────────────────────────────────────────────────────────────
+
+type InstallmentForm = {
+  title: string;
+  monthlyAmount: string;
+  totalMonths: string;
+  paidMonths: string;
+  notes: string;
+};
+
+const blankInstallmentForm = (): InstallmentForm => ({
+  title: "",
+  monthlyAmount: "",
+  totalMonths: "",
+  paidMonths: "0",
+  notes: "",
+});
+
+function PagosMesesTab({ c }: { c: ReturnType<typeof useColors> }) {
+  const { installmentPayments, addInstallment, updateInstallment, removeInstallment } =
+    usePlanningStore();
+  const { addExpenseFromModal } = useExpensesStore();
+
+  const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [form, setForm] = useState<InstallmentForm>(blankInstallmentForm());
+
+  function patch(p: Partial<InstallmentForm>) {
+    setForm((f) => ({ ...f, ...p }));
+  }
+
+  function startAdd() {
+    setEditId(null);
+    setForm(blankInstallmentForm());
+    setShowForm(true);
+  }
+
+  function startEdit(ip: InstallmentPayment) {
+    setEditId(ip.id);
+    setForm({
+      title: ip.title,
+      monthlyAmount: String(ip.monthlyAmount),
+      totalMonths: String(ip.totalMonths),
+      paidMonths: String(ip.paidMonths),
+      notes: ip.notes,
+    });
+    setShowForm(true);
+  }
+
+  function save() {
+    const monthly = parseFloat(form.monthlyAmount) || 0;
+    const total = parseInt(form.totalMonths, 10) || 0;
+    const paid = Math.min(parseInt(form.paidMonths, 10) || 0, total);
+    if (!form.title.trim() || monthly <= 0 || total <= 0) return;
+
+    const payload: Omit<InstallmentPayment, "id"> = {
+      title: form.title.trim(),
+      monthlyAmount: monthly,
+      totalMonths: total,
+      paidMonths: paid,
+      notes: form.notes.trim(),
+      status: paid >= total ? "completed" : "active",
+    };
+
+    if (editId) {
+      updateInstallment(editId, payload);
+    } else {
+      addInstallment(payload);
+    }
+    setShowForm(false);
+    setEditId(null);
+  }
+
+  function payMonth(ip: InstallmentPayment) {
+    const newPaid = ip.paidMonths + 1;
+    const isComplete = newPaid >= ip.totalMonths;
+    updateInstallment(ip.id, {
+      paidMonths: newPaid,
+      status: isComplete ? "completed" : "active",
+    });
+    addExpenseFromModal({
+      mes: currentMonthName(),
+      gastos: ip.title,
+      monto: ip.monthlyAmount,
+      metodoPago: ip.creditCardId ? "credito" : "efectivo",
+      frecuencia: "mes",
+      fecha: new Date().getDate(),
+      fechaMaxima: "",
+      estado: "pagado",
+      ...(ip.creditCardId ? { creditCardId: ip.creditCardId } : {}),
+    });
+  }
+
+  const active = installmentPayments.filter((ip) => ip.status === "active");
+  const completed = installmentPayments.filter((ip) => ip.status === "completed");
+
+  return (
+    <ScrollView style={styles.list} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
+      {showForm && (
+        <View style={[styles.formCard, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
+          <TextInput
+            style={[styles.input, { color: c.text, borderColor: c.border, backgroundColor: c.background }]}
+            placeholder="Nombre (ej: iPhone 15, Laptop...)"
+            placeholderTextColor={c.textPlaceholder}
+            value={form.title}
+            onChangeText={(v) => patch({ title: v })}
+          />
+          <View style={{ flexDirection: "row", gap: SPACING.sm }}>
+            <TextInput
+              style={[styles.input, { flex: 1, color: c.text, borderColor: c.border, backgroundColor: c.background }]}
+              placeholder="Mensualidad $"
+              placeholderTextColor={c.textPlaceholder}
+              keyboardType="numeric"
+              value={form.monthlyAmount}
+              onChangeText={(v) => patch({ monthlyAmount: v })}
+            />
+            <TextInput
+              style={[styles.input, { flex: 1, color: c.text, borderColor: c.border, backgroundColor: c.background }]}
+              placeholder="Total meses"
+              placeholderTextColor={c.textPlaceholder}
+              keyboardType="numeric"
+              value={form.totalMonths}
+              onChangeText={(v) => patch({ totalMonths: v })}
+            />
+            <TextInput
+              style={[styles.input, { flex: 1, color: c.text, borderColor: c.border, backgroundColor: c.background }]}
+              placeholder="Ya pagados"
+              placeholderTextColor={c.textPlaceholder}
+              keyboardType="numeric"
+              value={form.paidMonths}
+              onChangeText={(v) => patch({ paidMonths: v })}
+            />
+          </View>
+          {form.monthlyAmount && form.totalMonths ? (
+            <Text style={{ color: c.textMuted, fontSize: TYPOGRAPHY.fontSize.xs }}>
+              Total: ${formatMXN((parseFloat(form.monthlyAmount) || 0) * (parseInt(form.totalMonths, 10) || 0))}
+            </Text>
+          ) : null}
+          <TextInput
+            style={[styles.input, styles.notesInput, { color: c.text, borderColor: c.border, backgroundColor: c.background }]}
+            placeholder="Notas (opcional)"
+            placeholderTextColor={c.textPlaceholder}
+            value={form.notes}
+            onChangeText={(v) => patch({ notes: v })}
+            multiline
+          />
+          <View style={styles.formActions}>
+            <TouchableOpacity style={[styles.btn, { backgroundColor: c.primary }]} onPress={save}>
+              <Text style={[styles.btnText, { color: c.primaryForeground }]}>Guardar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.btn, { backgroundColor: c.backgroundStrong, borderColor: c.border, borderWidth: 1 }]}
+              onPress={() => setShowForm(false)}
+            >
+              <Text style={[styles.btnText, { color: c.text }]}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {active.length === 0 && completed.length === 0 && !showForm && (
+        <Text style={[styles.empty, { color: c.textMuted }]}>Sin pagos a meses registrados.</Text>
+      )}
+
+      {active.map((ip) => {
+        const remaining = ip.totalMonths - ip.paidMonths;
+        const pct = ip.totalMonths > 0 ? ip.paidMonths / ip.totalMonths : 0;
+        const finishDate = new Date();
+        finishDate.setMonth(finishDate.getMonth() + remaining);
+        const finishStr = finishDate.toLocaleDateString("es-MX", { month: "short", year: "numeric" });
+        return (
+          <View key={ip.id} style={[styles.itemCard, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
+            <View style={styles.itemMain}>
+              <View style={styles.itemInfo}>
+                <Text style={[styles.itemTitle, { color: c.text }]}>{ip.title}</Text>
+                <Text style={[styles.itemSub, { color: c.textMuted }]}>
+                  {ip.paidMonths}/{ip.totalMonths} meses · Termina {finishStr}
+                </Text>
+              </View>
+              <Text style={[styles.itemAmount, { color: c.primary }]}>${formatMXN(ip.monthlyAmount)}/mes</Text>
+            </View>
+            {/* Progress bar */}
+            <View style={[styles.progressBar, { backgroundColor: c.border }]}>
+              <View style={[styles.progressFill, { width: `${Math.round(pct * 100)}%` as any, backgroundColor: c.primary }]} />
+            </View>
+            {ip.notes ? <Text style={[styles.cancelledNote, { color: c.textMuted }]}>{ip.notes}</Text> : null}
+            <View style={styles.itemActions}>
+              <TouchableOpacity
+                style={[styles.actionBtn, { borderColor: "#16A34A" }]}
+                onPress={() => payMonth(ip)}
+              >
+                <Text style={[styles.actionBtnText, { color: "#16A34A" }]}>Pagar mes</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.actionBtn, { borderColor: c.border }]} onPress={() => startEdit(ip)}>
+                <Text style={[styles.actionBtnText, { color: c.text }]}>Editar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionBtn, { borderColor: c.danger }]}
+                onPress={() => removeInstallment(ip.id)}
+              >
+                <Text style={[styles.actionBtnText, { color: c.danger }]}>Eliminar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        );
+      })}
+
+      {completed.length > 0 && (
+        <>
+          <Text style={[styles.sectionLabel, { color: c.textMuted }]}>Terminados</Text>
+          {completed.map((ip) => (
+            <View
+              key={ip.id}
+              style={[styles.itemCard, { backgroundColor: c.backgroundStrong, borderColor: c.border, opacity: 0.5 }]}
+            >
+              <View style={styles.itemMain}>
+                <View style={styles.itemInfo}>
+                  <Text style={[styles.itemTitle, { color: c.text, textDecorationLine: "line-through" }]}>{ip.title}</Text>
+                  <Text style={[styles.itemSub, { color: c.textMuted }]}>{ip.totalMonths} meses completados</Text>
+                </View>
+                <Text style={[styles.itemAmount, { color: c.textMuted }]}>${formatMXN(ip.monthlyAmount)}/mes</Text>
+              </View>
+              <View style={styles.itemActions}>
+                <TouchableOpacity
+                  style={[styles.actionBtn, { borderColor: c.danger }]}
+                  onPress={() => removeInstallment(ip.id)}
+                >
+                  <Text style={[styles.actionBtnText, { color: c.danger }]}>Eliminar</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+        </>
+      )}
+
+      {!showForm && (
+        <TouchableOpacity style={[styles.addBtn, { borderColor: c.primary }]} onPress={startAdd}>
+          <Text style={[styles.addBtnText, { color: c.primary }]}>+ Agregar pago a meses</Text>
+        </TouchableOpacity>
+      )}
+    </ScrollView>
+  );
+}
+
+// ─── Simulación ───────────────────────────────────────────────────────────────
+
+type SimType = "meses" | "unico";
+
+type SimForm = {
+  description: string;
+  totalAmount: string;
+  months: string;
+};
+
+function SimulacionTab({ c }: { c: ReturnType<typeof useColors> }) {
+  const { recurringExpenses } = useExpensesStore();
+  const { installmentPayments } = usePlanningStore();
+
+  const [simType, setSimType] = useState<SimType>("meses");
+  const [form, setForm] = useState<SimForm>({ description: "", totalAmount: "", months: "" });
+
+  function patch(p: Partial<SimForm>) {
+    setForm((f) => ({ ...f, ...p }));
+  }
+
+  function reset() {
+    setForm({ description: "", totalAmount: "", months: "" });
+  }
+
+  const totalAmount = parseFloat(form.totalAmount) || 0;
+  const months = parseInt(form.months, 10) || 0;
+  const monthly = simType === "meses" && months > 0 ? totalAmount / months : totalAmount;
+
+  const currentActiveInstallments = installmentPayments
+    .filter((ip) => ip.status === "active")
+    .reduce((sum, ip) => sum + ip.monthlyAmount, 0);
+  const currentRecurring = recurringExpenses.reduce((sum, r) => sum + r.amount, 0);
+  const currentMonthlyTotal = currentRecurring + currentActiveInstallments;
+
+  const finishDate = new Date();
+  if (months > 0) finishDate.setMonth(finishDate.getMonth() + months);
+
+  const hasValues = totalAmount > 0 && (simType === "unico" || months > 0);
+
+  return (
+    <ScrollView style={styles.list} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
+      {/* Type selector */}
+      <View style={[styles.formCard, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
+        <Text style={[styles.sectionLabel, { color: c.text, textTransform: "none", fontSize: TYPOGRAPHY.fontSize.sm }]}>
+          ¿Qué quieres simular?
+        </Text>
+        <View style={styles.chipRow}>
+          {(["meses", "unico"] as SimType[]).map((t) => (
+            <TouchableOpacity
+              key={t}
+              style={[styles.chip, { borderColor: c.border, backgroundColor: simType === t ? c.primary : c.background, flex: 1, alignItems: "center" }]}
+              onPress={() => setSimType(t)}
+            >
+              <Text style={{ color: simType === t ? c.primaryForeground : c.text, fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "600" }}>
+                {t === "meses" ? "A meses" : "Pago único"}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <TextInput
+          style={[styles.input, { color: c.text, borderColor: c.border, backgroundColor: c.background }]}
+          placeholder="¿Qué quieres comprar?"
+          placeholderTextColor={c.textPlaceholder}
+          value={form.description}
+          onChangeText={(v) => patch({ description: v })}
+        />
+
+        <TextInput
+          style={[styles.input, { color: c.text, borderColor: c.border, backgroundColor: c.background }]}
+          placeholder={simType === "meses" ? "Precio total $" : "Monto $"}
+          placeholderTextColor={c.textPlaceholder}
+          keyboardType="decimal-pad"
+          value={form.totalAmount}
+          onChangeText={(v) => patch({ totalAmount: v })}
+        />
+
+        {simType === "meses" && (
+          <TextInput
+            style={[styles.input, { color: c.text, borderColor: c.border, backgroundColor: c.background }]}
+            placeholder="Número de meses"
+            placeholderTextColor={c.textPlaceholder}
+            keyboardType="numeric"
+            value={form.months}
+            onChangeText={(v) => patch({ months: v })}
+          />
+        )}
+
+        <TouchableOpacity onPress={reset}>
+          <Text style={{ color: c.textMuted, fontSize: TYPOGRAPHY.fontSize.xs, textAlign: "right" }}>Limpiar</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Results */}
+      {hasValues && (
+        <View style={[styles.formCard, { backgroundColor: c.backgroundStrong, borderColor: c.border, gap: SPACING.sm }]}>
+          <Text style={[styles.sectionLabel, { color: c.text, textTransform: "none", fontSize: TYPOGRAPHY.fontSize.sm }]}>
+            {form.description || "Compra simulada"}
+          </Text>
+
+          {simType === "meses" ? (
+            <>
+              <SimRow label="Mensualidad" value={`$${formatMXN(monthly)}/mes`} c={c} highlight />
+              <SimRow label="Costo total" value={`$${formatMXN(totalAmount)}`} c={c} />
+              <SimRow label="Duración" value={`${months} ${months === 1 ? "mes" : "meses"}`} c={c} />
+              <SimRow
+                label="Termina aprox."
+                value={finishDate.toLocaleDateString("es-MX", { month: "long", year: "numeric" })}
+                c={c}
+              />
+            </>
+          ) : (
+            <SimRow label="Pago único" value={`$${formatMXN(totalAmount)}`} c={c} highlight />
+          )}
+
+          <View style={[styles.progressBar, { backgroundColor: c.border, marginTop: SPACING.xs }]} />
+
+          <Text style={[styles.sectionLabel, { color: c.textMuted, textTransform: "uppercase", fontSize: TYPOGRAPHY.fontSize.xs }]}>
+            Impacto mensual
+          </Text>
+          <SimRow label="Gastos fijos actuales" value={`$${formatMXN(currentMonthlyTotal)}/mes`} c={c} />
+          {simType === "meses" && (
+            <SimRow
+              label="Con esta compra"
+              value={`$${formatMXN(currentMonthlyTotal + monthly)}/mes`}
+              c={c}
+              highlight
+            />
+          )}
+          {simType === "unico" && (
+            <SimRow
+              label="Mes de la compra"
+              value={`$${formatMXN(currentMonthlyTotal + totalAmount)}`}
+              c={c}
+              highlight
+            />
+          )}
+        </View>
+      )}
+    </ScrollView>
+  );
+}
+
+function SimRow({ label, value, c, highlight }: { label: string; value: string; c: ReturnType<typeof useColors>; highlight?: boolean }) {
+  return (
+    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+      <Text style={{ fontSize: TYPOGRAPHY.fontSize.sm, color: c.textMuted }}>{label}</Text>
+      <Text style={{ fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: highlight ? "700" : "400", color: highlight ? c.text : c.textMuted }}>
+        {value}
+      </Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  subTabBar: { flexDirection: "row", borderBottomWidth: StyleSheet.hairlineWidth },
+  subTabBar: { borderBottomWidth: StyleSheet.hairlineWidth },
   subTab: {
-    flex: 1,
     alignItems: "center",
     paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
     borderBottomWidth: 2,
     borderBottomColor: "transparent",
   },
@@ -673,4 +1111,6 @@ const styles = StyleSheet.create({
     borderStyle: "dashed",
   },
   addBtnText: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "600" },
+  progressBar: { height: 4, borderRadius: 2, overflow: "hidden", marginVertical: 2 },
+  progressFill: { height: 4, borderRadius: 2 },
 });

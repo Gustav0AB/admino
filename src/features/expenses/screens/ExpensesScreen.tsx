@@ -15,11 +15,11 @@ import type { AppData } from "../types";
 const DEBOUNCE_MS = 1500;
 
 const TABS = [
-  { key: "gastos", label: "Gastos" },
-  { key: "resumen", label: "Resumen" },
+  { key: "gastos", label: "Todos los gastos" },
   { key: "fijos", label: "Fijos" },
   { key: "vacaciones", label: "Vacaciones" },
   { key: "tarjetas", label: "Tarjetas" },
+  { key: "resumen", label: "Resumen" },
 ];
 
 export function ExpensesScreen() {
@@ -37,7 +37,7 @@ export function ExpensesScreen() {
     loadAppData,
   } = useExpensesStore();
 
-  const { scheduledExpenses, vacations } = usePlanningStore();
+  const { scheduledExpenses, vacations, installmentPayments } = usePlanningStore();
 
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const skipNextAutoSave = useRef(false);
@@ -68,7 +68,7 @@ export function ExpensesScreen() {
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
     };
-  }, [expenses, creditCards, recurringExpenses, scheduledExpenses, vacations, initialCreditDebt, creditCutDay, creditPayDay]);
+  }, [expenses, creditCards, recurringExpenses, scheduledExpenses, vacations, installmentPayments, initialCreditDebt, creditCutDay, creditPayDay]);
 
   return (
     <FeatureShell

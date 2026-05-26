@@ -8,6 +8,7 @@ const DEFAULT_BRANDING: ClientBranding = {
   secondaryColor: "#7C3AED",
   backgroundColor: "#FFFFFF",
   orgName: "Admino",
+  slug: "",
   logoUrl: null,
 };
 
@@ -42,6 +43,7 @@ export const useClientStore = create<ClientState>()((set, get) => ({
       const envelope = await res.json() as {
         data: {
           orgName: string;
+          slug: string;
           primaryColor: string;
           secondaryColor: string;
           logoUrl: string | null;
@@ -53,6 +55,7 @@ export const useClientStore = create<ClientState>()((set, get) => ({
       set({
         branding: {
           orgName: d.orgName,
+          slug: d.slug ?? "",
           primaryColor: d.primaryColor,
           secondaryColor: d.secondaryColor,
           backgroundColor: "#FFFFFF",

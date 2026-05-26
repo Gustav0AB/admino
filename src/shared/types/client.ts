@@ -3,6 +3,7 @@ export type ClientBranding = {
   secondaryColor: string;
   backgroundColor: string;
   orgName: string;
+  slug: string;
   logoUrl: string | null;
 };
 

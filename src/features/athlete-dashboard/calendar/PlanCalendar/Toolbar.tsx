@@ -19,6 +19,8 @@ type ToolbarProps = {
   draftEndDate: string;
   totalWeeks: number | null;
   weeksToNext: number | null;
+  saveError: string | null;
+  isSaving: boolean;
   onSelectPlan: (id: string | null) => void;
   onNewPlan: () => void;
   onDraftNameChange: (v: string) => void;
@@ -31,7 +33,7 @@ type ToolbarProps = {
 
 export function Toolbar({
   plans, selectedPlanId, editMode, draftName, draftStartDate, draftEndDate,
-  totalWeeks, weeksToNext,
+  totalWeeks, weeksToNext, saveError, isSaving,
   onSelectPlan, onNewPlan, onDraftNameChange, onDraftStartChange, onDraftEndChange,
   onSave, onAddEvent, onDownloadPdf,
 }: ToolbarProps) {
@@ -64,7 +66,7 @@ export function Toolbar({
         <View style={styles.btnGroup}>
           <CustomButton variant="outline" size="sm" onPress={onNewPlan}>+ Nuevo plan</CustomButton>
           {showSave && (
-            <CustomButton variant="primary" size="sm" onPress={onSave}>Guardar plan</CustomButton>
+            <CustomButton variant="primary" size="sm" onPress={onSave} loading={isSaving}>Guardar plan</CustomButton>
           )}
           <CustomButton variant="outline" size="sm" onPress={onAddEvent}>+ Evento</CustomButton>
           {showPdf && (
@@ -87,6 +89,7 @@ export function Toolbar({
             onChangeText={onDraftNameChange}
             placeholder="Ej. Macrociclo Mayo"
             containerStyle={styles.nameField}
+            error={saveError && !draftName.trim() ? "Obligatorio" : undefined}
           />
           <CalendarPicker
             label="Fecha inicio"
@@ -103,6 +106,12 @@ export function Toolbar({
             {...(draftStartDate ? { minimumDate: isoToLocalDate(draftStartDate) } : {})}
             style={styles.dateField}
           />
+        </View>
+      )}
+
+      {saveError && (
+        <View style={[styles.errorRow, { backgroundColor: "#fef2f2" }]}>
+          <Text style={styles.errorText}>⚠ {saveError}</Text>
         </View>
       )}
 
@@ -141,6 +150,8 @@ const styles = StyleSheet.create({
   pdfBtnText: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "500" },
   nameField: { flex: 2, minWidth: 160, marginBottom: 0 },
   dateField: { flex: 1, minWidth: 130, marginBottom: 0 },
+  errorRow: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs, borderRadius: BORDER_RADIUS.sm, marginHorizontal: SPACING.md, marginBottom: SPACING.xs },
+  errorText: { color: "#dc2626", fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "500" },
   statsRow: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.md, paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, borderTopWidth: StyleSheet.hairlineWidth },
   statPill: { flexDirection: "row", alignItems: "baseline", gap: SPACING.xs },
   statValue: { fontSize: TYPOGRAPHY.fontSize.lg, fontWeight: "700" },

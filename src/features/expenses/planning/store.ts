@@ -5,6 +5,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { useAuthStore } from "@/shared/store/authStore";
 import type {
+  InstallmentPayment,
   PlanningData,
   ScheduledExpense,
   VacationDay,
@@ -36,6 +37,7 @@ const userScopedStorage = createJSONStorage(() => ({
 type PlanningState = {
   vacations: VacationPlan[];
   scheduledExpenses: ScheduledExpense[];
+  installmentPayments: InstallmentPayment[];
 
   // Vacation actions
   addVacation: (plan: Omit<VacationPlan, "id" | "days">) => void;
@@ -50,6 +52,11 @@ type PlanningState = {
   updateScheduledExpense: (id: string, patch: Partial<ScheduledExpense>) => void;
   removeScheduledExpense: (id: string) => void;
 
+  // Installment payment actions
+  addInstallment: (p: Omit<InstallmentPayment, "id">) => void;
+  updateInstallment: (id: string, patch: Partial<InstallmentPayment>) => void;
+  removeInstallment: (id: string) => void;
+
   // Persist helpers
   getPlanningData: () => PlanningData;
   loadPlanningData: (data: PlanningData) => void;
@@ -62,6 +69,24 @@ export const usePlanningStore = create<PlanningState>()(
     (set, get) => ({
       vacations: [],
       scheduledExpenses: [],
+      installmentPayments: [],
+
+      addInstallment: (p) =>
+        set((s) => ({
+          installmentPayments: [...s.installmentPayments, { ...p, id: randomUUID() }],
+        })),
+
+      updateInstallment: (id, patch) =>
+        set((s) => ({
+          installmentPayments: s.installmentPayments.map((ip) =>
+            ip.id === id ? { ...ip, ...patch } : ip
+          ),
+        })),
+
+      removeInstallment: (id) =>
+        set((s) => ({
+          installmentPayments: s.installmentPayments.filter((ip) => ip.id !== id),
+        })),
 
       addVacation: (plan) =>
         set((s) => ({
@@ -138,6 +163,7 @@ export const usePlanningStore = create<PlanningState>()(
         return {
           vacations: s.vacations,
           scheduledExpenses: s.scheduledExpenses,
+          installmentPayments: s.installmentPayments,
           savedAt: new Date().toISOString(),
         };
       },
@@ -146,9 +172,10 @@ export const usePlanningStore = create<PlanningState>()(
         set({
           vacations: data.vacations ?? [],
           scheduledExpenses: data.scheduledExpenses ?? [],
+          installmentPayments: data.installmentPayments ?? [],
         }),
 
-      clearAll: () => set({ vacations: [], scheduledExpenses: [] }),
+      clearAll: () => set({ vacations: [], scheduledExpenses: [], installmentPayments: [] }),
 
       rehydrate: async () => {
         await usePlanningStore.persist.rehydrate();

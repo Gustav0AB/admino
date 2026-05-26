@@ -29,6 +29,7 @@ export type VacationPayment = {
   amount: number;
   perPerson: boolean;
   done: boolean;
+  trackInGastos: boolean; // false = planning only, won't appear in Todos los gastos
 };
 
 export type VacationPlan = {
@@ -37,7 +38,7 @@ export type VacationPlan = {
   destination: string;
   startDate: string;
   endDate: string;
-  budget: number;
+  budget?: number; // deprecated — computed from payments
   notes: string;
   status: VacationStatus;
   days: VacationDay[];
@@ -58,8 +59,20 @@ export type ScheduledExpense = {
   status: ScheduledExpenseStatus;
 };
 
+export type InstallmentPayment = {
+  id: string;
+  title: string;
+  monthlyAmount: number;
+  totalMonths: number;
+  paidMonths: number;
+  notes: string;
+  creditCardId?: string;
+  status: "active" | "completed";
+};
+
 export type PlanningData = {
   vacations: VacationPlan[];
   scheduledExpenses: ScheduledExpense[];
+  installmentPayments?: InstallmentPayment[];
   savedAt?: string;
 };

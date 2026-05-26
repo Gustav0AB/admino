@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
-import { View } from "react-native";
+import { View, Text } from "react-native";
 import { CustomModal } from "@/shared/components/feedback/CustomModal";
 import { CustomInput } from "@/shared/components/inputs/CustomInput";
 import { CustomButton } from "@/shared/components/inputs/CustomButton";
-import { SPACING } from "@/shared/theme/tokens";
+import { SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
+import { useColors } from "@/shared/hooks/useColors";
+import { useClientStore } from "@/shared/store/clientStore";
 import type { OrgMember, CreateMemberInput, UpdateMemberInput } from "@/shared/types/member";
 
 type Props = {
@@ -15,6 +17,8 @@ type Props = {
 };
 
 export function MemberFormModal({ open, onClose, member, onSubmit, isLoading }: Props) {
+  const c = useColors();
+  const slug = useClientStore((s) => s.branding.slug);
   const isEditing = !!member;
 
   const [name, setName] = useState("");
@@ -83,14 +87,21 @@ export function MemberFormModal({ open, onClose, member, onSubmit, isLoading }: 
 
         {!isEditing && (
           <>
-            <CustomInput
-              label="Nombre de usuario"
-              value={username}
-              onChangeText={setEmail}
-              placeholder="ej. john_doe"
-              autoCapitalize="none"
-              {...fe("username")}
-            />
+            <View>
+              <CustomInput
+                label="Nombre de usuario"
+                value={username}
+                onChangeText={setEmail}
+                placeholder="ej. john_doe"
+                autoCapitalize="none"
+                {...fe("username")}
+              />
+              {slug && username.trim() && (
+                <Text style={{ color: c.textMuted, fontSize: TYPOGRAPHY.fontSize.xs, marginTop: 4 }}>
+                  Iniciará sesión como: {slug}-{username.trim()}
+                </Text>
+              )}
+            </View>
             <CustomInput
               label="Contraseña"
               value={password}

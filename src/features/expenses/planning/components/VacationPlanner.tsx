@@ -8,11 +8,14 @@ import {
   View,
 } from "react-native";
 import { CustomButton } from "@/shared/components/inputs/CustomButton";
+import { CalendarPicker } from "@/shared/components/inputs/CalendarPicker";
 import { CustomModal } from "@/shared/components/feedback/CustomModal";
 import { useColors } from "@/shared/hooks/useColors";
 import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
 import { randomUUID } from "expo-crypto";
 import { usePlanningStore } from "../store";
+import { useExpensesStore } from "@/features/expenses/store";
+import { MESES_LIST, currentMonthName } from "@/features/expenses/helpers";
 import type { VacationDay, VacationPayment, VacationPlan, VacationStatus, VacationTask } from "../types";
 
 const STATUS_LABELS: Record<VacationStatus, string> = {
@@ -31,12 +34,15 @@ const STATUS_COLORS: Record<VacationStatus, string> = {
 
 const STATUSES: VacationStatus[] = ["planning", "confirmed", "completed", "cancelled"];
 
+function formatDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 type PlanFormState = {
   name: string;
   destination: string;
-  startDate: string;
-  endDate: string;
-  budget: string;
+  startDate: Date | null;
+  endDate: Date | null;
   notes: string;
   status: VacationStatus;
   persons: string[];
@@ -47,6 +53,7 @@ type PlanFormState = {
   newPaymentDescription: string;
   newPaymentAmount: string;
   newPaymentPerPerson: boolean;
+  newPaymentTrackInGastos: boolean;
 };
 
 type DayFormState = {
@@ -58,9 +65,8 @@ type DayFormState = {
 const blankPlanForm = (): PlanFormState => ({
   name: "",
   destination: "",
-  startDate: "",
-  endDate: "",
-  budget: "",
+  startDate: null,
+  endDate: null,
   notes: "",
   status: "planning",
   persons: [],
@@ -71,6 +77,7 @@ const blankPlanForm = (): PlanFormState => ({
   newPaymentDescription: "",
   newPaymentAmount: "",
   newPaymentPerPerson: false,
+  newPaymentTrackInGastos: true,
 });
 
 const blankDayForm = (): DayFormState => ({ date: "", activity: "", estimatedCost: "" });
@@ -85,6 +92,7 @@ export function VacationPlanner() {
   const c = useColors();
   const { vacations, addVacation, updateVacation, removeVacation, addVacationDay, removeVacationDay } =
     usePlanningStore();
+  const { addExpenseFromModal } = useExpensesStore();
 
   const [planModalOpen, setPlanModalOpen] = useState(false);
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
@@ -98,7 +106,10 @@ export function VacationPlanner() {
 
   const totalBudget = vacations
     .filter((v) => v.status !== "cancelled")
-    .reduce((sum, v) => sum + v.budget, 0);
+    .reduce((sum, v) => {
+      const pc = (v.persons ?? []).length;
+      return sum + (v.payments ?? []).reduce((s, p) => s + p.amount * (p.perPerson ? Math.max(pc, 1) : 1), 0);
+    }, 0);
 
   const totalPaymentsPending = vacations
     .filter((v) => v.status !== "cancelled")
@@ -116,9 +127,8 @@ export function VacationPlanner() {
     setPlanForm({
       name: plan.name,
       destination: plan.destination,
-      startDate: plan.startDate,
-      endDate: plan.endDate,
-      budget: plan.budget > 0 ? String(plan.budget) : "",
+      startDate: plan.startDate ? new Date(plan.startDate + "T12:00:00") : null,
+      endDate: plan.endDate ? new Date(plan.endDate + "T12:00:00") : null,
       notes: plan.notes,
       status: plan.status,
       persons: plan.persons ?? [],
@@ -129,29 +139,58 @@ export function VacationPlanner() {
       newPaymentDescription: "",
       newPaymentAmount: "",
       newPaymentPerPerson: false,
+      newPaymentTrackInGastos: true,
     });
     setPlanModalOpen(true);
   };
 
   const handleSavePlan = () => {
     if (!planForm.name.trim()) return;
+    const startDateStr = planForm.startDate ? formatDateStr(planForm.startDate) : "";
     const payload: Omit<VacationPlan, "id" | "days"> = {
       name: planForm.name.trim(),
       destination: planForm.destination.trim(),
-      startDate: planForm.startDate.trim(),
-      endDate: planForm.endDate.trim(),
-      budget: parseFloat(planForm.budget) || 0,
+      startDate: startDateStr,
+      endDate: planForm.endDate ? formatDateStr(planForm.endDate) : "",
       notes: planForm.notes.trim(),
       status: planForm.status,
       persons: planForm.persons,
       tasks: planForm.tasks,
       payments: planForm.payments,
     };
+
+    const prevStatus = editingPlanId ? vacations.find((v) => v.id === editingPlanId)?.status : undefined;
+    const justConfirmed = planForm.status === "confirmed" && prevStatus !== "confirmed";
+
     if (editingPlanId) {
       updateVacation(editingPlanId, payload);
     } else {
       addVacation(payload);
     }
+
+    // When newly confirmed, push all already-done trackInGastos payments to gastos
+    if (justConfirmed) {
+      const startMes = planForm.startDate
+        ? MESES_LIST[planForm.startDate.getMonth()] ?? currentMonthName()
+        : currentMonthName();
+      const startDay = planForm.startDate ? planForm.startDate.getDate() : 1;
+      const personCount = planForm.persons.length;
+      for (const p of planForm.payments) {
+        if (p.done && p.trackInGastos !== false) {
+          addExpenseFromModal({
+            mes: startMes,
+            gastos: p.description,
+            monto: p.amount * (p.perPerson ? Math.max(personCount, 1) : 1),
+            metodoPago: "efectivo",
+            frecuencia: "unico",
+            fecha: startDay,
+            fechaMaxima: "",
+            estado: "pagado",
+          });
+        }
+      }
+    }
+
     setPlanModalOpen(false);
   };
 
@@ -204,11 +243,19 @@ export function VacationPlanner() {
       ...f,
       payments: [
         ...f.payments,
-        { id: randomUUID(), description: desc, amount, perPerson: f.newPaymentPerPerson, done: false },
+        {
+          id: randomUUID(),
+          description: desc,
+          amount,
+          perPerson: f.newPaymentPerPerson,
+          done: false,
+          trackInGastos: f.newPaymentTrackInGastos,
+        },
       ],
       newPaymentDescription: "",
       newPaymentAmount: "",
       newPaymentPerPerson: false,
+      newPaymentTrackInGastos: true,
     }));
   };
 
@@ -432,10 +479,27 @@ export function VacationPlanner() {
                                 key={p.id}
                                 style={[styles.paymentRow, { borderBottomColor: c.border }, p.done && styles.rowDone]}
                                 onPress={() => {
+                                  const isMarkingDone = !p.done;
                                   const updated = plan.payments.map((x) =>
                                     x.id === p.id ? { ...x, done: !x.done } : x
                                   );
                                   updateVacation(plan.id, { payments: updated });
+                                  if (isMarkingDone && plan.status === "confirmed" && p.trackInGastos !== false) {
+                                    const startMes = plan.startDate
+                                      ? MESES_LIST[new Date(plan.startDate + "T12:00:00").getMonth()] ?? currentMonthName()
+                                      : currentMonthName();
+                                    const startDay = plan.startDate ? new Date(plan.startDate + "T12:00:00").getDate() : 1;
+                                    addExpenseFromModal({
+                                      mes: startMes,
+                                      gastos: p.description,
+                                      monto: itemTotal,
+                                      metodoPago: "efectivo",
+                                      frecuencia: "unico",
+                                      fecha: startDay,
+                                      fechaMaxima: "",
+                                      estado: "pagado",
+                                    });
+                                  }
                                 }}
                                 activeOpacity={0.75}
                               >
@@ -443,9 +507,14 @@ export function VacationPlanner() {
                                   {p.done && <Text style={{ color: "#fff", fontSize: 10 }}>✓</Text>}
                                 </View>
                                 <View style={{ flex: 1 }}>
-                                  <Text style={[styles.checkText, { color: p.done ? c.textMuted : c.text, textDecorationLine: p.done ? "line-through" : "none" }]}>
-                                    {p.description}
-                                  </Text>
+                                  <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                                    <Text style={[styles.checkText, { color: p.done ? c.textMuted : c.text, textDecorationLine: p.done ? "line-through" : "none" }]}>
+                                      {p.description}
+                                    </Text>
+                                    {p.trackInGastos === false && (
+                                      <Text style={{ fontSize: 10, color: c.textMuted }}>📋</Text>
+                                    )}
+                                  </View>
                                   {p.perPerson && personCount > 0 && (
                                     <Text style={[styles.paymentSub, { color: c.textMuted }]}>
                                       ${p.amount.toLocaleString("es-MX")} × {personCount} personas
@@ -569,33 +638,23 @@ export function VacationPlanner() {
 
         <View style={styles.twoCol}>
           <View style={{ flex: 1 }}>
-            <FormField label="Fecha inicio">
-              <StyledInput
-                value={planForm.startDate}
-                onChangeText={(v) => setPlanField("startDate", v)}
-                placeholder="YYYY-MM-DD"
-              />
-            </FormField>
+            <CalendarPicker
+              label="Fecha inicio"
+              value={planForm.startDate}
+              onChange={(d) => setPlanField("startDate", d)}
+              placeholder="Seleccionar"
+            />
           </View>
           <View style={{ flex: 1 }}>
-            <FormField label="Fecha fin">
-              <StyledInput
-                value={planForm.endDate}
-                onChangeText={(v) => setPlanField("endDate", v)}
-                placeholder="YYYY-MM-DD"
-              />
-            </FormField>
+            <CalendarPicker
+              label="Fecha fin"
+              value={planForm.endDate}
+              onChange={(d) => setPlanField("endDate", d)}
+              placeholder="Seleccionar"
+              minimumDate={planForm.startDate ?? undefined}
+            />
           </View>
         </View>
-
-        <FormField label="Presupuesto ($)">
-          <StyledInput
-            value={planForm.budget}
-            onChangeText={(v) => setPlanField("budget", v)}
-            placeholder="0"
-            keyboardType="decimal-pad"
-          />
-        </FormField>
 
         <FormField label="Estado">
           <View style={styles.chipRow}>
@@ -704,6 +763,15 @@ export function VacationPlanner() {
                   👤 Por persona {planForm.newPaymentPerPerson && planForm.persons.length > 0 ? `(×${planForm.persons.length})` : ""}
                 </Text>
               </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.perPersonChip, { borderColor: planForm.newPaymentTrackInGastos ? "#16A34A" : c.border, backgroundColor: planForm.newPaymentTrackInGastos ? "#16A34A22" : "transparent" }]}
+                onPress={() => setPlanField("newPaymentTrackInGastos", !planForm.newPaymentTrackInGastos)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.perPersonText, { color: planForm.newPaymentTrackInGastos ? "#16A34A" : c.textMuted }]}>
+                  {planForm.newPaymentTrackInGastos ? "✓ En gastos" : "Solo planeación"}
+                </Text>
+              </TouchableOpacity>
               <CustomButton variant="outline" size="sm" onPress={handleAddPayment}>
                 + Agregar
               </CustomButton>
@@ -722,9 +790,14 @@ export function VacationPlanner() {
                         {p.done && <Text style={{ color: "#fff", fontSize: 10 }}>✓</Text>}
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={[styles.checkText, { color: p.done ? c.textMuted : c.text, textDecorationLine: p.done ? "line-through" : "none" }]}>
-                          {p.description}
-                        </Text>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                          <Text style={[styles.checkText, { color: p.done ? c.textMuted : c.text, textDecorationLine: p.done ? "line-through" : "none" }]}>
+                            {p.description}
+                          </Text>
+                          {p.trackInGastos === false && (
+                            <Text style={{ fontSize: 9, color: c.textMuted, fontStyle: "italic" }}>solo plan</Text>
+                          )}
+                        </View>
                         {p.perPerson && perCount > 0 && (
                           <Text style={[styles.paymentSub, { color: c.textMuted }]}>
                             ${p.amount.toLocaleString("es-MX")} × {perCount}
