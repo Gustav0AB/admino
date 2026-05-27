@@ -31,6 +31,7 @@ export type EndUserMember = {
   grado: string | null;
   isActive: boolean;
   joinedAt: string;
+  trainingPlanId?: string | null;
 };
 
 export type TrainingPlan = {

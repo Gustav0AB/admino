@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Modal,
+  ScrollView,
   type StyleProp,
   type ViewStyle,
 } from "react-native";
@@ -47,11 +48,23 @@ export function CalendarPicker({
   const c = useColors();
   const [open, setOpen] = useState(false);
   const [viewDate, setViewDate] = useState<Date>(() => value ?? new Date());
+  const [mode, setMode] = useState<"days" | "years">("days");
+
+  const currentYear = new Date().getFullYear();
+  const YEAR_RANGE_START = 1980;
+  const YEAR_RANGE_END = currentYear + 20;
+  const years = Array.from({ length: YEAR_RANGE_END - YEAR_RANGE_START + 1 }, (_, i) => YEAR_RANGE_START + i);
 
   function openCalendar() {
     if (disabled) return;
     setViewDate(value ?? new Date());
+    setMode("days");
     setOpen(true);
+  }
+
+  function handleYearSelect(y: number) {
+    setViewDate((d) => new Date(y, d.getMonth(), 1));
+    setMode("days");
   }
 
   function handleDayPress(day: number) {
@@ -118,88 +131,125 @@ export function CalendarPicker({
             activeOpacity={1}
             style={[styles.card, { backgroundColor: c.background, borderColor: c.border }]}
           >
-            {/* Month navigation */}
+            {/* Month/year navigation */}
             <View style={styles.nav}>
-              <TouchableOpacity onPress={prevMonth} style={styles.navBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Text style={[styles.navArrow, { color: c.primary }]}>‹</Text>
-              </TouchableOpacity>
-              <Text style={[styles.monthTitle, { color: c.text }]}>
-                {MONTH_NAMES[month]} {year}
-              </Text>
-              <TouchableOpacity onPress={nextMonth} style={styles.navBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Text style={[styles.navArrow, { color: c.primary }]}>›</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Weekday headers */}
-            <View style={styles.weekdayRow}>
-              {WEEKDAYS.map((wd) => (
-                <Text key={wd} style={[styles.weekday, { color: c.textMuted }]}>
-                  {wd}
+              {mode === "days" && (
+                <TouchableOpacity onPress={prevMonth} style={styles.navBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Text style={[styles.navArrow, { color: c.primary }]}>‹</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                onPress={() => setMode((m) => (m === "days" ? "years" : "days"))}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={{ flex: 1, alignItems: "center" }}
+              >
+                <Text style={[styles.monthTitle, { color: c.primary }]}>
+                  {MONTH_NAMES[month]} {year} {mode === "days" ? "▾" : "▴"}
                 </Text>
-              ))}
+              </TouchableOpacity>
+              {mode === "days" && (
+                <TouchableOpacity onPress={nextMonth} style={styles.navBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Text style={[styles.navArrow, { color: c.primary }]}>›</Text>
+                </TouchableOpacity>
+              )}
             </View>
 
-            {/* Day grid */}
-            <View style={styles.grid}>
-              {cells.map((day, idx) => {
-                if (!day) {
-                  return <View key={`empty-${idx}`} style={styles.cell} />;
-                }
-                const cellDate = new Date(year, month, day);
-                const isSelected =
-                  value != null &&
-                  value.getFullYear() === year &&
-                  value.getMonth() === month &&
-                  value.getDate() === day;
-                // Normalize to local midnight so UTC-parsed dates don't shift the boundary
-                const minLocal = minimumDate
-                  ? new Date(minimumDate.getFullYear(), minimumDate.getMonth(), minimumDate.getDate())
-                  : null;
-                const maxLocal = maximumDate
-                  ? new Date(maximumDate.getFullYear(), maximumDate.getMonth(), maximumDate.getDate())
-                  : null;
-                const tooEarly = minLocal != null && cellDate < minLocal;
-                const tooLate = maxLocal != null && cellDate > maxLocal;
-                const isDisabled = tooEarly || tooLate;
-                const isToday =
-                  cellDate.toDateString() === new Date().toDateString();
-
-                return (
-                  <TouchableOpacity
-                    key={`day-${day}`}
-                    style={[
-                      styles.cell,
-                      isSelected && {
-                        backgroundColor: c.primary,
-                        borderRadius: BORDER_RADIUS.sm,
-                      },
-                      !isSelected && isToday && {
-                        borderWidth: 1,
-                        borderColor: c.primary,
-                        borderRadius: BORDER_RADIUS.sm,
-                      },
-                    ]}
-                    onPress={() => !isDisabled && handleDayPress(day)}
-                    disabled={isDisabled}
-                    activeOpacity={0.7}
-                  >
-                    <Text
-                      style={{
-                        fontSize: TYPOGRAPHY.fontSize.sm,
-                        color: isSelected
-                          ? c.primaryForeground
-                          : isDisabled
-                            ? c.textPlaceholder
-                            : c.text,
-                      }}
-                    >
-                      {day}
+            {mode === "years" ? (
+              <ScrollView style={{ maxHeight: 220 }} showsVerticalScrollIndicator={false}>
+                <View style={styles.yearGrid}>
+                  {years.map((y) => {
+                    const isSelected = y === year;
+                    return (
+                      <TouchableOpacity
+                        key={y}
+                        style={[
+                          styles.yearCell,
+                          isSelected && { backgroundColor: c.primary, borderRadius: BORDER_RADIUS.sm },
+                        ]}
+                        onPress={() => handleYearSelect(y)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={{ fontSize: TYPOGRAPHY.fontSize.sm, color: isSelected ? c.primaryForeground : c.text }}>
+                          {y}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+            ) : (
+              <>
+                {/* Weekday headers */}
+                <View style={styles.weekdayRow}>
+                  {WEEKDAYS.map((wd) => (
+                    <Text key={wd} style={[styles.weekday, { color: c.textMuted }]}>
+                      {wd}
                     </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+                  ))}
+                </View>
+
+                {/* Day grid */}
+                <View style={styles.grid}>
+                  {cells.map((day, idx) => {
+                    if (!day) {
+                      return <View key={`empty-${idx}`} style={styles.cell} />;
+                    }
+                    const cellDate = new Date(year, month, day);
+                    const isSelected =
+                      value != null &&
+                      value.getFullYear() === year &&
+                      value.getMonth() === month &&
+                      value.getDate() === day;
+                    // Normalize to local midnight so UTC-parsed dates don't shift the boundary
+                    const minLocal = minimumDate
+                      ? new Date(minimumDate.getFullYear(), minimumDate.getMonth(), minimumDate.getDate())
+                      : null;
+                    const maxLocal = maximumDate
+                      ? new Date(maximumDate.getFullYear(), maximumDate.getMonth(), maximumDate.getDate())
+                      : null;
+                    const tooEarly = minLocal != null && cellDate < minLocal;
+                    const tooLate = maxLocal != null && cellDate > maxLocal;
+                    const isDisabled = tooEarly || tooLate;
+                    const isToday =
+                      cellDate.toDateString() === new Date().toDateString();
+
+                    return (
+                      <TouchableOpacity
+                        key={`day-${day}`}
+                        style={[
+                          styles.cell,
+                          isSelected && {
+                            backgroundColor: c.primary,
+                            borderRadius: BORDER_RADIUS.sm,
+                          },
+                          !isSelected && isToday && {
+                            borderWidth: 1,
+                            borderColor: c.primary,
+                            borderRadius: BORDER_RADIUS.sm,
+                          },
+                        ]}
+                        onPress={() => !isDisabled && handleDayPress(day)}
+                        disabled={isDisabled}
+                        activeOpacity={0.7}
+                      >
+                        <Text
+                          style={{
+                            fontSize: TYPOGRAPHY.fontSize.sm,
+                            color: isSelected
+                              ? c.primaryForeground
+                              : isDisabled
+                                ? c.textPlaceholder
+                                : c.text,
+                          }}
+                        >
+                          {day}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </>
+            )}
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
@@ -278,6 +328,16 @@ const styles = StyleSheet.create({
   cell: {
     width: "14.28%",
     aspectRatio: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  yearGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+  yearCell: {
+    width: "25%",
+    paddingVertical: SPACING.sm,
     justifyContent: "center",
     alignItems: "center",
   },

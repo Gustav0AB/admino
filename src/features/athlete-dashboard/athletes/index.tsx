@@ -1,6 +1,6 @@
 import { useState } from "react";
 import {
-  View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView,
+  View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView, TextInput,
 } from "react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useColors } from "@/shared/hooks/useColors";
@@ -24,9 +24,14 @@ const CATEGORIA_OPTIONS = [
   { label: "Profesional", value: "profesional" },
 ];
 
+const CATEGORIA_FILTER_OPTIONS = [
+  { label: "Todas las categorías", value: "" },
+  ...CATEGORIA_OPTIONS,
+];
+
 function calcAge(birthdate: string | null): number | null {
   if (!birthdate) return null;
-  const dob = new Date(birthdate);
+  const dob = new Date(birthdate.slice(0, 10) + "T12:00:00");
   if (isNaN(dob.getTime())) return null;
   const today = new Date();
   let age = today.getFullYear() - dob.getFullYear();
@@ -34,6 +39,8 @@ function calcAge(birthdate: string | null): number | null {
   if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
   return age >= 0 ? age : null;
 }
+
+// ── Athlete Row ────────────────────────────────────────────────────────────────
 
 type AthleteRowProps = {
   athlete: EndUserMember;
@@ -79,6 +86,10 @@ function AthleteRow({ athlete, plans, assignedPlanId, onSaveData, onAssignPlan, 
     ...plans.map((p) => ({ label: p.name, value: p.id })),
   ];
 
+  const currentPlanName = assignedPlanId
+    ? plans.find((p) => p.id === assignedPlanId)?.name ?? "Plan asignado"
+    : null;
+
   return (
     <View style={[styles.card, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
       <TouchableOpacity style={styles.cardHeader} onPress={() => setExpanded((v) => !v)}>
@@ -101,6 +112,11 @@ function AthleteRow({ athlete, plans, assignedPlanId, onSaveData, onAssignPlan, 
             )}
             {athlete.peso && (
               <Text style={[styles.meta, { color: c.textMuted }]}>{athlete.peso}kg</Text>
+            )}
+            {currentPlanName && (
+              <Text style={[styles.metaBadge, { backgroundColor: c.backgroundHover ?? c.border, color: c.textMuted }]} numberOfLines={1}>
+                📋 {currentPlanName}
+              </Text>
             )}
           </View>
         </View>
@@ -155,10 +171,102 @@ function AthleteRow({ athlete, plans, assignedPlanId, onSaveData, onAssignPlan, 
   );
 }
 
+// ── Tracker Tab ────────────────────────────────────────────────────────────────
+
+function TrackerTab({ athletes, plans }: { athletes: EndUserMember[]; plans: TrainingPlan[] }) {
+  const c = useColors();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const selectedAthlete = athletes.find((a) => a.id === selectedId) ?? null;
+  const assignedPlan = selectedAthlete?.trainingPlanId
+    ? plans.find((p) => p.id === selectedAthlete.trainingPlanId) ?? null
+    : null;
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  const athleteOptions = athletes.map((a) => ({
+    label: `${a.name} ${a.lastname}`,
+    value: a.id,
+  }));
+
+  return (
+    <View style={{ flex: 1 }}>
+      <View style={[styles.trackerHeader, { borderBottomColor: c.border, backgroundColor: c.backgroundStrong }]}>
+        <CustomSelect
+          label=""
+          value={selectedId ?? ""}
+          options={[{ label: "Seleccionar atleta...", value: "" }, ...athleteOptions]}
+          onChange={(v) => setSelectedId(String(v) || null)}
+          placeholder="Seleccionar atleta..."
+        />
+      </View>
+
+      {!selectedAthlete ? (
+        <View style={styles.center}>
+          <Text style={{ color: c.textMuted, textAlign: "center" }}>
+            Selecciona un atleta para ver su actividad.
+          </Text>
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={{ padding: SPACING.md, gap: SPACING.md }}>
+          {/* Athlete summary */}
+          <View style={[styles.card, { backgroundColor: c.backgroundStrong, borderColor: c.border, padding: SPACING.md }]}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: SPACING.sm }}>
+              <Avatar name={`${selectedAthlete.name} ${selectedAthlete.lastname}`} size="md" />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.athleteName, { color: c.text }]}>{selectedAthlete.name} {selectedAthlete.lastname}</Text>
+                {selectedAthlete.categoria && (
+                  <Text style={[styles.meta, { color: c.textMuted }]}>{selectedAthlete.categoria}</Text>
+                )}
+                <View style={{ flexDirection: "row", gap: SPACING.sm, marginTop: 4 }}>
+                  {selectedAthlete.peso && <Text style={[styles.metaBadge, { backgroundColor: c.primary + "20", color: c.primary }]}>{selectedAthlete.peso}kg</Text>}
+                  {selectedAthlete.altura && <Text style={[styles.metaBadge, { backgroundColor: c.primary + "20", color: c.primary }]}>{selectedAthlete.altura}cm</Text>}
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {/* Assigned plan */}
+          {assignedPlan ? (
+            <View style={[styles.card, { backgroundColor: c.backgroundStrong, borderColor: c.border, padding: SPACING.md, gap: SPACING.sm }]}>
+              <Text style={[styles.sectionLabel, { color: c.textMuted }]}>Plan asignado</Text>
+              <Text style={[styles.athleteName, { color: c.text }]}>📋 {assignedPlan.name}</Text>
+              {assignedPlan.startDate && (
+                <Text style={[styles.meta, { color: c.textMuted }]}>{assignedPlan.startDate} → {assignedPlan.endDate}</Text>
+              )}
+
+              {/* Today's workout */}
+              {assignedPlan.cells?.[today] ? (
+                <View style={[{ backgroundColor: c.primary + "10", borderRadius: BORDER_RADIUS.sm, padding: SPACING.sm }]}>
+                  <Text style={[styles.sectionLabel, { color: c.primary, marginBottom: 4 }]}>Hoy</Text>
+                  <Text style={[{ color: c.text, fontSize: TYPOGRAPHY.fontSize.sm, lineHeight: 20 }]}>
+                    {assignedPlan.cells[today]}
+                  </Text>
+                </View>
+              ) : (
+                <Text style={[styles.meta, { color: c.textMuted, fontStyle: "italic" }]}>Sin actividad registrada para hoy.</Text>
+              )}
+            </View>
+          ) : (
+            <View style={[styles.card, { backgroundColor: c.backgroundStrong, borderColor: c.border, padding: SPACING.md }]}>
+              <Text style={[{ color: c.textMuted, fontStyle: "italic" }]}>Sin plan asignado.</Text>
+            </View>
+          )}
+        </ScrollView>
+      )}
+    </View>
+  );
+}
+
+// ── Main component ─────────────────────────────────────────────────────────────
+
 export function AthletesTab() {
   const c = useColors();
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState<"general" | "tracker">("general");
   const [localAssignments, setLocalAssignments] = useState<Record<string, string>>({});
+  const [search, setSearch] = useState("");
+  const [filterCategoria, setFilterCategoria] = useState("");
 
   const { data: athletes = [], isLoading: athletesLoading } = useQuery<EndUserMember[]>({
     queryKey: ["athletes"],
@@ -191,6 +299,7 @@ export function AthletesTab() {
       if (ENV.USE_MOCK) { await delay(400); return; }
       await httpClient("/training-plans/assign", { method: "POST", body: { memberId, planId } });
     },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["athletes"] }),
   });
 
   const unassignPlan = useMutation({
@@ -198,6 +307,7 @@ export function AthletesTab() {
       if (ENV.USE_MOCK) { await delay(400); return; }
       await httpClient(`/training-plans/assign/${memberId}/${planId}`, { method: "DELETE" });
     },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["athletes"] }),
   });
 
   function handleAssign(memberId: string, planId: string) {
@@ -210,32 +320,92 @@ export function AthletesTab() {
     setLocalAssignments((prev) => { const n = { ...prev }; delete n[memberId]; return n; });
   }
 
+  const filteredAthletes = athletes.filter((a) => {
+    const fullName = `${a.name} ${a.lastname}`.toLowerCase();
+    const matchSearch = !search || fullName.includes(search.toLowerCase()) || (a.username ?? "").toLowerCase().includes(search.toLowerCase());
+    const matchCat = !filterCategoria || a.categoria === filterCategoria;
+    return matchSearch && matchCat;
+  });
+
   if (athletesLoading) {
     return <View style={styles.center}><ActivityIndicator color={c.primary} /></View>;
   }
 
   return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.list}>
-      {athletes.length === 0 && (
-        <View style={styles.center}>
-          <Text style={{ color: c.textMuted, textAlign: "center" }}>
-            Sin atletas registrados.{"\n"}Añade miembros desde Configuración → Miembros.
-          </Text>
-        </View>
+    <View style={{ flex: 1 }}>
+      {/* Tab bar */}
+      <View style={[styles.tabBar, { borderBottomColor: c.border, backgroundColor: c.background }]}>
+        {(["general", "tracker"] as const).map((tab) => (
+          <TouchableOpacity
+            key={tab}
+            style={[styles.tabBtn, activeTab === tab && { borderBottomColor: c.primary, borderBottomWidth: 2 }]}
+            onPress={() => setActiveTab(tab)}
+          >
+            <Text style={[styles.tabLabel, { color: activeTab === tab ? c.primary : c.textMuted, fontWeight: activeTab === tab ? "600" : "400" }]}>
+              {tab === "general" ? "General" : "Tracker"}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {activeTab === "general" ? (
+        <>
+          {/* Search + filter */}
+          <View style={[styles.filterRow, { backgroundColor: c.background, borderBottomColor: c.border }]}>
+            <View style={[styles.searchBox, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
+              <Text style={{ color: c.textMuted, fontSize: 14 }}>🔍</Text>
+              <TextInput
+                value={search}
+                onChangeText={setSearch}
+                placeholder="Buscar atleta..."
+                placeholderTextColor={c.textPlaceholder}
+                style={{ flex: 1, color: c.text, fontSize: TYPOGRAPHY.fontSize.sm, paddingVertical: 0 }}
+              />
+              {search.length > 0 && (
+                <TouchableOpacity onPress={() => setSearch("")}>
+                  <Text style={{ color: c.textMuted }}>✕</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            <View style={{ width: 160 }}>
+              <CustomSelect
+                label=""
+                value={filterCategoria}
+                options={CATEGORIA_FILTER_OPTIONS}
+                onChange={(v) => setFilterCategoria(String(v))}
+                placeholder="Categoría"
+              />
+            </View>
+          </View>
+
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.list}>
+            {filteredAthletes.length === 0 && (
+              <View style={styles.center}>
+                <Text style={{ color: c.textMuted, textAlign: "center" }}>
+                  {athletes.length === 0
+                    ? "Sin atletas registrados.\nAñade miembros desde Configuración → Miembros."
+                    : "Sin resultados para la búsqueda."}
+                </Text>
+              </View>
+            )}
+            {filteredAthletes.map((athlete) => (
+              <AthleteRow
+                key={athlete.id}
+                athlete={athlete}
+                plans={plans}
+                assignedPlanId={localAssignments[athlete.id] ?? athlete.trainingPlanId ?? null}
+                onSaveData={(id, data) => updateAthlete.mutate({ id, data })}
+                onAssignPlan={handleAssign}
+                onUnassignPlan={handleUnassign}
+                isSaving={updateAthlete.isPending}
+              />
+            ))}
+          </ScrollView>
+        </>
+      ) : (
+        <TrackerTab athletes={athletes} plans={plans} />
       )}
-      {athletes.map((athlete) => (
-        <AthleteRow
-          key={athlete.id}
-          athlete={athlete}
-          plans={plans}
-          assignedPlanId={localAssignments[athlete.id] ?? null}
-          onSaveData={(id, data) => updateAthlete.mutate({ id, data })}
-          onAssignPlan={handleAssign}
-          onUnassignPlan={handleUnassign}
-          isSaving={updateAthlete.isPending}
-        />
-      ))}
-    </ScrollView>
+    </View>
   );
 }
 
@@ -255,4 +425,10 @@ const styles = StyleSheet.create({
   panel: { padding: SPACING.md, borderTopWidth: StyleSheet.hairlineWidth, gap: SPACING.md },
   sectionLabel: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5 },
   row2: { flexDirection: "row", gap: SPACING.sm },
+  tabBar: { flexDirection: "row", borderBottomWidth: StyleSheet.hairlineWidth },
+  tabBtn: { flex: 1, alignItems: "center", paddingVertical: SPACING.sm, borderBottomWidth: 2, borderBottomColor: "transparent" },
+  tabLabel: { fontSize: TYPOGRAPHY.fontSize.sm },
+  filterRow: { flexDirection: "row", gap: SPACING.sm, paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, borderBottomWidth: StyleSheet.hairlineWidth, alignItems: "center" },
+  searchBox: { flex: 1, flexDirection: "row", alignItems: "center", gap: SPACING.xs, borderWidth: 1, borderRadius: BORDER_RADIUS.md, paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs, minHeight: 40 },
+  trackerHeader: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, borderBottomWidth: StyleSheet.hairlineWidth },
 });

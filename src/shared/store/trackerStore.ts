@@ -37,6 +37,7 @@ type TrackerState = {
   setRpe: (rpe: number) => void;
   setFeedbackNotes: (notes: string) => void;
   resetFeedback: () => void;
+  reset: () => void;
 };
 
 const storage = createJSONStorage(() =>
@@ -97,6 +98,7 @@ export const useTrackerStore = create<TrackerState>()(
       setRpe: (rpe) => set({ rpe }),
       setFeedbackNotes: (notes) => set({ feedbackNotes: notes }),
       resetFeedback: () => set({ rpe: null, feedbackNotes: "" }),
+      reset: () => set({ workout: null, streak: 0, lastCompletedDate: null, evidenceUris: [], rpe: null, feedbackNotes: "" }),
     }),
     {
       name: "tracker-storage",

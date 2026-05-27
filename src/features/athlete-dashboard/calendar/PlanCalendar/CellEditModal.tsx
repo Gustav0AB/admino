@@ -45,7 +45,7 @@ export function CellEditModal({ open, dateLabel, initialValue, onClose, onSave }
       open={open}
       onOpenChange={onClose}
       title={dateLabel}
-      size="sm"
+      size="md"
       footer={
         <View style={styles.footer}>
           <CustomButton variant="ghost" size="sm" onPress={onClose}>Cancelar</CustomButton>
@@ -59,7 +59,7 @@ export function CellEditModal({ open, dateLabel, initialValue, onClose, onSave }
           onChangeText={setValue}
           placeholder={"Fuerza\npecho banca plana 2 series de 4\ntrote 2x4 40min\nnota: calentar bien"}
           multiline
-          numberOfLines={6}
+          numberOfLines={10}
           style={styles.textArea}
           textAlignVertical="top"
         />
@@ -81,7 +81,7 @@ export function CellEditModal({ open, dateLabel, initialValue, onClose, onSave }
 
 const styles = StyleSheet.create({
   footer: { flex: 1, flexDirection: "row", justifyContent: "flex-end", gap: SPACING.sm },
-  textArea: { minHeight: 120 },
+  textArea: { minHeight: 200 },
   hintBox: { borderRadius: 8, borderWidth: 1, padding: SPACING.sm },
   hintToggle: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "600" },
   hintText: { fontSize: TYPOGRAPHY.fontSize.xs, lineHeight: 18, marginTop: SPACING.xs },

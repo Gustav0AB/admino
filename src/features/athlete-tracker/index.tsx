@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, AppState, AppStateStatus,
+  ActivityIndicator, AppState, AppStateStatus, TextInput,
 } from "react-native";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { MainLayout } from "@/shared/components/MainLayout";
 import { useColors } from "@/shared/hooks/useColors";
 import { useAuthStore } from "@/shared/store/authStore";
@@ -177,8 +177,30 @@ export function AthleteTrackerScreen() {
   const today = todayIso();
   const [phrase] = useState(() => randomPhrase());
   const [checked, setChecked] = useState<Record<number, boolean>>({});
+  const queryClient = useQueryClient();
 
-  const { data: plan, isLoading } = useQuery<TrainingPlan | null>({
+  // Self-update form
+  const [showDataForm, setShowDataForm] = useState(false);
+  const [editName, setEditName] = useState(user?.name ?? "");
+  const [editPeso, setEditPeso] = useState("");
+
+  const updateSelf = useMutation({
+    mutationFn: async (data: { name?: string; peso?: number | null }) => {
+      if (ENV.USE_MOCK) return;
+      await httpClient("/members/me", { method: "PATCH", body: data });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-training-plan"] });
+      setShowDataForm(false);
+    },
+  });
+
+  function handleSaveSelf() {
+    const pesoNum = editPeso ? parseFloat(editPeso) : null;
+    updateSelf.mutate({ name: editName.trim() || undefined, peso: pesoNum });
+  }
+
+  const { data: plan, isLoading, refetch, isFetching } = useQuery<TrainingPlan | null>({
     queryKey: ["my-training-plan"],
     queryFn: async () => {
       if (ENV.USE_MOCK) return null;
@@ -259,19 +281,85 @@ export function AthleteTrackerScreen() {
       <ScrollView contentContainerStyle={styles.scroll}>
         {/* Welcome header */}
         <View style={[styles.welcomeCard, { backgroundColor: c.primary + "15", borderColor: c.primary + "30" }]}>
-          <Text style={[styles.welcomeGreeting, { color: c.primary }]}>¡Bienvenido de vuelta! 👋</Text>
-          <Text style={[styles.welcomeDate, { color: c.text }]}>
-            {formatSpanishDate(today)} — hoy toca{" "}
-            <Text style={{ fontWeight: "700" }}>{workout?.title || "descanso"}</Text>
-          </Text>
-          {nextEvent && daysTillEvent !== null && daysTillEvent >= 0 && (
-            <Text style={[styles.eventCountdown, { color: c.textMuted }]}>
-              Faltan {daysTillEvent === 0 ? "0 días (¡hoy!)" : `${daysTillEvent} día${daysTillEvent === 1 ? "" : "s"}`} para{" "}
-              <Text style={{ fontWeight: "600" }}>{nextEvent.name}</Text>
-            </Text>
-          )}
+          <View style={styles.welcomeTop}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.welcomeGreeting, { color: c.primary }]}>¡Bienvenido de vuelta! 👋</Text>
+              <Text style={[styles.welcomeDate, { color: c.text }]}>
+                {formatSpanishDate(today)} — hoy toca{" "}
+                <Text style={{ fontWeight: "700" }}>{workout?.title || "descanso"}</Text>
+              </Text>
+              {nextEvent && daysTillEvent !== null && daysTillEvent >= 0 && (
+                <Text style={[styles.eventCountdown, { color: c.textMuted }]}>
+                  Faltan {daysTillEvent === 0 ? "0 días (¡hoy!)" : `${daysTillEvent} día${daysTillEvent === 1 ? "" : "s"}`} para{" "}
+                  <Text style={{ fontWeight: "600" }}>{nextEvent.name}</Text>
+                </Text>
+              )}
+            </View>
+            <View style={{ gap: SPACING.xs }}>
+              <TouchableOpacity
+                style={[styles.iconBtn, { borderColor: c.border, backgroundColor: c.background }]}
+                onPress={() => refetch()}
+                disabled={isFetching}
+              >
+                <Text style={{ color: isFetching ? c.textMuted : c.primary, fontSize: 16 }}>↺</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.iconBtn, { borderColor: c.border, backgroundColor: c.background }]}
+                onPress={() => { setShowDataForm((v) => !v); setEditName(user?.name ?? ""); setEditPeso(""); }}
+              >
+                <Text style={{ color: c.textMuted, fontSize: 14 }}>✎</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
           <Text style={[styles.phrase, { color: c.textMuted }]}>"{phrase}"</Text>
         </View>
+
+        {/* Self-update form */}
+        {showDataForm && (
+          <View style={[styles.section, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
+            <Text style={[styles.sectionTitle, { color: c.text }]}>Mis datos</Text>
+            <View style={{ gap: SPACING.sm }}>
+              <View>
+                <Text style={[styles.fieldLabel, { color: c.textMuted }]}>Nombre</Text>
+                <TextInput
+                  value={editName}
+                  onChangeText={setEditName}
+                  style={[styles.fieldInput, { color: c.text, borderColor: c.border, backgroundColor: c.background }]}
+                  placeholder="Tu nombre"
+                  placeholderTextColor={c.textPlaceholder}
+                />
+              </View>
+              <View>
+                <Text style={[styles.fieldLabel, { color: c.textMuted }]}>Peso (kg)</Text>
+                <TextInput
+                  value={editPeso}
+                  onChangeText={setEditPeso}
+                  keyboardType="decimal-pad"
+                  style={[styles.fieldInput, { color: c.text, borderColor: c.border, backgroundColor: c.background }]}
+                  placeholder="ej. 75.5"
+                  placeholderTextColor={c.textPlaceholder}
+                />
+              </View>
+              <View style={{ flexDirection: "row", gap: SPACING.sm }}>
+                <TouchableOpacity
+                  style={[styles.timerBtn, { backgroundColor: c.primary, borderColor: c.primary, flex: 1 }]}
+                  onPress={handleSaveSelf}
+                  disabled={updateSelf.isPending}
+                >
+                  <Text style={{ color: "#fff", fontWeight: "600", fontSize: TYPOGRAPHY.fontSize.sm, textAlign: "center" }}>
+                    {updateSelf.isPending ? "Guardando..." : "Guardar"}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.timerBtn, { borderColor: c.border }]}
+                  onPress={() => setShowDataForm(false)}
+                >
+                  <Text style={{ color: c.textMuted, fontSize: TYPOGRAPHY.fontSize.sm }}>Cancelar</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
 
         {!workout || !workout.title ? (
           <View style={[styles.restCard, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
@@ -338,10 +426,14 @@ const styles = StyleSheet.create({
   emptySubtitle: { fontSize: TYPOGRAPHY.fontSize.sm, textAlign: "center", lineHeight: 22 },
 
   welcomeCard: { borderRadius: BORDER_RADIUS.lg, borderWidth: 1, padding: SPACING.md, gap: SPACING.xs },
+  welcomeTop: { flexDirection: "row", alignItems: "flex-start", gap: SPACING.sm },
   welcomeGreeting: { fontSize: TYPOGRAPHY.fontSize.lg, fontWeight: "700" },
   welcomeDate: { fontSize: TYPOGRAPHY.fontSize.md },
   eventCountdown: { fontSize: TYPOGRAPHY.fontSize.sm },
   phrase: { fontSize: TYPOGRAPHY.fontSize.sm, fontStyle: "italic", marginTop: SPACING.xs },
+  iconBtn: { width: 32, height: 32, borderRadius: BORDER_RADIUS.sm, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  fieldLabel: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "600", marginBottom: 4 },
+  fieldInput: { borderWidth: 1, borderRadius: BORDER_RADIUS.md, paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs, fontSize: TYPOGRAPHY.fontSize.sm, minHeight: 40 },
 
   restCard: { borderRadius: BORDER_RADIUS.lg, borderWidth: 1, padding: SPACING.xl, alignItems: "center", gap: SPACING.sm },
 

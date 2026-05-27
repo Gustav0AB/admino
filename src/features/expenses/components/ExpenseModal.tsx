@@ -77,10 +77,12 @@ export function ExpenseModal({ open, onClose, expense, onSave, onDelete }: Props
   const isEdit = expense !== undefined;
 
   const [form, setForm] = useState<FormState>(isEdit ? expenseToForm(expense) : blankForm());
+  const [cardError, setCardError] = useState("");
 
   useEffect(() => {
     if (open) {
       setForm(expense ? expenseToForm(expense) : blankForm());
+      setCardError("");
     }
   }, [open, expense]);
 
@@ -92,9 +94,19 @@ export function ExpenseModal({ open, onClose, expense, onSave, onDelete }: Props
 
   function patch(update: Partial<FormState>) {
     setForm((prev) => ({ ...prev, ...update }));
+    if (update.creditCardId) setCardError("");
+  }
+
+  function handleSelectCredito() {
+    const firstCard = creditCards[0]?.id ?? "";
+    patch({ metodoPago: "credito", creditCardId: form.creditCardId || firstCard });
   }
 
   function handleSave() {
+    if (form.metodoPago === "credito" && !form.creditCardId) {
+      setCardError("Debes seleccionar una tarjeta para pagos con crédito");
+      return;
+    }
     const data: Omit<Expense, "id" | "selected"> = {
       mes: form.mes,
       gastos: form.gastos,
@@ -109,10 +121,7 @@ export function ExpenseModal({ open, onClose, expense, onSave, onDelete }: Props
     onSave(data);
   }
 
-  const cardOptions = [
-    { label: "Ninguna", value: "" },
-    ...creditCards.map((c) => ({ label: c.name, value: c.id })),
-  ];
+  const cardOptions = creditCards.map((c) => ({ label: c.name, value: c.id }));
 
   const footer = (
     <View style={styles.footerRow}>
@@ -179,21 +188,30 @@ export function ExpenseModal({ open, onClose, expense, onSave, onDelete }: Props
 
         <FormSection label="Método de pago">
           <View style={styles.chipRow}>
-            <Chip label="Efectivo" selected={form.metodoPago === "efectivo"} onPress={() => patch({ metodoPago: "efectivo" })} c={c} />
-            {creditCards.length > 0 && (
-              <Chip label="Crédito" selected={form.metodoPago === "credito"} onPress={() => patch({ metodoPago: "credito" })} c={c} />
-            )}
+            <Chip label="Efectivo" selected={form.metodoPago === "efectivo"} onPress={() => patch({ metodoPago: "efectivo", creditCardId: "" })} c={c} />
+            <Chip
+              label="Crédito"
+              selected={form.metodoPago === "credito"}
+              onPress={handleSelectCredito}
+              disabled={creditCards.length === 0}
+              c={c}
+            />
           </View>
         </FormSection>
 
-        {creditCards.length > 0 && (
-          <FormSection label="Tarjeta de crédito">
+        {form.metodoPago === "credito" && (
+          <FormSection label="Tarjeta de crédito *">
             <CustomSelect
               value={form.creditCardId}
               options={cardOptions}
               onChange={(v) => patch({ creditCardId: String(v) })}
-              placeholder="Ninguna"
+              placeholder="Seleccionar tarjeta"
             />
+            {cardError ? (
+              <Text style={{ color: c.danger, fontSize: TYPOGRAPHY.fontSize.xs, marginTop: 2 }}>
+                {cardError}
+              </Text>
+            ) : null}
           </FormSection>
         )}
 
@@ -249,14 +267,19 @@ function FormSection({ label, children }: { label: string; children: React.React
 }
 
 function Chip({
-  label, selected, onPress, c,
+  label, selected, onPress, disabled = false, c,
 }: {
-  label: string; selected: boolean; onPress: () => void; c: ReturnType<typeof useColors>;
+  label: string; selected: boolean; onPress: () => void; disabled?: boolean; c: ReturnType<typeof useColors>;
 }) {
   return (
     <TouchableOpacity
       onPress={onPress}
-      style={[styles.chip, { borderColor: selected ? c.primary : c.border, backgroundColor: selected ? `${c.primary}20` : "transparent" }]}
+      disabled={disabled}
+      style={[
+        styles.chip,
+        { borderColor: selected ? c.primary : c.border, backgroundColor: selected ? `${c.primary}20` : "transparent" },
+        disabled && { opacity: 0.4 },
+      ]}
     >
       <Text style={[styles.chipText, { color: selected ? c.primary : c.text }]}>{label}</Text>
     </TouchableOpacity>

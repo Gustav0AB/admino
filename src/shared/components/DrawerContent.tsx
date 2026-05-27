@@ -125,6 +125,12 @@ export function DrawerContent(props: DrawerContentComponentProps) {
     //   feature: "nutritionist_planning",
     // },
     {
+      label: "Usuarios",
+      href: "/(drawer)/members",
+      icon: (color) => <Feather name="users" size={20} color={color} />,
+      roles: ["OWNER", "ADMIN"],
+    },
+    {
       label: "Configuración",
       href: "/(drawer)/client-settings",
       icon: (color) => <Feather name="sliders" size={20} color={color} />,

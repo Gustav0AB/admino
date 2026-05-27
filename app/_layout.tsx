@@ -2,6 +2,7 @@ import "@/shared/i18n";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import {
@@ -19,6 +20,7 @@ import { SplashOverlay } from "@/shared/components/SplashOverlay";
 import { ErrorBoundary } from "@/shared/components/feedback/ErrorBoundary";
 import { ToastProvider } from "@/shared/components/feedback/Toast";
 import { OfflineBanner } from "@/shared/components/OfflineBanner";
+import { SessionGuardModal } from "@/shared/components/feedback/SessionGuardModal";
 import { useAppLifecycle } from "@/shared/hooks/useAppLifecycle";
 import { useClientTheme } from "@/shared/theme/useClientTheme";
 
@@ -40,8 +42,10 @@ function AppContent() {
 
   return (
     <>
+      <StatusBar style="auto" />
       <Stack screenOptions={{ headerShown: false }} />
       <OfflineBanner />
+      <SessionGuardModal />
       <SplashOverlay visible={showSplash} primaryColor={primaryColor} orgName={orgName} />
     </>
   );

@@ -20,18 +20,11 @@ import { useClientStore } from "@/shared/store/clientStore";
 import { ENV } from "@/shared/config/env";
 import { httpClient } from "@/shared/api/client";
 import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
-import {
-  mockOrgMembers,
-} from "@/shared/api/mocks/member";
 import type {
-  OrgMember,
-  CreateMemberInput,
-  UpdateMemberInput,
   EndUserMember,
   CreateEndUserMemberInput,
   UpdateEndUserMemberInput,
 } from "@/shared/types/member";
-import { MemberFormModal } from "./MemberFormModal";
 import { EndUserFormModal } from "./EndUserFormModal";
 import { ChangePasswordSection } from "@/shared/components/inputs/ChangePasswordSection";
 
@@ -39,16 +32,9 @@ const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 const TABS = [
   { key: "branding", label: "Apariencia" },
-  { key: "members", label: "Usuarios" },
   { key: "endusers", label: "Miembros" },
   { key: "security", label: "Seguridad" },
 ];
-
-const ROLE_LABEL: Record<string, string> = {
-  OWNER: "Propietario",
-  ADMIN: "Administrador",
-  MEMBER: "Miembro",
-};
 
 export function ClientSettingsScreen() {
   const c = useColors();
@@ -64,103 +50,15 @@ export function ClientSettingsScreen() {
   const [brandingSaved, setBrandingSaved] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Staff members (ClientMember)
-  const [memberModalOpen, setMemberModalOpen] = useState(false);
-  const [editingMember, setEditingMember] = useState<OrgMember | null>(null);
-
   // End-user members (Member)
   const [endUserModalOpen, setEndUserModalOpen] = useState(false);
   const [editingEndUser, setEditingEndUser] = useState<EndUserMember | null>(null);
 
-  // ── Queries ────────────────────────────────────────────────────────────────
-  const { data: members = [], isLoading: membersLoading } = useQuery<OrgMember[]>({
-    queryKey: ["org-members"],
-    queryFn: async () => {
-      if (ENV.USE_MOCK) {
-        await delay(600);
-        return mockOrgMembers;
-      }
-      const res = await httpClient<{ data: OrgMember[] }>("/clients/members");
-      return res.data;
-    },
-  });
-
-  // ── Mutations ──────────────────────────────────────────────────────────────
-  const createMember = useMutation({
-    mutationFn: async (data: CreateMemberInput) => {
-      if (ENV.USE_MOCK) {
-        await delay(700);
-        const newMember: OrgMember = {
-          id: `mem-${Date.now()}`,
-          name: data.name,
-          username: data.username,
-          role: data.role,
-          isActive: true,
-          permissions: data.permissions,
-          createdAt: new Date().toISOString(),
-        };
-        return newMember;
-      }
-      const res = await httpClient<{ data: OrgMember }>("/clients/members", {
-        method: "POST",
-        body: data,
-      });
-      return res.data;
-    },
-    onSuccess: (newMember) => {
-      queryClient.setQueryData<OrgMember[]>(["org-members"], (old = []) => [newMember, ...old]);
-      setMemberModalOpen(false);
-    },
-  });
-
-  const updateMember = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: UpdateMemberInput }) => {
-      if (ENV.USE_MOCK) {
-        await delay(500);
-        return { id, ...data };
-      }
-      const res = await httpClient<{ data: OrgMember }>(`/clients/members/${id}`, {
-        method: "PATCH",
-        body: data,
-      });
-      return res.data;
-    },
-    onSuccess: (_, { id, data }) => {
-      queryClient.setQueryData<OrgMember[]>(["org-members"], (old = []) =>
-        (old ?? []).map((m) => (m.id === id ? { ...m, ...data } : m))
-      );
-      setMemberModalOpen(false);
-      setEditingMember(null);
-    },
-  });
-
-  const toggleMemberActive = useMutation({
-    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
-      if (ENV.USE_MOCK) {
-        await delay(400);
-        return { id, isActive };
-      }
-      await httpClient(`/clients/members/${id}`, {
-        method: "PATCH",
-        body: { isActive },
-      });
-      return { id, isActive };
-    },
-    onSuccess: (_, { id, isActive }) => {
-      queryClient.setQueryData<OrgMember[]>(["org-members"], (old = []) =>
-        (old ?? []).map((m) => (m.id === id ? { ...m, isActive } : m))
-      );
-    },
-  });
-
-  // ── End-user member queries & mutations ───────────────────────────────────
+  // ── End-user queries & mutations ──────────────────────────────────────────
   const { data: endUsers = [], isLoading: endUsersLoading } = useQuery<EndUserMember[]>({
     queryKey: ["end-user-members"],
     queryFn: async () => {
-      if (ENV.USE_MOCK) {
-        await delay(600);
-        return [];
-      }
+      if (ENV.USE_MOCK) { await delay(600); return []; }
       const res = await httpClient<{ data: EndUserMember[] }>("/members");
       return res.data;
     },
@@ -183,10 +81,7 @@ export function ClientSettingsScreen() {
 
   const updateEndUser = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: UpdateEndUserMemberInput }) => {
-      if (ENV.USE_MOCK) {
-        await delay(500);
-        return { id, ...data } as EndUserMember;
-      }
+      if (ENV.USE_MOCK) { await delay(500); return { id, ...data } as EndUserMember; }
       const res = await httpClient<{ data: EndUserMember }>(`/members/${id}`, { method: "PATCH", body: data });
       return res.data;
     },
@@ -248,7 +143,7 @@ export function ClientSettingsScreen() {
 
   function calcAge(birthdate: string | null): number | null {
     if (!birthdate) return null;
-    const dob = new Date(birthdate);
+    const dob = new Date(birthdate.slice(0, 10) + "T12:00:00");
     if (isNaN(dob.getTime())) return null;
     const today = new Date();
     let age = today.getFullYear() - dob.getFullYear();
@@ -257,122 +152,11 @@ export function ClientSettingsScreen() {
     return age >= 0 ? age : null;
   }
 
-  const renderEndUsers = () => (
-    <View style={styles.tabContent}>
-      {endUsersLoading ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={c.primary} />
-        </View>
-      ) : (
-        <View style={styles.memberList}>
-          {endUsers.length === 0 && (
-            <Text style={{ color: c.textMuted, textAlign: "center", paddingVertical: SPACING.xl }}>
-              Sin miembros
-            </Text>
-          )}
-          {endUsers.map((member) => {
-            const age = calcAge(member.birthdate);
-            return (
-              <View
-                key={member.id}
-                style={[
-                  styles.memberRow,
-                  { backgroundColor: c.backgroundStrong, borderColor: c.border, opacity: member.isActive ? 1 : 0.6 },
-                ]}
-              >
-                <Avatar name={`${member.name} ${member.lastname}`} size="sm" />
-                <View style={styles.memberInfo}>
-                  <View style={styles.memberNameRow}>
-                    <Text style={[styles.memberName, { color: c.text }]} numberOfLines={1}>
-                      {member.name} {member.lastname}
-                    </Text>
-                    <StatusBadge
-                      status={member.isActive ? "active" : "cancelled"}
-                      customLabel={member.isActive ? "Activo" : "Inactivo"}
-                      size="sm"
-                    />
-                  </View>
-                  {age !== null && (
-                    <Text style={{ color: c.textMuted, fontSize: TYPOGRAPHY.fontSize.xs }}>
-                      {age} años
-                    </Text>
-                  )}
-                  {member.username && (
-                    <Text style={{ color: c.primary, fontSize: TYPOGRAPHY.fontSize.xs }}>
-                      @{member.username}
-                    </Text>
-                  )}
-                </View>
-                <View style={styles.memberActions}>
-                  <TouchableOpacity
-                    style={[styles.actionBtn, { borderColor: c.border, backgroundColor: c.background }]}
-                    onPress={() => openEditEndUser(member)}
-                  >
-                    <Text style={[styles.actionBtnText, { color: c.text }]}>Editar</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.actionBtn,
-                      {
-                        borderColor: member.isActive ? c.danger + "60" : c.border,
-                        backgroundColor: member.isActive ? c.danger + "10" : c.background,
-                      },
-                    ]}
-                    onPress={() => confirmToggleEndUser(member)}
-                  >
-                    <Text style={[styles.actionBtnText, { color: member.isActive ? c.danger : c.textMuted }]}>
-                      {member.isActive ? "Desactivar" : "Activar"}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            );
-          })}
-        </View>
-      )}
-    </View>
-  );
-
   // ── Handlers ───────────────────────────────────────────────────────────────
-  function openEdit(member: OrgMember) {
-    setEditingMember(member);
-    setMemberModalOpen(true);
-  }
-
-  function openCreate() {
-    setEditingMember(null);
-    setMemberModalOpen(true);
-  }
-
-  function handleMemberSubmit(data: CreateMemberInput | UpdateMemberInput) {
-    if (editingMember) {
-      updateMember.mutate({ id: editingMember.id, data: data as UpdateMemberInput });
-    } else {
-      createMember.mutate(data as CreateMemberInput);
-    }
-  }
-
-  function confirmToggle(member: OrgMember) {
-    const action = member.isActive ? "desactivar" : "activar";
-    Alert.alert(
-      `¿${member.isActive ? "Desactivar" : "Activar"} usuario?`,
-      `Esto ${action}á a ${member.name}.`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: member.isActive ? "Desactivar" : "Activar",
-          style: member.isActive ? "destructive" : "default",
-          onPress: () => toggleMemberActive.mutate({ id: member.id, isActive: !member.isActive }),
-        },
-      ]
-    );
-  }
-
   function handleColorChange(key: "primaryColor" | "secondaryColor" | "backgroundColor", value: string) {
     if (key === "primaryColor") setPrimaryColor(value);
     if (key === "secondaryColor") setSecondaryColor(value);
     if (key === "backgroundColor") setBackgroundColor(value);
-    // Real-time update
     setBranding({ [key]: value });
   }
 
@@ -393,15 +177,13 @@ export function ClientSettingsScreen() {
   }
 
   function saveBranding() {
-    // Already live — just show confirmation
     setBrandingSaved(true);
     setTimeout(() => setBrandingSaved(false), 2000);
   }
 
-  // ── Tabs content ───────────────────────────────────────────────────────────
+  // ── Tab renders ────────────────────────────────────────────────────────────
   const renderBranding = () => (
     <View style={styles.tabContent}>
-      {/* Hidden web file input */}
       {Platform.OS === "web" && (
         <input
           ref={fileInputRef}
@@ -422,7 +204,6 @@ export function ClientSettingsScreen() {
         </Text>
 
         <View style={styles.fields}>
-          {/* Logo upload */}
           <View style={styles.logoSection}>
             <Text style={[styles.fieldLabel, { color: c.textMuted }]}>Logo</Text>
             <View style={styles.logoRow}>
@@ -440,12 +221,7 @@ export function ClientSettingsScreen() {
                   Subir imagen (JPG/PNG)
                 </CustomButton>
                 {logoPreview && (
-                  <TouchableOpacity
-                    onPress={() => {
-                      setLogoPreview(null);
-                      setBranding({ logoUrl: null });
-                    }}
-                  >
+                  <TouchableOpacity onPress={() => { setLogoPreview(null); setBranding({ logoUrl: null }); }}>
                     <Text style={[styles.removeText, { color: c.danger }]}>Eliminar logo</Text>
                   </TouchableOpacity>
                 )}
@@ -453,22 +229,9 @@ export function ClientSettingsScreen() {
             </View>
           </View>
 
-          {/* Color pickers */}
-          <ColorPicker
-            label="Color primario"
-            value={primaryColor}
-            onChange={(v) => handleColorChange("primaryColor", v)}
-          />
-          <ColorPicker
-            label="Color secundario"
-            value={secondaryColor}
-            onChange={(v) => handleColorChange("secondaryColor", v)}
-          />
-          <ColorPicker
-            label="Color de fondo"
-            value={backgroundColor}
-            onChange={(v) => handleColorChange("backgroundColor", v)}
-          />
+          <ColorPicker label="Color primario" value={primaryColor} onChange={(v) => handleColorChange("primaryColor", v)} />
+          <ColorPicker label="Color secundario" value={secondaryColor} onChange={(v) => handleColorChange("secondaryColor", v)} />
+          <ColorPicker label="Color de fondo" value={backgroundColor} onChange={(v) => handleColorChange("backgroundColor", v)} />
 
           <CustomButton onPress={saveBranding}>
             {brandingSaved ? "¡Cambios guardados!" : "Confirmar cambios"}
@@ -478,85 +241,64 @@ export function ClientSettingsScreen() {
     </View>
   );
 
-  const renderMembers = () => (
+  const renderEndUsers = () => (
     <View style={styles.tabContent}>
-      {membersLoading ? (
+      {endUsersLoading ? (
         <View style={styles.center}>
           <ActivityIndicator color={c.primary} />
         </View>
       ) : (
         <View style={styles.memberList}>
-          {members.length === 0 && (
+          {endUsers.length === 0 && (
             <Text style={{ color: c.textMuted, textAlign: "center", paddingVertical: SPACING.xl }}>
-              Sin usuarios
+              Sin miembros
             </Text>
           )}
-          {members.map((member) => (
-            <View
-              key={member.id}
-              style={[
-                styles.memberRow,
-                {
-                  backgroundColor: c.backgroundStrong,
-                  borderColor: c.border,
-                  opacity: member.isActive ? 1 : 0.6,
-                },
-              ]}
-            >
-              <Avatar name={member.name} size="sm" />
-
-              <View style={styles.memberInfo}>
-                <View style={styles.memberNameRow}>
-                  <Text style={[styles.memberName, { color: c.text }]} numberOfLines={1}>
-                    {member.name}
-                  </Text>
-                  <StatusBadge
-                    status={member.isActive ? "active" : "cancelled"}
-                    customLabel={member.isActive ? "Activo" : "Inactivo"}
-                    size="sm"
-                  />
+          {endUsers.map((member) => {
+            const age = calcAge(member.birthdate);
+            return (
+              <View
+                key={member.id}
+                style={[styles.memberRow, { backgroundColor: c.backgroundStrong, borderColor: c.border, opacity: member.isActive ? 1 : 0.6 }]}
+              >
+                <Avatar name={`${member.name} ${member.lastname}`} size="sm" />
+                <View style={styles.memberInfo}>
+                  <View style={styles.memberNameRow}>
+                    <Text style={[styles.memberName, { color: c.text }]} numberOfLines={1}>
+                      {member.name} {member.lastname}
+                    </Text>
+                    <StatusBadge
+                      status={member.isActive ? "active" : "cancelled"}
+                      customLabel={member.isActive ? "Activo" : "Inactivo"}
+                      size="sm"
+                    />
+                  </View>
+                  {age !== null && (
+                    <Text style={{ color: c.textMuted, fontSize: TYPOGRAPHY.fontSize.xs }}>{age} años</Text>
+                  )}
+                  {member.username && (
+                    <Text style={{ color: c.primary, fontSize: TYPOGRAPHY.fontSize.xs }}>@{member.username}</Text>
+                  )}
                 </View>
-                <Text style={[{ color: c.textMuted, fontSize: TYPOGRAPHY.fontSize.xs }]} numberOfLines={1}>
-                  {member.username}
-                </Text>
-                <Text style={[{ color: c.primary, fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "500" }]}>
-                  {ROLE_LABEL[member.role] ?? member.role}
-                </Text>
+                <View style={styles.memberActions}>
+                  <TouchableOpacity
+                    style={[styles.actionBtn, { borderColor: c.border, backgroundColor: c.background }]}
+                    onPress={() => openEditEndUser(member)}
+                  >
+                    <Text style={[styles.actionBtnText, { color: c.text }]}>Editar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.actionBtn, { borderColor: member.isActive ? c.danger + "60" : c.border, backgroundColor: member.isActive ? c.danger + "10" : c.background }]}
+                    onPress={() => confirmToggleEndUser(member)}
+                  >
+                    <Text style={[styles.actionBtnText, { color: member.isActive ? c.danger : c.textMuted }]}>
+                      {member.isActive ? "Desactivar" : "Activar"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-
-              <View style={styles.memberActions}>
-                {member.role !== "OWNER" && (
-                  <>
-                    <TouchableOpacity
-                      style={[styles.actionBtn, { borderColor: c.border, backgroundColor: c.background }]}
-                      onPress={() => openEdit(member)}
-                    >
-                      <Text style={[styles.actionBtnText, { color: c.text }]}>Editar</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[
-                        styles.actionBtn,
-                        {
-                          borderColor: member.isActive ? c.danger + "60" : c.border,
-                          backgroundColor: member.isActive ? c.danger + "10" : c.background,
-                        },
-                      ]}
-                      onPress={() => confirmToggle(member)}
-                    >
-                      <Text
-                        style={[
-                          styles.actionBtnText,
-                          { color: member.isActive ? c.danger : c.textMuted },
-                        ]}
-                      >
-                        {member.isActive ? "Desactivar" : "Activar"}
-                      </Text>
-                    </TouchableOpacity>
-                  </>
-                )}
-              </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
       )}
     </View>
@@ -570,17 +312,13 @@ export function ClientSettingsScreen() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         saveActions={
-          activeTab === "members"
-            ? [{ label: "Agregar usuario", type: "primary", onClick: openCreate }]
-            : activeTab === "endusers"
+          activeTab === "endusers"
             ? [{ label: "Agregar miembro", type: "primary", onClick: openCreateEndUser }]
             : []
         }
       >
         {activeTab === "branding"
           ? renderBranding()
-          : activeTab === "members"
-          ? renderMembers()
           : activeTab === "endusers"
           ? renderEndUsers()
           : (
@@ -590,23 +328,9 @@ export function ClientSettingsScreen() {
           )}
       </FeatureShell>
 
-      <MemberFormModal
-        open={memberModalOpen}
-        onClose={() => {
-          setMemberModalOpen(false);
-          setEditingMember(null);
-        }}
-        member={editingMember}
-        onSubmit={handleMemberSubmit}
-        isLoading={createMember.isPending || updateMember.isPending}
-      />
-
       <EndUserFormModal
         open={endUserModalOpen}
-        onClose={() => {
-          setEndUserModalOpen(false);
-          setEditingEndUser(null);
-        }}
+        onClose={() => { setEndUserModalOpen(false); setEditingEndUser(null); }}
         member={editingEndUser}
         onSubmit={handleEndUserSubmit}
         isLoading={createEndUser.isPending || updateEndUser.isPending}
@@ -616,107 +340,26 @@ export function ClientSettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  tabContent: {
-    padding: SPACING.md,
-  },
-  card: {
-    borderRadius: BORDER_RADIUS.lg,
-    borderWidth: 1,
-    padding: SPACING.md,
-    gap: SPACING.sm,
-  },
-  sectionTitle: {
-    fontSize: TYPOGRAPHY.fontSize.md,
-    fontWeight: TYPOGRAPHY.fontWeight.semibold,
-  },
-  sectionHint: {
-    fontSize: TYPOGRAPHY.fontSize.sm,
-  },
-  fields: {
-    gap: SPACING.md,
-    marginTop: SPACING.sm,
-  },
-  fieldLabel: {
-    fontSize: TYPOGRAPHY.fontSize.sm,
-    fontWeight: "500",
-    marginBottom: SPACING.xs,
-  },
-  logoSection: {
-    gap: SPACING.xs,
-  },
-  logoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.md,
-    flexWrap: "wrap",
-  },
-  logoBox: {
-    width: 72,
-    height: 72,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-  },
-  logoImage: {
-    width: 72,
-    height: 72,
-  },
-  logoInitial: {
-    fontSize: 28,
-    fontWeight: "800",
-  },
-  logoActions: {
-    gap: SPACING.sm,
-    flex: 1,
-  },
-  removeText: {
-    fontSize: TYPOGRAPHY.fontSize.sm,
-  },
-  center: {
-    paddingVertical: SPACING.xl,
-    alignItems: "center",
-  },
-  memberList: {
-    gap: SPACING.sm,
-  },
-  memberRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
-    padding: SPACING.sm,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-  },
-  memberInfo: {
-    flex: 1,
-    gap: 2,
-    minWidth: 0,
-  },
-  memberNameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.xs,
-    flexWrap: "wrap",
-  },
-  memberName: {
-    fontSize: TYPOGRAPHY.fontSize.sm,
-    fontWeight: "600",
-    flexShrink: 1,
-  },
-  memberActions: {
-    flexDirection: "row",
-    gap: SPACING.xs,
-  },
-  actionBtn: {
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
-    borderRadius: BORDER_RADIUS.sm,
-    borderWidth: 1,
-  },
-  actionBtnText: {
-    fontSize: TYPOGRAPHY.fontSize.xs,
-    fontWeight: "500",
-  },
+  tabContent: { padding: SPACING.md },
+  card: { borderRadius: BORDER_RADIUS.lg, borderWidth: 1, padding: SPACING.md, gap: SPACING.sm },
+  sectionTitle: { fontSize: TYPOGRAPHY.fontSize.md, fontWeight: TYPOGRAPHY.fontWeight.semibold },
+  sectionHint: { fontSize: TYPOGRAPHY.fontSize.sm },
+  fields: { gap: SPACING.md, marginTop: SPACING.sm },
+  fieldLabel: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "500", marginBottom: SPACING.xs },
+  logoSection: { gap: SPACING.xs },
+  logoRow: { flexDirection: "row", alignItems: "center", gap: SPACING.md, flexWrap: "wrap" },
+  logoBox: { width: 72, height: 72, borderRadius: BORDER_RADIUS.md, borderWidth: 1, alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  logoImage: { width: 72, height: 72 },
+  logoInitial: { fontSize: 28, fontWeight: "800" },
+  logoActions: { gap: SPACING.sm, flex: 1 },
+  removeText: { fontSize: TYPOGRAPHY.fontSize.sm },
+  center: { paddingVertical: SPACING.xl, alignItems: "center" },
+  memberList: { gap: SPACING.sm },
+  memberRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, padding: SPACING.sm, borderRadius: BORDER_RADIUS.md, borderWidth: 1 },
+  memberInfo: { flex: 1, gap: 2, minWidth: 0 },
+  memberNameRow: { flexDirection: "row", alignItems: "center", gap: SPACING.xs, flexWrap: "wrap" },
+  memberName: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "600", flexShrink: 1 },
+  memberActions: { flexDirection: "row", gap: SPACING.xs },
+  actionBtn: { paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs, borderRadius: BORDER_RADIUS.sm, borderWidth: 1 },
+  actionBtnText: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "500" },
 });

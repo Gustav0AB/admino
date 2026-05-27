@@ -30,6 +30,12 @@ export function useAppLifecycle() {
   }, [isAuthenticated]);
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      queryClient.clear();
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
     if (!isAuthHydrated || !isOrgLoaded) return;
 
     if (!isWeb) {

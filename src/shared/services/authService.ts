@@ -14,7 +14,11 @@ async function mockLogin(credentials: LoginCredentials): Promise<AuthSession> {
   if (!role) {
     throw new Error("Invalid credentials");
   }
-  return { user: MOCK_USERS[role], token: MOCK_TOKENS[role] };
+  return {
+    user: MOCK_USERS[role],
+    token: MOCK_TOKENS[role],
+    expiresAt: Math.floor(Date.now() / 1000) + 3600,
+  };
 }
 
 async function realLogin(credentials: LoginCredentials): Promise<AuthSession> {
@@ -27,10 +31,17 @@ async function realLogin(credentials: LoginCredentials): Promise<AuthSession> {
     const body = await res.json().catch(() => ({}));
     throw new Error((body as { message?: string }).message ?? "Login failed");
   }
-  const envelope = await res.json() as { data: { token: string; user: { sub: string; username: string; role: UserRole; orgId: string | null; name?: string } } };
-  const { token, user: u } = envelope.data;
+  const envelope = await res.json() as {
+    data: {
+      token: string;
+      expiresAt: number;
+      user: { sub: string; username: string; role: UserRole; orgId: string | null; name?: string };
+    };
+  };
+  const { token, user: u, expiresAt } = envelope.data;
   return {
     token,
+    expiresAt: expiresAt ?? null,
     user: {
       id: u.sub,
       name: u.name ?? u.username,
@@ -41,7 +52,24 @@ async function realLogin(credentials: LoginCredentials): Promise<AuthSession> {
   };
 }
 
+async function realRefresh(token: string): Promise<{ token: string; expiresAt: number }> {
+  const res = await fetch(`${ENV.API_URL}/auth/refresh`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) throw new Error("Refresh failed");
+  const envelope = await res.json() as { data: { token: string; expiresAt: number } };
+  return envelope.data;
+}
+
 export const authService = {
   login: (credentials: LoginCredentials): Promise<AuthSession> =>
     ENV.USE_MOCK ? mockLogin(credentials) : realLogin(credentials),
+  refresh: (token: string): Promise<{ token: string; expiresAt: number }> =>
+    ENV.USE_MOCK
+      ? Promise.resolve({ token, expiresAt: Math.floor(Date.now() / 1000) + 3600 })
+      : realRefresh(token),
 };

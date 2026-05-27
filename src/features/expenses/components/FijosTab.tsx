@@ -148,6 +148,7 @@ function RecurringList({
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<RecurringForm>(blankRecurring());
+  const [cardError, setCardError] = useState("");
 
   const items = recurringExpenses.filter((r) => r.category === category);
 
@@ -180,10 +181,7 @@ function RecurringList({
     }
   }, [selectedMes]);
 
-  const cardOptions = [
-    { label: "Sin tarjeta", value: "" },
-    ...creditCards.map((c) => ({ label: c.name, value: c.id })),
-  ];
+  const cardOptions = creditCards.map((c) => ({ label: c.name, value: c.id }));
 
   // Days not yet selected, for the add-day dropdown
   const availableDayOptions = [
@@ -193,6 +191,12 @@ function RecurringList({
 
   function patch(p: Partial<RecurringForm>) {
     setForm((f) => ({ ...f, ...p }));
+    if (p.creditCardId) setCardError("");
+  }
+
+  function handleSelectCredito() {
+    const firstCard = creditCards[0]?.id ?? "";
+    patch({ metodoPago: "credito", creditCardId: form.creditCardId || firstCard });
   }
 
   function addDay(day: number) {
@@ -208,6 +212,7 @@ function RecurringList({
   function startAdd() {
     setEditId(null);
     setForm(blankRecurring());
+    setCardError("");
     setShowForm(true);
   }
 
@@ -220,12 +225,17 @@ function RecurringList({
       metodoPago: r.metodoPago,
       creditCardId: r.creditCardId ?? "",
     });
+    setCardError("");
     setShowForm(true);
   }
 
   function save() {
     const amount = parseFloat(form.amount.replace(/[^0-9.]/g, "")) || 0;
     if (!form.title.trim() || amount <= 0 || form.days.length === 0) return;
+    if (form.metodoPago === "credito" && !form.creditCardId) {
+      setCardError("Debes seleccionar una tarjeta para pagos con crédito");
+      return;
+    }
 
     const patch_data = {
       title: form.title.trim(),
@@ -315,26 +325,38 @@ function RecurringList({
 
           {/* Payment method */}
           <View style={styles.chipRow}>
-            {(["efectivo", "credito"] as const).map((m) => (
-              <TouchableOpacity
-                key={m}
-                style={[styles.chip, { borderColor: c.border, backgroundColor: form.metodoPago === m ? c.primary : c.background }]}
-                onPress={() => patch({ metodoPago: m, creditCardId: "" })}
-              >
-                <Text style={{ color: form.metodoPago === m ? c.primaryForeground : c.text, fontSize: TYPOGRAPHY.fontSize.xs }}>
-                  {m === "efectivo" ? "Efectivo" : "Crédito"}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            <TouchableOpacity
+              style={[styles.chip, { borderColor: c.border, backgroundColor: form.metodoPago === "efectivo" ? c.primary : c.background }]}
+              onPress={() => patch({ metodoPago: "efectivo", creditCardId: "" })}
+            >
+              <Text style={{ color: form.metodoPago === "efectivo" ? c.primaryForeground : c.text, fontSize: TYPOGRAPHY.fontSize.xs }}>
+                Efectivo
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.chip, { borderColor: c.border, backgroundColor: form.metodoPago === "credito" ? c.primary : c.background }, creditCards.length === 0 && { opacity: 0.4 }]}
+              onPress={handleSelectCredito}
+              disabled={creditCards.length === 0}
+            >
+              <Text style={{ color: form.metodoPago === "credito" ? c.primaryForeground : c.text, fontSize: TYPOGRAPHY.fontSize.xs }}>
+                Crédito
+              </Text>
+            </TouchableOpacity>
           </View>
 
-          {/* Card selector — only when credito and cards exist */}
-          {form.metodoPago === "credito" && creditCards.length > 0 && (
-            <CustomSelect
-              value={form.creditCardId}
-              options={cardOptions}
-              onChange={(v) => patch({ creditCardId: String(v) })}
-            />
+          {/* Card selector — required when credito */}
+          {form.metodoPago === "credito" && (
+            <View style={{ gap: 4 }}>
+              <CustomSelect
+                value={form.creditCardId}
+                options={cardOptions}
+                onChange={(v) => patch({ creditCardId: String(v) })}
+                placeholder="Seleccionar tarjeta *"
+              />
+              {cardError ? (
+                <Text style={{ color: c.danger, fontSize: TYPOGRAPHY.fontSize.xs }}>{cardError}</Text>
+              ) : null}
+            </View>
           )}
 
           <View style={styles.formActions}>

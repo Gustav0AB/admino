@@ -332,6 +332,7 @@ export const useExpensesStore = create<ExpensesState>()(
         }
         set({
           expenses: data.expenses ?? [],
+          filterMes: "Todos",
           initialCreditDebt: data.creditDebt ?? 0,
           creditDebtMes: data.creditDebtMes ?? currentMonthName(),
           creditCutDay: data.creditCutDay ?? 0,

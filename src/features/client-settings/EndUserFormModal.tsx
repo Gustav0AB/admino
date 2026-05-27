@@ -53,7 +53,7 @@ export function EndUserFormModal({ open, onClose, member, onSubmit, isLoading }:
     if (open) {
       setName(member?.name ?? "");
       setLastname(member?.lastname ?? "");
-      setBirthdate(member?.birthdate ? new Date(member.birthdate + "T12:00:00") : null);
+      setBirthdate(member?.birthdate ? new Date(member.birthdate.slice(0, 10) + "T12:00:00") : null);
       setWithAccount(!!member?.username);
       setUsername(member?.username ?? "");
       setPassword("");

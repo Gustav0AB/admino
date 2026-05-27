@@ -21,6 +21,14 @@ function getPlanningStore() {
   }
 }
 
+function getTrackerStore() {
+  try {
+    return require("@/shared/store/trackerStore").useTrackerStore;
+  } catch {
+    return null;
+  }
+}
+
 const storage = createJSONStorage(() =>
   Platform.OS === "web" ? localStorage : AsyncStorage
 );
@@ -66,21 +74,24 @@ export const MOCK_TOKENS: Record<UserRole, string> = {
 type AuthState = {
   user: User | null;
   token: string | null;
+  tokenExpiresAt: number | null; // Unix timestamp (seconds)
   isAuthenticated: boolean;
   isInitialized: boolean;
   _hasHydrated: boolean;
   setHasHydrated: (hydrated: boolean) => void;
   login: (credentials: LoginCredentials) => Promise<void>;
   logout: () => void;
+  refresh: () => Promise<void>;
   simulateLogin: (role: UserRole) => void;
   switchRole: (role: UserRole) => void;
 };
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       token: null,
+      tokenExpiresAt: null,
       isAuthenticated: false,
       isInitialized: false,
       _hasHydrated: false,
@@ -91,6 +102,7 @@ export const useAuthStore = create<AuthState>()(
         set({
           user: session.user,
           token: session.token,
+          tokenExpiresAt: session.expiresAt,
           isAuthenticated: true,
           isInitialized: true,
         });
@@ -104,17 +116,27 @@ export const useAuthStore = create<AuthState>()(
         if (expensesStore) expensesStore.getState().clearAll();
         const planningStore = getPlanningStore();
         if (planningStore) planningStore.getState().clearAll();
+        const trackerStore = getTrackerStore();
+        if (trackerStore) trackerStore.getState().reset();
         set({
           user: null,
           token: null,
+          tokenExpiresAt: null,
           isAuthenticated: false,
           isInitialized: true,
         });
+      },
+      refresh: async () => {
+        const currentToken = get().token;
+        if (!currentToken) throw new Error("No token");
+        const result = await authService.refresh(currentToken);
+        set({ token: result.token, tokenExpiresAt: result.expiresAt });
       },
       simulateLogin: (role) => {
         set({
           user: MOCK_USERS[role],
           token: MOCK_TOKENS[role],
+          tokenExpiresAt: Math.floor(Date.now() / 1000) + 3600,
           isAuthenticated: true,
           isInitialized: true,
         });
@@ -125,6 +147,7 @@ export const useAuthStore = create<AuthState>()(
         set({
           user: MOCK_USERS[role],
           token: MOCK_TOKENS[role],
+          tokenExpiresAt: Math.floor(Date.now() / 1000) + 3600,
           isAuthenticated: true,
         }),
     }),
@@ -134,12 +157,14 @@ export const useAuthStore = create<AuthState>()(
       partialize: (state) => ({
         user: state.user,
         token: state.token,
+        tokenExpiresAt: state.tokenExpiresAt,
         isAuthenticated: state.isAuthenticated,
       }),
       onRehydrateStorage: () => (state) => {
         if (state?.user && !state.user.role) {
           state.user = null;
           state.token = null;
+          state.tokenExpiresAt = null;
           state.isAuthenticated = false;
         }
         state?.setHasHydrated(true);
