@@ -95,6 +95,10 @@ export default function DrawerLayout() {
         options={{ title: "Usuarios", drawerLabel: "Usuarios" }}
       />
       <Drawer.Screen
+        name="miembros"
+        options={{ title: "Miembros", drawerLabel: "Miembros" }}
+      />
+      <Drawer.Screen
         name="client-settings"
         options={{ title: "Configuración", drawerLabel: "Configuración" }}
       />

@@ -131,6 +131,12 @@ export function DrawerContent(props: DrawerContentComponentProps) {
       roles: ["OWNER", "ADMIN"],
     },
     {
+      label: "Miembros",
+      href: "/(drawer)/miembros",
+      icon: (color) => <Feather name="user-check" size={20} color={color} />,
+      roles: ["OWNER", "ADMIN"],
+    },
+    {
       label: "Configuración",
       href: "/(drawer)/client-settings",
       icon: (color) => <Feather name="sliders" size={20} color={color} />,
