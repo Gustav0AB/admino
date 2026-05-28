@@ -7,8 +7,10 @@ import { useExpensesStore } from "../store";
 import { usePlanningStore } from "@/features/expenses/planning/store";
 import {
   currentMonthName,
+  currentYear,
   formatMXN,
   getAvailableMeses,
+  getAvailableAños,
   getCreditHistoryForCard,
   getCurrentCreditBalance,
   MESES_LIST,
@@ -20,17 +22,25 @@ export function ResumenTab() {
   const { scheduledExpenses, vacations } = usePlanningStore();
 
   const availableMeses = useMemo(() => getAvailableMeses(expenses), [expenses]);
+  const availableAños = useMemo(() => getAvailableAños(expenses), [expenses]);
   const [selectedMes, setSelectedMes] = useState(currentMonthName());
+  const [selectedAño, setSelectedAño] = useState(currentYear());
+
+  const añoOptions = [
+    { label: "Todos los años", value: 0 },
+    ...availableAños.map((y) => ({ label: String(y), value: y })),
+  ];
 
   const mesOptions = [
     { label: "Todos los meses", value: "__all__" },
     ...MESES_LIST.filter((m) => availableMeses.includes(m)).map((m) => ({ label: m, value: m })),
   ];
 
-  const filtered = useMemo(
-    () => (selectedMes === "__all__" ? expenses : expenses.filter((e) => e.mes === selectedMes)),
-    [expenses, selectedMes],
-  );
+  const filtered = useMemo(() => {
+    let result = selectedMes === "__all__" ? expenses : expenses.filter((e) => e.mes === selectedMes);
+    if (selectedAño > 0) result = result.filter((e) => (e.año ?? currentYear()) === selectedAño);
+    return result;
+  }, [expenses, selectedMes, selectedAño]);
 
   const stats = useMemo(() => {
     const pagado = filtered.filter((e) => e.estado === "pagado").reduce((s, e) => s + e.monto, 0);
@@ -56,12 +66,12 @@ export function ResumenTab() {
     }).filter(Boolean) as { mes: string; total: number; pagado: number; sinPagar: number; count: number }[];
   }, [expenses, selectedMes]);
 
-  // Recurring totals for selected month
+  // Recurring totals for selected month — multiply by number of payment days
   const recurringTotal = useMemo(() => {
     const active = recurringExpenses.filter(
       (r) => selectedMes === "__all__" || !r.cancelledMonths.includes(selectedMes),
     );
-    return active.reduce((s, r) => s + r.amount, 0);
+    return active.reduce((s, r) => s + r.amount * r.days.length, 0);
   }, [recurringExpenses, selectedMes]);
 
   // Credit card balances
@@ -82,14 +92,27 @@ export function ResumenTab() {
   const scheduledPending = scheduledExpenses.filter((e) => e.status === "pending" && e.amountKnown);
   const scheduledTotal = scheduledPending.reduce((s, e) => s + e.amount, 0);
 
-  // Vacations
+  // Vacations — budget is deprecated; compute from pending payments when available
   const vacationsActive = vacations.filter((v) => v.status !== "cancelled");
-  const vacationsTotal = vacationsActive.reduce((s, v) => s + v.budget, 0);
+  const getVacationBudget = (v: (typeof vacationsActive)[0]) => {
+    if (v.payments?.length) {
+      const pc = v.persons?.length ?? 0;
+      return v.payments.reduce((s, p) => s + p.amount * (p.perPerson ? Math.max(pc, 1) : 1), 0);
+    }
+    return v.budget ?? 0;
+  };
+  const vacationsTotal = vacationsActive.reduce((s, v) => s + getVacationBudget(v), 0);
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      {/* Month filter */}
+      {/* Year + Month filter */}
       <View style={styles.topBar}>
+        <CustomSelect
+          value={selectedAño}
+          options={añoOptions}
+          onChange={(v) => setSelectedAño(Number(v))}
+          style={styles.mesSelect}
+        />
         <CustomSelect
           value={selectedMes}
           options={mesOptions}
@@ -119,7 +142,7 @@ export function ResumenTab() {
                 <Row
                   key={r.id}
                   label={`  ${r.title} · ${r.days.length === 1 ? `día ${r.days[0]}` : `días ${[...r.days].sort((a, b) => a - b).join(", ")}`}`}
-                  value={`$${formatMXN(r.amount)}`}
+                  value={r.days.length > 1 ? `$${formatMXN(r.amount)} ×${r.days.length} = $${formatMXN(r.amount * r.days.length)}` : `$${formatMXN(r.amount)}`}
                   c={c}
                   muted
                 />
@@ -159,7 +182,7 @@ export function ResumenTab() {
         <Section title="Vacaciones" c={c}>
           <Row label={`${vacationsActive.length} planes`} value={`$${formatMXN(vacationsTotal)}`} c={c} />
           {vacationsActive.map((v) => (
-            <Row key={v.id} label={`  ${v.name}`} value={`$${formatMXN(v.budget)}`} c={c} muted />
+            <Row key={v.id} label={`  ${v.name}`} value={`$${formatMXN(getVacationBudget(v))}`} c={c} muted />
           ))}
         </Section>
       )}
@@ -229,8 +252,8 @@ function Row({ label, value, c, muted }: { label: string; value: string; c: Retu
 const styles = StyleSheet.create({
   root: { flex: 1 },
   content: { padding: SPACING.md, gap: SPACING.md, paddingBottom: SPACING.xl },
-  topBar: { flexDirection: "row" },
-  mesSelect: { minWidth: 200 },
+  topBar: { flexDirection: "row", gap: SPACING.sm, flexWrap: "wrap" },
+  mesSelect: { minWidth: 160 },
   statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm },
   statCard: { borderRadius: BORDER_RADIUS.md, borderWidth: StyleSheet.hairlineWidth, padding: SPACING.md, gap: 4, minWidth: 100 },
   statValue: { fontWeight: "700" },

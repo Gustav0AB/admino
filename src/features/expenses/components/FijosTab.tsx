@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -14,17 +14,12 @@ import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
 import { usePlanningStore } from "@/features/expenses/planning/store";
 import { useExpensesStore } from "../store";
 import type { InstallmentPayment } from "@/features/expenses/planning/types";
-import { currentMonthName, formatMXN, MESES_LIST } from "../helpers";
+import { currentMonthName, currentYear, formatMXN, MESES_LIST } from "../helpers";
 import type { RecurringCategory, RecurringExpense } from "../types";
 import type { ScheduledExpenseCategory } from "../planning/types";
 
 const SUB_TABS = ["Básicos", "Servicios", "Agendados", "Pagos a meses", "Simulación"] as const;
 type SubTab = (typeof SUB_TABS)[number];
-
-const MES_OPTIONS = [
-  { label: "Todos los meses", value: "__all__" },
-  ...MESES_LIST.map((m) => ({ label: m, value: m })),
-];
 
 const DAY_OPTIONS = Array.from({ length: 31 }, (_, i) => ({
   label: String(i + 1),
@@ -82,12 +77,38 @@ export function FijosTab() {
   const c = useColors();
   const [subTab, setSubTab] = useState<SubTab>("Básicos");
   const [selectedMes, setSelectedMes] = useState(currentMonthName());
+  const [selectedAño, setSelectedAño] = useState(currentYear());
+  const { activatedMonths, activateMonth, deactivateMonth } = useExpensesStore();
+
+  const currentMes = currentMonthName();
+  const thisYear = currentYear();
+
+  // Generate year options: current year ± 1
+  const añoOptions = [thisYear - 1, thisYear, thisYear + 1].map((y) => ({
+    label: String(y),
+    value: y,
+  }));
+
+  // Auto-activate next month after day 25
+  useEffect(() => {
+    if (new Date().getDate() >= 25) {
+      const nextMonth = MESES_LIST[(new Date().getMonth() + 1) % 12]!;
+      const nextYear = new Date().getMonth() === 11 ? thisYear + 1 : thisYear;
+      const key = `${nextMonth}-${nextYear}`;
+      if (!activatedMonths.includes(key)) {
+        activateMonth(nextMonth, nextYear);
+      }
+    }
+  }, []);
 
   const showMonthFilter = subTab === "Básicos" || subTab === "Servicios";
+  const activationKey = `${selectedMes}-${selectedAño}`;
+  const isCurrentMesAndYear = selectedMes === currentMes && selectedAño === thisYear;
+  const isActivated = isCurrentMesAndYear || activatedMonths.includes(activationKey);
 
   return (
     <View style={styles.root}>
-      {/* Sub-tab bar — scrollable for 5 tabs */}
+      {/* Sub-tab bar */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -105,15 +126,33 @@ export function FijosTab() {
         ))}
       </ScrollView>
 
-      {/* Month filter for Básicos / Servicios */}
+      {/* Month dropdown for Básicos / Servicios */}
       {showMonthFilter && (
-        <View style={[styles.monthBar, { borderBottomColor: c.border }]}>
+        <View style={[styles.monthFilterRow, { borderBottomColor: c.border }]}>
           <CustomSelect
-            value={selectedMes}
-            options={MES_OPTIONS}
-            onChange={(v) => setSelectedMes(String(v))}
-            style={styles.mesSelect}
+            placeholder="Año"
+            options={añoOptions}
+            value={selectedAño}
+            onChange={(val) => setSelectedAño(Number(val))}
+            style={styles.yearSelect}
           />
+          <CustomSelect
+            placeholder="Seleccionar mes"
+            options={MESES_LIST.map((m) => ({ label: m, value: m }))}
+            value={selectedMes}
+            onChange={(val) => setSelectedMes(val as string)}
+            style={styles.monthSelect}
+          />
+          {!isCurrentMesAndYear && (
+            <TouchableOpacity
+              onPress={() => isActivated ? deactivateMonth(selectedMes, selectedAño) : activateMonth(selectedMes, selectedAño)}
+              style={styles.gastosAplicadosBtn}
+            >
+              <Text style={{ color: isActivated ? "#16A34A" : c.textMuted, fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "600" }}>
+                {isActivated ? "✓ gastos aplicados" : "+ aplicar a gastos"}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
@@ -151,35 +190,6 @@ function RecurringList({
   const [cardError, setCardError] = useState("");
 
   const items = recurringExpenses.filter((r) => r.category === category);
-
-  // Auto-sync recurring expenses into Todos los gastos when month changes
-  const lastSyncedRef = useRef<string>("");
-  useEffect(() => {
-    if (selectedMes === "__all__" || selectedMes === lastSyncedRef.current) return;
-    lastSyncedRef.current = selectedMes;
-    const { expenses: currentExpenses, addExpenseFromModal: addFromModal } = useExpensesStore.getState();
-    for (const r of useExpensesStore.getState().recurringExpenses.filter((r) => r.category === category)) {
-      if (r.cancelledMonths.includes(selectedMes)) continue;
-      for (const day of r.days) {
-        const exists = currentExpenses.some(
-          (e) => e.mes === selectedMes && e.gastos === r.title && e.fecha === day
-        );
-        if (!exists) {
-          addFromModal({
-            mes: selectedMes,
-            gastos: r.title,
-            monto: r.amount,
-            metodoPago: r.metodoPago,
-            frecuencia: "mes",
-            fecha: day,
-            fechaMaxima: "",
-            estado: "no pagado",
-            ...(r.creditCardId ? { creditCardId: r.creditCardId } : {}),
-          });
-        }
-      }
-    }
-  }, [selectedMes]);
 
   const cardOptions = creditCards.map((c) => ({ label: c.name, value: c.id }));
 
@@ -278,6 +288,13 @@ function RecurringList({
 
   return (
     <ScrollView style={styles.list} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
+      {/* Add button — always at top so it's visible regardless of list length */}
+      {!showForm && (
+        <TouchableOpacity style={[styles.addBtn, { borderColor: c.primary }]} onPress={startAdd}>
+          <Text style={[styles.addBtnText, { color: c.primary }]}>+ Agregar</Text>
+        </TouchableOpacity>
+      )}
+
       {/* Add / edit form */}
       {showForm && (
         <View style={[styles.formCard, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
@@ -430,11 +447,6 @@ function RecurringList({
         );
       })}
 
-      {!showForm && (
-        <TouchableOpacity style={[styles.addBtn, { borderColor: c.primary }]} onPress={startAdd}>
-          <Text style={[styles.addBtnText, { color: c.primary }]}>+ Agregar</Text>
-        </TouchableOpacity>
-      )}
     </ScrollView>
   );
 }
@@ -1074,12 +1086,17 @@ const styles = StyleSheet.create({
     borderBottomColor: "transparent",
   },
   subTabLabel: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "600" },
-  monthBar: {
+  monthFilterRow: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
+    paddingTop: SPACING.sm,
+    gap: SPACING.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  mesSelect: { maxWidth: 220 },
+  yearSelect: { width: 90, marginBottom: SPACING.sm },
+  monthSelect: { flex: 1, marginBottom: SPACING.sm },
+  gastosAplicadosBtn: { paddingBottom: SPACING.sm },
   list: { flex: 1 },
   listContent: { padding: SPACING.md, gap: SPACING.sm, paddingBottom: SPACING.xl },
   empty: { textAlign: "center", marginTop: SPACING.xl, fontSize: TYPOGRAPHY.fontSize.sm },

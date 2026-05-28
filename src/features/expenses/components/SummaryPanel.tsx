@@ -43,8 +43,8 @@ export function SummaryPanel() {
   const vacationsTotal = useMemo(
     () =>
       vacations
-        .filter((v) => v.status !== "cancelled" && v.budget > 0)
-        .reduce((s, v) => s + v.budget, 0),
+        .filter((v) => v.status !== "cancelled" && (v.budget ?? 0) > 0)
+        .reduce((s, v) => s + (v.budget ?? 0), 0),
     [vacations],
   );
 

@@ -14,6 +14,7 @@ import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
 import { useExpensesStore } from "../store";
 import {
   currentMonthName,
+  currentYear,
   formatMXN,
   getCreditCycleInfoForCard,
   getCreditHistoryForCard,
@@ -37,7 +38,7 @@ function blankAddForm(): AddCardForm {
 
 export function CreditCardsTab() {
   const c = useColors();
-  const { expenses, creditCards, addCreditCard, updateCreditCard, removeCreditCard } =
+  const { expenses, creditCards, addCreditCard, updateCreditCard, removeCreditCard, addCardPayment } =
     useExpensesStore();
 
   const [selectedMes, setSelectedMes] = useState(currentMonthName());
@@ -110,6 +111,7 @@ export function CreditCardsTab() {
           selectedMes={selectedMes}
           onUpdate={(patch) => updateCreditCard(card.id, patch)}
           onRemove={() => removeCreditCard(card.id)}
+          onPayment={(amount) => addCardPayment(card.id, amount, currentMonthName(), currentYear())}
           c={c}
         />
       ))}
@@ -123,12 +125,15 @@ type CardItemProps = {
   selectedMes: string;
   onUpdate: (patch: Partial<CreditCard>) => void;
   onRemove: () => void;
+  onPayment: (amount: number) => void;
   c: ReturnType<typeof useColors>;
 };
 
-function CardItem({ card, expenses, selectedMes, onUpdate, onRemove, c }: CardItemProps) {
+function CardItem({ card, expenses, selectedMes, onUpdate, onRemove, onPayment, c }: CardItemProps) {
   const [showHistory, setShowHistory] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const [showPayForm, setShowPayForm] = useState(false);
+  const [payAmount, setPayAmount] = useState("");
 
   const cycle = useMemo(() => getCreditCycleInfoForCard(expenses, card), [expenses, card]);
   const history = useMemo(() => getCreditHistoryForCard(expenses, card), [expenses, card]);
@@ -196,9 +201,62 @@ function CardItem({ card, expenses, selectedMes, onUpdate, onRemove, c }: CardIt
         <DebtRow label="Adeudo estado de cuenta" value={cycle.frozenDebt} c={c} />
         {cycle.totalPayments > 0 && <DebtRow label="Pagos realizados" value={-cycle.totalPayments} c={c} color="#16A34A" />}
         {cycle.remainingDebt > 0 && <DebtRow label={`Saldo a pagar (día ${cycle.payDay})`} value={cycle.remainingDebt} c={c} color={c.danger} bold />}
-        {cycle.newCharges > 0 && <DebtRow label="Nuevos cargos (próx. ciclo)" value={cycle.newCharges} c={c} color={c.textMuted} />}
+        {cycle.newCharges > 0 && (
+          <DebtRow
+            label={cycle.isCutPassed ? "Nuevos cargos (próx. ciclo)" : "Cargos del ciclo actual"}
+            value={cycle.newCharges}
+            c={c}
+            color={c.textMuted}
+          />
+        )}
         <DebtRow label="Balance actual" value={currentBalance} c={c} />
       </View>
+
+      {/* Pay button */}
+      {cycle.frozenDebt > 0 && (
+        <View style={[styles.paySection, { borderColor: c.border }]}>
+          {showPayForm ? (
+            <View style={styles.payForm}>
+              <Text style={[styles.payLabel, { color: c.textMuted }]}>Monto a pagar</Text>
+              <TextInput
+                style={[styles.payInput, { color: c.text, borderColor: c.border, backgroundColor: c.background }]}
+                value={payAmount}
+                onChangeText={setPayAmount}
+                keyboardType="numeric"
+                placeholder={String(cycle.remainingDebt || cycle.frozenDebt)}
+                placeholderTextColor={c.textPlaceholder}
+                autoFocus
+              />
+              <View style={styles.payActions}>
+                <CustomButton variant="outline" size="sm" onPress={() => { setShowPayForm(false); setPayAmount(""); }}>
+                  Cancelar
+                </CustomButton>
+                <CustomButton
+                  variant="primary"
+                  size="sm"
+                  onPress={() => {
+                    const amount = parseFloat(payAmount);
+                    if (!amount || amount <= 0) return;
+                    onPayment(amount);
+                    setShowPayForm(false);
+                    setPayAmount("");
+                  }}
+                >
+                  Confirmar pago
+                </CustomButton>
+              </View>
+            </View>
+          ) : (
+            <CustomButton
+              variant="outline"
+              size="sm"
+              onPress={() => { setShowPayForm(true); setPayAmount(String(cycle.remainingDebt || cycle.frozenDebt)); }}
+            >
+              💳 Registrar pago con efectivo
+            </CustomButton>
+          )}
+        </View>
+      )}
 
       {/* Month charges */}
       <View style={[styles.monthSection, { borderColor: c.border }]}>
@@ -359,6 +417,12 @@ const styles = StyleSheet.create({
   chargeTotalRow: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: SPACING.xs, marginTop: 2 },
   chargeDesc: { fontSize: TYPOGRAPHY.fontSize.xs, flex: 1 },
   chargeAmt: { fontSize: TYPOGRAPHY.fontSize.xs },
+
+  paySection: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: SPACING.sm },
+  payForm: { gap: SPACING.sm },
+  payLabel: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "600" },
+  payInput: { borderWidth: StyleSheet.hairlineWidth, borderRadius: BORDER_RADIUS.sm, paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs, fontSize: TYPOGRAPHY.fontSize.sm },
+  payActions: { flexDirection: "row", justifyContent: "flex-end", gap: SPACING.sm },
 
   configSection: { gap: SPACING.sm, borderTopWidth: StyleSheet.hairlineWidth, paddingTop: SPACING.sm },
   configGrid: { gap: SPACING.xs },

@@ -4,7 +4,7 @@ import { Platform } from "react-native";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { useAuthStore } from "@/shared/store/authStore";
-import { currentMonthName, buildAppData } from "./helpers";
+import { currentMonthName, currentQuincena, currentYear, buildAppData, getFilteredExpenses } from "./helpers";
 import type { AppData, CreditCard, Estado, Expense, Frecuencia, MetodoPago, RecurringExpense } from "./types";
 import { usePlanningStore } from "./planning/store";
 
@@ -43,6 +43,7 @@ function blankExpense(): Expense {
   return {
     id: randomUUID(),
     mes: currentMonthName(),
+    año: currentYear(),
     gastos: "",
     monto: 0,
     metodoPago: "efectivo",
@@ -59,17 +60,20 @@ type ExpensesState = {
   filterMes: string;
   filterFrecuencia: string;
   filterFecha: number;
+  filterAño: number;
   initialCreditDebt: number;
   creditDebtMes: string;
   creditCutDay: number;
   creditPayDay: number;
   creditCards: CreditCard[];
   recurringExpenses: RecurringExpense[];
+  activatedMonths: string[];
 
   setExpenses: (expenses: Expense[]) => void;
   setFilterMes: (v: string) => void;
   setFilterFrecuencia: (v: string) => void;
   setFilterFecha: (v: number) => void;
+  setFilterAño: (v: number) => void;
   setInitialCreditDebt: (v: number) => void;
   setCreditDebtMes: (v: string) => void;
   setCreditCutDay: (v: number) => void;
@@ -78,11 +82,14 @@ type ExpensesState = {
   addCreditCard: (card: Omit<CreditCard, "id">) => void;
   updateCreditCard: (id: string, patch: Partial<CreditCard>) => void;
   removeCreditCard: (id: string) => void;
+  addCardPayment: (cardId: string, amount: number, mes: string, año: number) => void;
 
   addRecurringExpense: (item: Omit<RecurringExpense, "id" | "cancelledMonths">) => void;
   updateRecurringExpense: (id: string, patch: Partial<Omit<RecurringExpense, "id">>) => void;
   removeRecurringExpense: (id: string) => void;
   toggleCancelMonth: (id: string, mes: string) => void;
+  activateMonth: (month: string, year?: number) => void;
+  deactivateMonth: (month: string, year?: number) => void;
 
   addExpense: () => void;
   removeExpense: (id: string) => void;
@@ -107,18 +114,21 @@ export const useExpensesStore = create<ExpensesState>()(
       expenses: [],
       filterMes: currentMonthName(),
       filterFrecuencia: "Todos",
-      filterFecha: 0,
+      filterFecha: currentQuincena(),
+      filterAño: 0,
       initialCreditDebt: 0,
       creditDebtMes: currentMonthName(),
       creditCutDay: 0,
       creditPayDay: 0,
       creditCards: [],
       recurringExpenses: [],
+      activatedMonths: [`${currentMonthName()}-${currentYear()}`],
 
       setExpenses: (expenses) => set({ expenses }),
       setFilterMes: (filterMes) => set({ filterMes }),
       setFilterFrecuencia: (filterFrecuencia) => set({ filterFrecuencia }),
       setFilterFecha: (filterFecha) => set({ filterFecha }),
+      setFilterAño: (filterAño) => set({ filterAño }),
       setInitialCreditDebt: (initialCreditDebt) => set({ initialCreditDebt }),
       setCreditDebtMes: (creditDebtMes) => set({ creditDebtMes }),
       setCreditCutDay: (creditCutDay) => set({ creditCutDay }),
@@ -139,6 +149,27 @@ export const useExpensesStore = create<ExpensesState>()(
       removeCreditCard: (id) =>
         set((s) => ({
           creditCards: s.creditCards.filter((c) => c.id !== id),
+        })),
+
+      addCardPayment: (cardId, amount, mes, año) =>
+        set((s) => ({
+          expenses: [
+            ...s.expenses,
+            {
+              id: randomUUID(),
+              mes,
+              año,
+              gastos: "tarjeta de credito",
+              monto: amount,
+              metodoPago: "efectivo" as MetodoPago,
+              frecuencia: "mes" as Frecuencia,
+              fecha: new Date().getDate(),
+              fechaMaxima: "",
+              estado: "pagado" as Estado,
+              selected: false,
+              creditCardId: cardId,
+            },
+          ],
         })),
 
       addRecurringExpense: (item) =>
@@ -175,6 +206,46 @@ export const useExpensesStore = create<ExpensesState>()(
           }),
         })),
 
+      activateMonth: (month, year = currentYear()) =>
+        set((s) => {
+          const key = `${month}-${year}`;
+          if (s.activatedMonths.includes(key)) return s;
+          const newExpenses: Expense[] = [];
+          for (const r of s.recurringExpenses) {
+            if (r.cancelledMonths.includes(month)) continue;
+            for (const day of r.days) {
+              const exists = s.expenses.some(
+                (e) => e.mes === month && (e.año ?? year) === year && e.gastos === r.title && e.fecha === day
+              );
+              if (!exists) {
+                newExpenses.push({
+                  id: randomUUID(),
+                  mes: month,
+                  año: year,
+                  gastos: r.title,
+                  monto: r.amount,
+                  metodoPago: r.metodoPago,
+                  frecuencia: "mes",
+                  fecha: day,
+                  fechaMaxima: "",
+                  estado: "no pagado",
+                  selected: true,
+                  ...(r.creditCardId ? { creditCardId: r.creditCardId } : {}),
+                });
+              }
+            }
+          }
+          return {
+            activatedMonths: [...s.activatedMonths, key],
+            expenses: [...s.expenses, ...newExpenses],
+          };
+        }),
+
+      deactivateMonth: (month, year = currentYear()) =>
+        set((s) => ({
+          activatedMonths: s.activatedMonths.filter((m) => m !== `${month}-${year}`),
+        })),
+
       addExpense: () =>
         set((s) => ({ expenses: [...s.expenses, blankExpense()] })),
 
@@ -196,7 +267,17 @@ export const useExpensesStore = create<ExpensesState>()(
         })),
 
       selectAll: (selected) =>
-        set((s) => ({ expenses: s.expenses.map((e) => ({ ...e, selected })) })),
+        set((s) => {
+          const filteredIds = new Set(
+            getFilteredExpenses(s.expenses, s.filterMes, s.filterFrecuencia, s.filterFecha)
+              .map((e) => e.id),
+          );
+          return {
+            expenses: s.expenses.map((e) =>
+              filteredIds.has(e.id) ? { ...e, selected } : e,
+            ),
+          };
+        }),
 
       duplicateExpense: (id, targetMeses) => {
         const { expenses } = get();
@@ -207,6 +288,7 @@ export const useExpensesStore = create<ExpensesState>()(
         const copies: Expense[] = targetMeses.map((mes) => ({
           id: randomUUID(),
           mes,
+          ...(source.año !== undefined ? { año: source.año } : {}),
           gastos: source.gastos,
           monto: source.monto,
           metodoPago: source.metodoPago,
@@ -229,6 +311,7 @@ export const useExpensesStore = create<ExpensesState>()(
           targetMeses.map((mes): Expense => ({
             id: randomUUID(),
             mes,
+            ...(source.año !== undefined ? { año: source.año } : {}),
             gastos: source.gastos,
             monto: source.monto,
             metodoPago: source.metodoPago,
@@ -269,6 +352,7 @@ export const useExpensesStore = create<ExpensesState>()(
           newExpenses.push({
             id: randomUUID(),
             mes: defaultMes,
+            año: currentYear(),
             gastos,
             monto,
             metodoPago,
@@ -288,7 +372,7 @@ export const useExpensesStore = create<ExpensesState>()(
         set((s) => ({
           expenses: [
             ...s.expenses,
-            { ...data, id: randomUUID(), selected: true },
+            { ...data, año: data.año ?? currentYear(), id: randomUUID(), selected: true },
           ],
         })),
 
@@ -310,7 +394,8 @@ export const useExpensesStore = create<ExpensesState>()(
           s.creditPayDay,
           s.creditCards,
           s.recurringExpenses,
-          planningData
+          planningData,
+          s.activatedMonths
         );
       },
 
@@ -330,15 +415,26 @@ export const useExpensesStore = create<ExpensesState>()(
             },
           ];
         }
+        const yr = currentYear();
+        // Migrate: add año to expenses that lack it, normalize activatedMonths to "Mes-YYYY" format
+        const expenses = (data.expenses ?? []).map((e) =>
+          e.año !== undefined ? e : { ...e, año: yr }
+        );
+        const activatedMonths = (data.activatedMonths ?? [currentMonthName()]).map((m) =>
+          /\-\d{4}$/.test(m) ? m : `${m}-${yr}`
+        );
         set({
-          expenses: data.expenses ?? [],
-          filterMes: "Todos",
+          expenses,
+          filterMes: currentMonthName(),
+          filterFecha: currentQuincena(),
+          filterAño: 0,
           initialCreditDebt: data.creditDebt ?? 0,
           creditDebtMes: data.creditDebtMes ?? currentMonthName(),
           creditCutDay: data.creditCutDay ?? 0,
           creditPayDay: data.creditPayDay ?? 0,
           creditCards,
           recurringExpenses: migrateRecurring(data.recurringExpenses ?? []),
+          activatedMonths,
         });
         if (data.planningData) {
           usePlanningStore.getState().loadPlanningData(data.planningData);
@@ -350,13 +446,15 @@ export const useExpensesStore = create<ExpensesState>()(
           expenses: [],
           filterMes: currentMonthName(),
           filterFrecuencia: "Todos",
-          filterFecha: 0,
+          filterFecha: currentQuincena(),
+          filterAño: 0,
           initialCreditDebt: 0,
           creditDebtMes: currentMonthName(),
           creditCutDay: 0,
           creditPayDay: 0,
           creditCards: [],
           recurringExpenses: [],
+          activatedMonths: [`${currentMonthName()}-${currentYear()}`],
         }),
 
       rehydrate: async () => {

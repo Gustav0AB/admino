@@ -57,6 +57,7 @@ export type ScheduledExpense = {
   amount: number;
   notes: string;
   status: ScheduledExpenseStatus;
+  paymentMethod?: "efectivo" | "credito";
 };
 
 export type InstallmentPayment = {

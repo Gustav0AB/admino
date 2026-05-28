@@ -26,6 +26,7 @@ export type CreditCard = {
 export type Expense = {
   id: string;
   mes: string;
+  año?: number;
   gastos: string;
   monto: number;
   metodoPago: MetodoPago;
@@ -69,5 +70,6 @@ export type AppData = {
   creditCards?: CreditCard[];
   initialCreditDebt?: number;
   recurringExpenses?: RecurringExpense[];
+  activatedMonths?: string[];
   planningData?: import("./planning/types").PlanningData;
 };

@@ -4,17 +4,18 @@ import { useColors } from "@/shared/hooks/useColors";
 import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
 import { useExpensesStore } from "../store";
 import {
+  currentMonthName,
+  currentYear,
   formatMXN,
   getCreditCycleInfoForCard,
   getCreditHistoryForCard,
   getCurrentCreditBalance,
-  currentMonthName,
 } from "../helpers";
 import type { CreditCard, Expense } from "../types";
 
 export function CreditPanel() {
   const c = useColors();
-  const { expenses, creditCards, addCreditCard, updateCreditCard, removeCreditCard } = useExpensesStore();
+  const { expenses, creditCards, addCreditCard, updateCreditCard, removeCreditCard, addCardPayment } = useExpensesStore();
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState("");
@@ -63,6 +64,7 @@ export function CreditPanel() {
           expenses={expenses}
           onUpdate={(patch) => updateCreditCard(card.id, patch)}
           onRemove={() => removeCreditCard(card.id)}
+          onPayment={(amount) => addCardPayment(card.id, amount, currentMonthName(), currentYear())}
           c={c}
         />
       ))}
@@ -99,16 +101,20 @@ function CardSection({
   expenses,
   onUpdate,
   onRemove,
+  onPayment,
   c,
 }: {
   card: CreditCard;
   expenses: Expense[];
   onUpdate: (patch: Partial<CreditCard>) => void;
   onRemove: () => void;
+  onPayment: (amount: number) => void;
   c: ReturnType<typeof useColors>;
 }) {
   const [showHistory, setShowHistory] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const [showPayForm, setShowPayForm] = useState(false);
+  const [payAmount, setPayAmount] = useState("");
 
   const cycle = useMemo(() => getCreditCycleInfoForCard(expenses, card), [expenses, card]);
   const history = useMemo(() => getCreditHistoryForCard(expenses, card), [expenses, card]);
@@ -174,10 +180,61 @@ function CardSection({
           <DebtRow label={`Saldo a pagar (día ${cycle.payDay})`} value={cycle.remainingDebt} c={c} color={c.danger} bold />
         )}
         {cycle.newCharges > 0 && (
-          <DebtRow label="Nuevos cargos (próx. ciclo)" value={cycle.newCharges} c={c} color={c.textMuted} />
+          <DebtRow
+            label={cycle.isCutPassed ? "Nuevos cargos (próx. ciclo)" : "Cargos del ciclo actual"}
+            value={cycle.newCharges}
+            c={c}
+            color={c.textMuted}
+          />
         )}
         <DebtRow label="Balance actual" value={currentBalance} c={c} />
       </View>
+
+      {cycle.frozenDebt > 0 && (
+        <View style={[styles.paySection, { borderColor: c.border }]}>
+          {showPayForm ? (
+            <View style={styles.payForm}>
+              <Text style={[styles.payLabel, { color: c.textMuted }]}>Monto a pagar</Text>
+              <TextInput
+                style={[styles.payInput, { color: c.text, borderColor: c.border, backgroundColor: c.background }]}
+                value={payAmount}
+                onChangeText={setPayAmount}
+                keyboardType="numeric"
+                placeholder={String(cycle.remainingDebt || cycle.frozenDebt)}
+                placeholderTextColor={c.textPlaceholder}
+                autoFocus
+              />
+              <View style={styles.payActions}>
+                <TouchableOpacity
+                  onPress={() => { setShowPayForm(false); setPayAmount(""); }}
+                  style={[styles.btn, { borderColor: c.border }]}
+                >
+                  <Text style={[styles.btnText, { color: c.text }]}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    const amount = parseFloat(payAmount);
+                    if (!amount || amount <= 0) return;
+                    onPayment(amount);
+                    setShowPayForm(false);
+                    setPayAmount("");
+                  }}
+                  style={[styles.btn, { backgroundColor: c.primary, borderColor: c.primary }]}
+                >
+                  <Text style={[styles.btnText, { color: c.primaryForeground }]}>Confirmar pago</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity
+              onPress={() => { setShowPayForm(true); setPayAmount(String(cycle.remainingDebt || cycle.frozenDebt)); }}
+              style={[styles.btn, { borderColor: c.border, alignSelf: "flex-start" }]}
+            >
+              <Text style={[styles.btnText, { color: c.primary }]}>💳 Registrar pago con efectivo</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
 
       <View style={[styles.section, styles.configSection]}>
         <ConfigInput
@@ -318,6 +375,12 @@ const styles = StyleSheet.create({
   historyAmounts: { alignItems: "flex-end" },
   historyAmt: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "600" },
   historyBal: { fontSize: 10 },
+
+  paySection: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: SPACING.sm },
+  payForm: { gap: SPACING.sm },
+  payLabel: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "600" },
+  payInput: { borderWidth: StyleSheet.hairlineWidth, borderRadius: BORDER_RADIUS.sm, paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs, fontSize: TYPOGRAPHY.fontSize.sm },
+  payActions: { flexDirection: "row" as const, justifyContent: "flex-end" as const, gap: SPACING.sm },
 
   addForm: { borderWidth: StyleSheet.hairlineWidth, borderRadius: BORDER_RADIUS.sm, padding: SPACING.sm, gap: SPACING.sm },
   addFormTitle: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "600" },

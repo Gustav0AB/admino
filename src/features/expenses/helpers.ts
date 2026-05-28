@@ -9,17 +9,27 @@ export function currentMonthName(): string {
   return MESES_LIST[new Date().getMonth()] ?? "Enero";
 }
 
+export function currentQuincena(): number {
+  return new Date().getDate() <= 15 ? 15 : 30;
+}
+
+export function currentYear(): number {
+  return new Date().getFullYear();
+}
+
 export function getFilteredExpenses(
   expenses: Expense[],
   filterMes: string,
   filterFrecuencia: string,
-  filterFecha: number
+  filterFecha: number,
+  filterAño: number = 0,
 ): Expense[] {
   return expenses.filter((e) => {
     if (filterMes && filterMes !== "Todos" && e.mes !== filterMes) return false;
     if (filterFrecuencia && filterFrecuencia !== "Todos" && e.frecuencia !== filterFrecuencia) return false;
     if (filterFecha === 15 && !(e.fecha >= 1 && e.fecha <= 15)) return false;
     if (filterFecha === 30 && !(e.fecha >= 16 && e.fecha <= 31)) return false;
+    if (filterAño > 0 && (e.año ?? currentYear()) !== filterAño) return false;
     return true;
   });
 }
@@ -29,10 +39,16 @@ export function getAvailableMeses(expenses: Expense[]): string[] {
   return MESES_LIST.filter((m) => set.has(m));
 }
 
+export function getAvailableAños(expenses: Expense[]): number[] {
+  const set = new Set(expenses.map((e) => e.año ?? currentYear()));
+  return Array.from(set).sort((a, b) => b - a);
+}
+
 export function getCreditHistory(
   expenses: Expense[],
   initialCreditDebt: number,
-  creditDebtMes: string
+  creditDebtMes: string,
+  cardId?: string,
 ): CreditHistoryEntry[] {
   const monthExpenses = expenses.filter((e) => e.mes === creditDebtMes);
   const entries: CreditHistoryEntry[] = [];
@@ -41,6 +57,11 @@ export function getCreditHistory(
   for (const e of monthExpenses) {
     const isPayment = e.gastos.toLowerCase().trim() === "tarjeta de credito";
     const isCharge = e.metodoPago === "credito" && !isPayment;
+
+    if (cardId) {
+      if (isCharge && e.creditCardId !== cardId) continue;
+      if (isPayment && e.creditCardId && e.creditCardId !== cardId) continue;
+    }
 
     if (isCharge) {
       balance += e.monto;
@@ -72,7 +93,7 @@ export function getCreditHistoryForCard(
   expenses: Expense[],
   card: CreditCard
 ): CreditHistoryEntry[] {
-  return getCreditHistory(expenses, card.initialDebt, card.debtMes);
+  return getCreditHistory(expenses, card.initialDebt, card.debtMes, card.id);
 }
 
 export function getCurrentCreditBalance(
@@ -87,7 +108,8 @@ export function getCreditCycleInfo(
   expenses: Expense[],
   initialCreditDebt: number,
   creditCutDay: number,
-  creditPayDay: number
+  creditPayDay: number,
+  cardId?: string,
 ): CreditCycleInfo {
   const today = new Date();
   const currentMonth = MESES_LIST[today.getMonth()] ?? "Enero";
@@ -103,16 +125,27 @@ export function getCreditCycleInfo(
 
   const monthExpenses = expenses.filter((e) => e.mes === currentMonth);
 
-  const frozenDebt = isCutPassed ? initialCreditDebt : 0;
+  // Always show the statement amount regardless of cycle state
+  const frozenDebt = initialCreditDebt;
 
   const totalPayments = monthExpenses
-    .filter((e) => e.gastos.toLowerCase().trim() === "tarjeta de credito")
+    .filter((e) => {
+      const isPayment = e.gastos.toLowerCase().trim() === "tarjeta de credito";
+      if (!isPayment) return false;
+      if (cardId) return e.creditCardId === cardId || !e.creditCardId;
+      return true;
+    })
     .reduce((sum, e) => sum + e.monto, 0);
 
   const remainingDebt = Math.max(0, frozenDebt - totalPayments);
 
   const newCharges = monthExpenses
-    .filter((e) => e.metodoPago === "credito" && e.gastos.toLowerCase().trim() !== "tarjeta de credito")
+    .filter((e) => {
+      if (e.gastos.toLowerCase().trim() === "tarjeta de credito") return false;
+      if (e.metodoPago !== "credito") return false;
+      if (cardId) return e.creditCardId === cardId;
+      return true;
+    })
     .reduce((sum, e) => sum + e.monto, 0);
 
   return {
@@ -133,7 +166,7 @@ export function getCreditCycleInfoForCard(
   expenses: Expense[],
   card: CreditCard
 ): CreditCycleInfo {
-  return getCreditCycleInfo(expenses, card.initialDebt, card.cutDay, card.payDay);
+  return getCreditCycleInfo(expenses, card.initialDebt, card.cutDay, card.payDay, card.id);
 }
 
 export function formatMXN(n: number): string {
@@ -148,11 +181,13 @@ export function buildAppData(
   creditPayDay: number,
   creditCards?: import("./types").CreditCard[],
   recurringExpenses?: import("./types").RecurringExpense[],
-  planningData?: import("./planning/types").PlanningData
+  planningData?: import("./planning/types").PlanningData,
+  activatedMonths?: string[]
 ): AppData {
   const base: AppData = { expenses, creditDebt, creditDebtMes, creditCutDay, creditPayDay };
   if (creditCards && creditCards.length > 0) base.creditCards = creditCards;
   if (recurringExpenses && recurringExpenses.length > 0) base.recurringExpenses = recurringExpenses;
+  if (activatedMonths && activatedMonths.length > 0) base.activatedMonths = activatedMonths;
   if (planningData) base.planningData = planningData;
   return base;
 }

@@ -21,7 +21,6 @@ import {
   TYPOGRAPHY,
 } from "@/shared/theme/tokens";
 import { useExpensesStore } from "../store";
-import { usePlanningStore } from "@/features/expenses/planning/store";
 import { getFilteredExpenses, MESES_LIST, formatMXN } from "../helpers";
 import { ExpenseRow } from "./ExpenseRow";
 import { ExpenseModal } from "./ExpenseModal";
@@ -70,16 +69,6 @@ export function ExpenseList() {
     addExpenseFromModal,
     updateExpenseFromModal,
   } = useExpensesStore();
-
-  const { scheduledExpenses } = usePlanningStore();
-
-  const activeScheduled = useMemo(
-    () =>
-      scheduledExpenses
-        .filter((e) => e.status !== "cancelled")
-        .sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate)),
-    [scheduledExpenses],
-  );
 
   const filtered = useMemo(
     () =>
@@ -580,7 +569,6 @@ export function ExpenseList() {
               ))}
             </View>
           ))}
-          <ScheduledSection expenses={activeScheduled} />
         </TableShell>
       </View>
     );
@@ -596,7 +584,6 @@ export function ExpenseList() {
         {filtered.map((e) => (
           <ExpenseRow key={e.id} {...makeRowProps(e)} />
         ))}
-        <ScheduledSection expenses={activeScheduled} />
       </TableShell>
     </View>
   );

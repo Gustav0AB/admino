@@ -29,7 +29,7 @@ export function UpcomingSection() {
     .sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
 
   const activeVacations = vacations.filter(
-    (v) => v.status !== "cancelled" && v.budget > 0,
+    (v) => v.status !== "cancelled" && (v.budget ?? 0) > 0,
   );
 
   if (activeScheduled.length === 0 && activeVacations.length === 0) {
@@ -40,7 +40,7 @@ export function UpcomingSection() {
     activeScheduled
       .filter((e) => e.amountKnown)
       .reduce((s, e) => s + e.amount, 0) +
-    activeVacations.reduce((s, v) => s + v.budget, 0);
+    activeVacations.reduce((s, v) => s + (v.budget ?? 0), 0);
 
   return (
     <View
@@ -116,7 +116,7 @@ export function UpcomingSection() {
                 )}
               </View>
               <Text style={[styles.rowAmount, { color: c.text }]}>
-                ${formatMXN(v.budget)}
+                ${formatMXN(v.budget ?? 0)}
               </Text>
             </View>
           ))}

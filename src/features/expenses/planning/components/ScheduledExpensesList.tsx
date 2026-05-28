@@ -50,6 +50,7 @@ type FormState = {
   amount: string;
   notes: string;
   status: ScheduledExpenseStatus;
+  paymentMethod: "efectivo" | "credito";
 };
 
 const blankForm = (): FormState => ({
@@ -60,6 +61,7 @@ const blankForm = (): FormState => ({
   amount: "",
   notes: "",
   status: "pending",
+  paymentMethod: "efectivo",
 });
 
 export function ScheduledExpensesList() {
@@ -99,6 +101,7 @@ export function ScheduledExpensesList() {
       amount: expense.amount > 0 ? String(expense.amount) : "",
       notes: expense.notes,
       status: expense.status,
+      paymentMethod: expense.paymentMethod ?? "efectivo",
     });
     setModalOpen(true);
   };
@@ -113,6 +116,7 @@ export function ScheduledExpensesList() {
       amount: form.amountKnown ? parseFloat(form.amount) || 0 : 0,
       notes: form.notes.trim(),
       status: form.status,
+      paymentMethod: form.paymentMethod,
     };
     if (editingId) {
       updateScheduledExpense(editingId, payload);
@@ -316,6 +320,21 @@ export function ScheduledExpensesList() {
             />
           </FormField>
         )}
+
+        <FormField label="Método de pago">
+          <View style={styles.toggleRow}>
+            <ToggleChip
+              label="Efectivo"
+              active={form.paymentMethod === "efectivo"}
+              onPress={() => setField("paymentMethod", "efectivo")}
+            />
+            <ToggleChip
+              label="Tarjeta de crédito"
+              active={form.paymentMethod === "credito"}
+              onPress={() => setField("paymentMethod", "credito")}
+            />
+          </View>
+        </FormField>
 
         <FormField label="Estado">
           <View style={styles.toggleRow}>

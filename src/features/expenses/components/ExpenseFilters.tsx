@@ -4,7 +4,7 @@ import { CustomSelect } from "@/shared/components/inputs/CustomSelect";
 import { useColors } from "@/shared/hooks/useColors";
 import { SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
 import { useExpensesStore } from "../store";
-import { getAvailableMeses, getFilteredExpenses, MESES_LIST } from "../helpers";
+import { getAvailableMeses, getAvailableAños, getFilteredExpenses } from "../helpers";
 
 export function ExpenseFilters() {
   const c = useColors();
@@ -13,16 +13,24 @@ export function ExpenseFilters() {
     filterMes,
     filterFrecuencia,
     filterFecha,
+    filterAño,
     setFilterMes,
     setFilterFrecuencia,
     setFilterFecha,
+    setFilterAño,
   } = useExpensesStore();
 
   const availableMeses = useMemo(() => getAvailableMeses(expenses), [expenses]);
+  const availableAños = useMemo(() => getAvailableAños(expenses), [expenses]);
   const filtered = useMemo(
-    () => getFilteredExpenses(expenses, filterMes, filterFrecuencia, filterFecha),
-    [expenses, filterMes, filterFrecuencia, filterFecha]
+    () => getFilteredExpenses(expenses, filterMes, filterFrecuencia, filterFecha, filterAño),
+    [expenses, filterMes, filterFrecuencia, filterFecha, filterAño]
   );
+
+  const añoOptions = [
+    { label: "Todos los años", value: 0 },
+    ...availableAños.map((y) => ({ label: String(y), value: y })),
+  ];
 
   const mesOptions = [
     { label: "Todos", value: "Todos" },
@@ -45,10 +53,18 @@ export function ExpenseFilters() {
   const hasActiveFilter =
     (filterMes && filterMes !== "Todos") ||
     (filterFrecuencia && filterFrecuencia !== "Todos") ||
-    filterFecha !== 0;
+    filterFecha !== 0 ||
+    filterAño !== 0;
 
   return (
     <View style={styles.row}>
+      <CustomSelect
+        placeholder="Año"
+        options={añoOptions}
+        value={filterAño}
+        onChange={(v) => setFilterAño(Number(v))}
+        style={styles.select}
+      />
       <CustomSelect
         placeholder="Mes"
         options={mesOptions}
@@ -79,6 +95,7 @@ export function ExpenseFilters() {
             setFilterMes("Todos");
             setFilterFrecuencia("Todos");
             setFilterFecha(0);
+            setFilterAño(0);
           }}
         >
           <Text style={[styles.clear, { color: c.danger }]}>✕ Limpiar</Text>

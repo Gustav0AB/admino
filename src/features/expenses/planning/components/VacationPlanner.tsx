@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -489,16 +490,26 @@ export function VacationPlanner() {
                                       ? MESES_LIST[new Date(plan.startDate + "T12:00:00").getMonth()] ?? currentMonthName()
                                       : currentMonthName();
                                     const startDay = plan.startDate ? new Date(plan.startDate + "T12:00:00").getDate() : 1;
-                                    addExpenseFromModal({
-                                      mes: startMes,
-                                      gastos: p.description,
-                                      monto: itemTotal,
-                                      metodoPago: "efectivo",
-                                      frecuencia: "unico",
-                                      fecha: startDay,
-                                      fechaMaxima: "",
-                                      estado: "pagado",
-                                    });
+                                    const addToGastos = (metodoPago: "efectivo" | "credito") =>
+                                      addExpenseFromModal({
+                                        mes: startMes,
+                                        gastos: p.description,
+                                        monto: itemTotal,
+                                        metodoPago,
+                                        frecuencia: "unico",
+                                        fecha: startDay,
+                                        fechaMaxima: "",
+                                        estado: "pagado",
+                                      });
+                                    Alert.alert(
+                                      "¿Cómo se pagó?",
+                                      p.description,
+                                      [
+                                        { text: "Efectivo", onPress: () => addToGastos("efectivo") },
+                                        { text: "Tarjeta", onPress: () => addToGastos("credito") },
+                                        { text: "Solo marcar", style: "cancel" },
+                                      ],
+                                    );
                                   }
                                 }}
                                 activeOpacity={0.75}
