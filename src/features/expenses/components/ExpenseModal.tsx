@@ -13,8 +13,8 @@ import { CustomSelect } from "@/shared/components/inputs/CustomSelect";
 import { useColors } from "@/shared/hooks/useColors";
 import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
 import { useExpensesStore } from "../store";
-import { currentMonthName, MESES_LIST } from "../helpers";
-import type { Estado, Expense, Frecuencia, MetodoPago } from "../types";
+import { CATEGORIES, currentMonthName, MESES_LIST } from "../helpers";
+import type { Estado, Expense, ExpenseCategory, Frecuencia, MetodoPago } from "../types";
 
 type FormState = {
   mes: string;
@@ -26,6 +26,8 @@ type FormState = {
   fechaMaxima: string;
   estado: Estado;
   creditCardId: string;
+  category: ExpenseCategory | "";
+  accountId: string;
 };
 
 type Props = {
@@ -54,6 +56,8 @@ function blankForm(): FormState {
     fechaMaxima: "",
     estado: "no pagado",
     creditCardId: "",
+    category: "",
+    accountId: "",
   };
 }
 
@@ -68,12 +72,14 @@ function expenseToForm(e: Expense): FormState {
     fechaMaxima: e.fechaMaxima,
     estado: e.estado,
     creditCardId: e.creditCardId ?? "",
+    category: e.category ?? "",
+    accountId: e.accountId ?? "",
   };
 }
 
 export function ExpenseModal({ open, onClose, expense, onSave, onDelete }: Props) {
   const c = useColors();
-  const { creditCards } = useExpensesStore();
+  const { creditCards, accounts } = useExpensesStore();
   const isEdit = expense !== undefined;
 
   const [form, setForm] = useState<FormState>(isEdit ? expenseToForm(expense) : blankForm());
@@ -118,6 +124,8 @@ export function ExpenseModal({ open, onClose, expense, onSave, onDelete }: Props
       estado: form.estado,
     };
     if (form.creditCardId) data.creditCardId = form.creditCardId;
+    if (form.category) data.category = form.category;
+    if (form.accountId) data.accountId = form.accountId;
     onSave(data);
   }
 
@@ -215,6 +223,17 @@ export function ExpenseModal({ open, onClose, expense, onSave, onDelete }: Props
           </FormSection>
         )}
 
+        {accounts.length > 0 && form.metodoPago === "efectivo" && (
+          <FormSection label="Cuenta de origen (opcional)">
+            <CustomSelect
+              value={form.accountId}
+              options={[{ label: "Sin vincular", value: "" }, ...accounts.map((a) => ({ label: a.name, value: a.id }))]}
+              onChange={(v) => patch({ accountId: String(v) })}
+              placeholder="Sin vincular"
+            />
+          </FormSection>
+        )}
+
         <FormSection label="Frecuencia">
           <View style={styles.chipRow}>
             <Chip label="Mensual" selected={form.frecuencia === "mes"} onPress={() => patch({ frecuencia: "mes" })} c={c} />
@@ -238,6 +257,28 @@ export function ExpenseModal({ open, onClose, expense, onSave, onDelete }: Props
             <Chip label="No pagado" selected={form.estado === "no pagado"} onPress={() => patch({ estado: "no pagado" })} c={c} />
             <Chip label="Guardado" selected={form.estado === "guardado"} onPress={() => patch({ estado: "guardado" })} c={c} />
             <Chip label="No guardado" selected={form.estado === "no guardado"} onPress={() => patch({ estado: "no guardado" })} c={c} />
+          </View>
+        </FormSection>
+
+        <FormSection label="Categoría">
+          <View style={styles.chipRow}>
+            {CATEGORIES.map((cat) => (
+              <TouchableOpacity
+                key={cat.value}
+                onPress={() => patch({ category: form.category === cat.value ? "" : cat.value })}
+                style={[
+                  styles.chip,
+                  {
+                    borderColor: form.category === cat.value ? cat.color : c.border,
+                    backgroundColor: form.category === cat.value ? `${cat.color}22` : "transparent",
+                  },
+                ]}
+              >
+                <Text style={[styles.chipText, { color: form.category === cat.value ? cat.color : c.text }]}>
+                  {cat.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </FormSection>
 

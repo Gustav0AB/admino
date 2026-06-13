@@ -60,6 +60,8 @@ export function ExpenseList() {
     filterMes,
     filterFrecuencia,
     filterFecha,
+    filterAño,
+    filterCategoria,
     selectAll,
     bulkAddExpenses,
     bulkUpdateEstado,
@@ -72,8 +74,8 @@ export function ExpenseList() {
 
   const filtered = useMemo(
     () =>
-      getFilteredExpenses(expenses, filterMes, filterFrecuencia, filterFecha),
-    [expenses, filterMes, filterFrecuencia, filterFecha],
+      getFilteredExpenses(expenses, filterMes, filterFrecuencia, filterFecha, filterAño, filterCategoria),
+    [expenses, filterMes, filterFrecuencia, filterFecha, filterAño, filterCategoria],
   );
 
   const selected = filtered.filter((e) => e.selected);
@@ -115,17 +117,18 @@ export function ExpenseList() {
   };
 
   const statusBarData = useMemo(() => {
-    const pagado = filtered
+    const gastos = filtered.filter((e) => e.metodoPago !== "credito");
+    const pagado = gastos
       .filter((e) => e.estado === "pagado" && e.monto > 0)
       .reduce((s, e) => s + e.monto, 0);
-    const sinPagar = filtered
+    const sinPagar = gastos
       .filter(
         (e) =>
           (e.estado === "no pagado" || e.estado === "no guardado") &&
           e.monto > 0,
       )
       .reduce((s, e) => s + e.monto, 0);
-    const guardado = filtered
+    const guardado = gastos
       .filter((e) => e.estado === "guardado" && e.monto > 0)
       .reduce((s, e) => s + e.monto, 0);
     const total = pagado + sinPagar + guardado;
@@ -145,7 +148,7 @@ export function ExpenseList() {
       return {
         title: m,
         data: items,
-        total: items.reduce((s, e) => s + e.monto, 0),
+        total: items.filter((e) => e.metodoPago !== "credito").reduce((s, e) => s + e.monto, 0),
       };
     });
   }, [filtered, filterMes]);

@@ -12,15 +12,23 @@ import { CustomButton } from "@/shared/components/inputs/CustomButton";
 import { useColors } from "@/shared/hooks/useColors";
 import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
 import { useExpensesStore } from "../store";
+import { usePlanningStore } from "../planning/store";
 import {
   currentMonthName,
   currentYear,
   formatMXN,
+  getBillingCycleStatus,
+  getBillingPeriodCharges,
+  getBillingPeriodLabel,
   getCreditCycleInfoForCard,
   getCreditHistoryForCard,
   getCurrentCreditBalance,
+  getAvailableAños,
+  getMSIPendingForCard,
   MESES_LIST,
+  nextMonthName,
 } from "../helpers";
+import type { BillingCycleStatus } from "../helpers";
 import type { CreditCard, Expense } from "../types";
 
 const MES_OPTIONS = MESES_LIST.map((m) => ({ label: m, value: m }));
@@ -40,10 +48,20 @@ export function CreditCardsTab() {
   const c = useColors();
   const { expenses, creditCards, addCreditCard, updateCreditCard, removeCreditCard, addCardPayment } =
     useExpensesStore();
+  const { installmentPayments } = usePlanningStore();
 
   const [selectedMes, setSelectedMes] = useState(currentMonthName());
+  const [selectedAño, setSelectedAño] = useState(currentYear());
   const [showAddForm, setShowAddForm] = useState(false);
   const [addForm, setAddForm] = useState<AddCardForm>(blankAddForm());
+
+  const añoOptions = useMemo(
+    () => [
+      ...getAvailableAños(expenses).map((y) => ({ label: String(y), value: y })),
+      { label: String(currentYear() + 1), value: currentYear() + 1 },
+    ].filter((o, i, arr) => arr.findIndex((x) => x.value === o.value) === i).sort((a, b) => a.value - b.value),
+    [expenses],
+  );
 
   function handleAdd() {
     if (!addForm.name.trim()) return;
@@ -53,6 +71,7 @@ export function CreditCardsTab() {
       payDay: parseInt(addForm.payDay) || 0,
       initialDebt: parseFloat(addForm.initialDebt) || 0,
       debtMes: selectedMes,
+      debtAño: selectedAño,
     });
     setAddForm(blankAddForm());
     setShowAddForm(false);
@@ -63,6 +82,13 @@ export function CreditCardsTab() {
       {/* Top bar */}
       <View style={styles.topBar}>
         <View style={styles.mesSelector}>
+          <Text style={[styles.mesLabel, { color: c.textMuted }]}>Año</Text>
+          <CustomSelect
+            value={selectedAño}
+            options={añoOptions}
+            onChange={(v) => setSelectedAño(Number(v))}
+            style={{ minWidth: 90 }}
+          />
           <Text style={[styles.mesLabel, { color: c.textMuted }]}>Mes</Text>
           <CustomSelect
             value={selectedMes}
@@ -109,10 +135,12 @@ export function CreditCardsTab() {
           card={card}
           expenses={expenses}
           selectedMes={selectedMes}
+          selectedAño={selectedAño}
           onUpdate={(patch) => updateCreditCard(card.id, patch)}
           onRemove={() => removeCreditCard(card.id)}
           onPayment={(amount) => addCardPayment(card.id, amount, currentMonthName(), currentYear())}
           c={c}
+          installmentPayments={installmentPayments}
         />
       ))}
     </ScrollView>
@@ -123,28 +151,50 @@ type CardItemProps = {
   card: CreditCard;
   expenses: Expense[];
   selectedMes: string;
+  selectedAño: number;
   onUpdate: (patch: Partial<CreditCard>) => void;
   onRemove: () => void;
   onPayment: (amount: number) => void;
   c: ReturnType<typeof useColors>;
+  installmentPayments: import("../planning/types").InstallmentPayment[];
 };
 
-function CardItem({ card, expenses, selectedMes, onUpdate, onRemove, onPayment, c }: CardItemProps) {
+const CYCLE_STATUS_CONFIG: Record<BillingCycleStatus, { label: string; color: string; bg: string }> = {
+  cerrado:      { label: "🔒 Cerrado",      color: "#EF4444", bg: "#EF444418" },
+  en_curso:     { label: "🟢 En curso",     color: "#16A34A", bg: "#16A34A18" },
+  no_en_curso:  { label: "📅 No en curso",  color: "#94A3B8", bg: "#94A3B818" },
+};
+
+function CardItem({ card, expenses, selectedMes, selectedAño, onUpdate, onRemove, onPayment, c, installmentPayments }: CardItemProps) {
   const [showHistory, setShowHistory] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [showPayForm, setShowPayForm] = useState(false);
   const [payAmount, setPayAmount] = useState("");
+  const [showReconcile, setShowReconcile] = useState(false);
+  const [reconcileAmount, setReconcileAmount] = useState("");
+  const [showCloseCycle, setShowCloseCycle] = useState(false);
 
+  // Always reflects the real-time current cycle (for debt/payments)
   const cycle = useMemo(() => getCreditCycleInfoForCard(expenses, card), [expenses, card]);
   const history = useMemo(() => getCreditHistoryForCard(expenses, card), [expenses, card]);
   const currentBalance = getCurrentCreditBalance(history, card.initialDebt);
+  const msi = useMemo(() => getMSIPendingForCard(installmentPayments, card.id), [installmentPayments, card.id]);
 
-  // Charges to this card for the selected month
-  const monthCharges = useMemo(
-    () => expenses.filter((e) => e.creditCardId === card.id && e.mes === selectedMes),
-    [expenses, card.id, selectedMes]
+  // Cycle status and charges based on the SELECTED month
+  const cycleStatus = useMemo(
+    () => getBillingCycleStatus(selectedMes, card.cutDay),
+    [selectedMes, card.cutDay],
   );
-  const monthTotal = monthCharges.reduce((s, e) => s + e.monto, 0);
+  const billingCharges = useMemo(
+    () => getBillingPeriodCharges(expenses, card.id, selectedMes, card.cutDay, selectedAño),
+    [expenses, card.id, selectedMes, card.cutDay, selectedAño],
+  );
+  const billingTotal = billingCharges.reduce((s, e) => s + e.monto, 0);
+  const periodLabel = getBillingPeriodLabel(selectedMes, card.cutDay);
+
+  // Debt/pay section is only relevant for the active statement (today's current cycle)
+  const isActiveStatement = selectedMes === cycle.currentMonth;
+  const statusDisplay = CYCLE_STATUS_CONFIG[cycleStatus];
 
   return (
     <View style={[styles.card, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
@@ -157,9 +207,6 @@ function CardItem({ card, expenses, selectedMes, onUpdate, onRemove, onPayment, 
           placeholderTextColor={c.textPlaceholder}
           placeholder="Nombre de tarjeta"
         />
-        <View style={[styles.badge, { backgroundColor: `${c.primary}18` }]}>
-          <Text style={[styles.badgeText, { color: c.primary }]}>{cycle.currentMonth}</Text>
-        </View>
         {confirmRemove ? (
           <View style={styles.confirmRow}>
             <Text style={[styles.confirmLabel, { color: c.danger }]}>¿Eliminar?</Text>
@@ -178,42 +225,101 @@ function CardItem({ card, expenses, selectedMes, onUpdate, onRemove, onPayment, 
       </View>
 
       {/* Cycle status */}
-      {card.cutDay > 0 && (
-        <View style={styles.cycleRow}>
-          <Text style={[styles.cycleText, { color: c.textMuted }]}>Corte: día {cycle.cutDay}</Text>
-          <Text style={[styles.cycleText, { color: c.textMuted }]}>Pago: día {cycle.payDay}</Text>
-          <View style={[styles.statusPill, { backgroundColor: cycle.isCutPassed ? "#EF444418" : "#16A34A18" }]}>
-            <Text style={[styles.statusPillText, { color: cycle.isCutPassed ? "#EF4444" : "#16A34A" }]}>
-              {cycle.isCutPassed ? "🔒 Cerrado" : "🟢 Abierto"}
-            </Text>
-          </View>
-          {!cycle.isPayDayPassed && cycle.payDay > 0 && (
-            <Text style={[styles.cycleText, { color: c.textMuted }]}>{cycle.daysUntilPayDay} días para pago</Text>
+      <View style={styles.cycleRow}>
+        {card.cutDay > 0 && (
+          <Text style={[styles.cycleText, { color: c.textMuted }]}>Corte: día {card.cutDay}</Text>
+        )}
+        {card.payDay > 0 && (
+          <Text style={[styles.cycleText, { color: c.textMuted }]}>Pago: día {card.payDay}</Text>
+        )}
+        <View style={[styles.statusPill, { backgroundColor: statusDisplay.bg }]}>
+          <Text style={[styles.statusPillText, { color: statusDisplay.color }]}>
+            {statusDisplay.label}
+          </Text>
+        </View>
+        {isActiveStatement && !cycle.isPayDayPassed && cycle.payDay > 0 && cycleStatus === "cerrado" && (
+          <Text style={[styles.cycleText, { color: c.textMuted }]}>{cycle.daysUntilPayDay} días para pago</Text>
+        )}
+        {isActiveStatement && cycle.isPayDayPassed && cycleStatus === "cerrado" && (
+          <Text style={[styles.cycleText, { color: c.danger }]}>⚠️ Pago vencido</Text>
+        )}
+      </View>
+
+      {/* Debt summary — only for the active (today's) statement */}
+      {isActiveStatement && (
+        <View style={[styles.debtSection, { borderColor: c.border }]}>
+          <DebtRow label="Adeudo estado de cuenta" value={cycle.frozenDebt} c={c} />
+          {cycle.totalPayments > 0 && <DebtRow label="Pagos realizados" value={-cycle.totalPayments} c={c} color="#16A34A" />}
+          {cycle.remainingDebt > 0 && <DebtRow label={`Saldo a pagar (día ${cycle.payDay})`} value={cycle.remainingDebt} c={c} color={c.danger} bold />}
+          {cycle.newCharges > 0 && (
+            <DebtRow
+              label={cycle.isCutPassed ? "Nuevos cargos (próx. ciclo)" : "Cargos del ciclo actual"}
+              value={cycle.newCharges}
+              c={c}
+              color={c.textMuted}
+            />
           )}
-          {cycle.isPayDayPassed && (
-            <Text style={[styles.cycleText, { color: c.danger }]}>⚠️ Pago vencido</Text>
+          <DebtRow label="Balance actual" value={currentBalance} c={c} />
+          {(card.creditLimit ?? 0) > 0 && (
+            <CreditLimitBar limit={card.creditLimit!} used={currentBalance} c={c} />
           )}
         </View>
       )}
 
-      {/* Debt summary */}
-      <View style={[styles.debtSection, { borderColor: c.border }]}>
-        <DebtRow label="Adeudo estado de cuenta" value={cycle.frozenDebt} c={c} />
-        {cycle.totalPayments > 0 && <DebtRow label="Pagos realizados" value={-cycle.totalPayments} c={c} color="#16A34A" />}
-        {cycle.remainingDebt > 0 && <DebtRow label={`Saldo a pagar (día ${cycle.payDay})`} value={cycle.remainingDebt} c={c} color={c.danger} bold />}
-        {cycle.newCharges > 0 && (
-          <DebtRow
-            label={cycle.isCutPassed ? "Nuevos cargos (próx. ciclo)" : "Cargos del ciclo actual"}
-            value={cycle.newCharges}
-            c={c}
-            color={c.textMuted}
+      {/* Reconcile */}
+      {showReconcile ? (
+        <View style={[styles.reconcileForm, { borderTopColor: c.border }]}>
+          <Text style={[styles.monthTitle, { color: c.textMuted }]}>Ajustar deuda real</Text>
+          <TextInput
+            style={[styles.payInput, { color: c.text, borderColor: c.border, backgroundColor: c.background }]}
+            value={reconcileAmount}
+            onChangeText={setReconcileAmount}
+            keyboardType="numeric"
+            placeholder={`Deuda real (balance actual: $${formatMXN(currentBalance)})`}
+            placeholderTextColor={c.textPlaceholder}
+            autoFocus
           />
-        )}
-        <DebtRow label="Balance actual" value={currentBalance} c={c} />
-      </View>
+          <View style={styles.payActions}>
+            <CustomButton variant="outline" size="sm" onPress={() => { setShowReconcile(false); setReconcileAmount(""); }}>
+              Cancelar
+            </CustomButton>
+            <CustomButton
+              variant="primary"
+              size="sm"
+              onPress={() => {
+                const real = parseFloat(reconcileAmount);
+                if (isNaN(real)) return;
+                onUpdate({ initialDebt: card.initialDebt + (real - currentBalance) });
+                setShowReconcile(false);
+                setReconcileAmount("");
+              }}
+            >
+              Ajustar
+            </CustomButton>
+          </View>
+        </View>
+      ) : (
+        <TouchableOpacity onPress={() => { setShowReconcile(true); setReconcileAmount(String(currentBalance)); }}>
+          <Text style={[styles.reconcileLink, { color: c.primary }]}>⚖ Ajustar deuda real</Text>
+        </TouchableOpacity>
+      )}
 
-      {/* Pay button */}
-      {cycle.frozenDebt > 0 && (
+      {/* MSI summary */}
+      {msi.count > 0 && (
+        <View style={[styles.msiSection, { borderColor: c.border, backgroundColor: `${c.primary}08` }]}>
+          <Text style={[styles.monthTitle, { color: c.textMuted }]}>MSI activos</Text>
+          <View style={styles.msiRow}>
+            <View style={[styles.msiBadge, { backgroundColor: `${c.primary}18` }]}>
+              <Text style={[styles.msiBadgeText, { color: c.primary }]}>{msi.count} plan{msi.count !== 1 ? "es" : ""}</Text>
+            </View>
+            <Text style={[styles.msiAmount, { color: c.text }]}>${formatMXN(msi.monthlyTotal)}/mes</Text>
+            <Text style={[styles.msiPending, { color: c.textMuted }]}>${formatMXN(msi.totalPending)} pendiente</Text>
+          </View>
+        </View>
+      )}
+
+      {/* Pay section — only for active statement */}
+      {isActiveStatement && cycle.frozenDebt > 0 && (
         <View style={[styles.paySection, { borderColor: c.border }]}>
           {showPayForm ? (
             <View style={styles.payForm}>
@@ -247,45 +353,110 @@ function CardItem({ card, expenses, selectedMes, onUpdate, onRemove, onPayment, 
               </View>
             </View>
           ) : (
-            <CustomButton
-              variant="outline"
-              size="sm"
-              onPress={() => { setShowPayForm(true); setPayAmount(String(cycle.remainingDebt || cycle.frozenDebt)); }}
-            >
-              💳 Registrar pago con efectivo
-            </CustomButton>
+            <View style={styles.payButtons}>
+              <CustomButton
+                variant="primary"
+                size="sm"
+                onPress={() => onPayment(cycle.remainingDebt || cycle.frozenDebt)}
+              >
+                💳 Pagar total ${formatMXN(cycle.remainingDebt || cycle.frozenDebt)}
+              </CustomButton>
+              <CustomButton
+                variant="outline"
+                size="sm"
+                onPress={() => { setShowPayForm(true); setPayAmount(""); }}
+              >
+                Pagar parcial
+              </CustomButton>
+            </View>
           )}
         </View>
       )}
 
-      {/* Month charges */}
+      {/* Cerrar ciclo — only for active statement */}
+      {isActiveStatement && (cycle.remainingDebt > 0 || cycle.newCharges > 0) && (
+        <View style={[styles.closeCycleSection, { borderColor: c.border }]}>
+          {showCloseCycle ? (
+            <View style={styles.closeCycleForm}>
+              <Text style={[styles.monthTitle, { color: c.textMuted }]}>Cerrar ciclo</Text>
+              <View style={[styles.carryOverBreakdown, { backgroundColor: `${c.danger}08`, borderColor: c.border }]}>
+                {cycle.remainingDebt > 0 && <DebtRow label="Deuda restante" value={cycle.remainingDebt} c={c} />}
+                {cycle.newCharges > 0 && <DebtRow label="+ Cargos del mes" value={cycle.newCharges} c={c} />}
+                <View style={[styles.carryOverTotal, { borderTopColor: c.border }]}>
+                  <DebtRow
+                    label={`= Deuda en ${nextMonthName()}`}
+                    value={cycle.remainingDebt + cycle.newCharges}
+                    c={c}
+                    bold
+                    color={c.danger}
+                  />
+                </View>
+              </View>
+              <View style={styles.payActions}>
+                <CustomButton variant="outline" size="sm" onPress={() => setShowCloseCycle(false)}>
+                  Cancelar
+                </CustomButton>
+                <CustomButton
+                  variant="primary"
+                  size="sm"
+                  onPress={() => {
+                    const carryForward = cycle.remainingDebt + cycle.newCharges;
+                    const nextMes = nextMonthName();
+                    const nextAño = nextMes === "Enero" ? currentYear() + 1 : currentYear();
+                    onUpdate({ initialDebt: carryForward, debtMes: nextMes, debtAño: nextAño });
+                    setShowCloseCycle(false);
+                  }}
+                >
+                  Confirmar
+                </CustomButton>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity onPress={() => setShowCloseCycle(true)}>
+              <Text style={[styles.reconcileLink, { color: c.textMuted }]}>
+                📅 Cerrar ciclo y arrastrar deuda al siguiente mes
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {/* Billing period charges */}
       <View style={[styles.monthSection, { borderColor: c.border }]}>
-        <Text style={[styles.monthTitle, { color: c.textMuted }]}>
-          Cargos en {selectedMes} ({monthCharges.length})
-        </Text>
-        {monthCharges.length === 0 ? (
-          <Text style={[styles.emptyText, { color: c.textPlaceholder }]}>Sin cargos este mes</Text>
+        {cycleStatus === "no_en_curso" ? (
+          <Text style={[styles.emptyText, { color: c.textPlaceholder }]}>
+            Mes fuera del ciclo activo · sin cargos registrados
+          </Text>
         ) : (
           <>
-            {monthCharges.map((e) => (
-              <View key={e.id} style={styles.chargeRow}>
-                <Text style={[styles.chargeDesc, { color: c.text }]} numberOfLines={1}>{e.gastos}</Text>
-                <Text style={[styles.chargeAmt, { color: c.text }]}>${formatMXN(e.monto)}</Text>
-              </View>
-            ))}
-            <View style={[styles.chargeRow, styles.chargeTotalRow]}>
-              <Text style={[styles.chargeDesc, { color: c.textMuted, fontWeight: "600" }]}>Total</Text>
-              <Text style={[styles.chargeAmt, { color: c.primary, fontWeight: "700" }]}>${formatMXN(monthTotal)}</Text>
-            </View>
+            <Text style={[styles.monthTitle, { color: c.textMuted }]}>
+              Cargos del ciclo · {periodLabel} ({billingCharges.length})
+            </Text>
+            {billingCharges.length === 0 ? (
+              <Text style={[styles.emptyText, { color: c.textPlaceholder }]}>Sin cargos en este periodo</Text>
+            ) : (
+              <>
+                {billingCharges.map((e) => (
+                  <View key={e.id} style={styles.chargeRow}>
+                    <Text style={[styles.chargeDesc, { color: c.text }]} numberOfLines={1}>{e.gastos}</Text>
+                    <Text style={[styles.chargeAmt, { color: c.text }]}>${formatMXN(e.monto)}</Text>
+                  </View>
+                ))}
+                <View style={[styles.chargeRow, styles.chargeTotalRow]}>
+                  <Text style={[styles.chargeDesc, { color: c.textMuted, fontWeight: "600" }]}>Total</Text>
+                  <Text style={[styles.chargeAmt, { color: c.primary, fontWeight: "700" }]}>${formatMXN(billingTotal)}</Text>
+                </View>
+              </>
+            )}
           </>
         )}
       </View>
 
-      {/* Config fields */}
+      {/* Config fields — initialDebt is set once at creation; use "Ajustar deuda real" to correct it */}
       <View style={[styles.configSection, { borderColor: c.border }]}>
         <Text style={[styles.monthTitle, { color: c.textMuted }]}>Configuración</Text>
         <View style={styles.configGrid}>
-          <ConfigInput label="Adeudo inicial ($)" value={String(card.initialDebt || "")} onChangeText={(v) => onUpdate({ initialDebt: parseFloat(v) || 0 })} keyboardType="numeric" c={c} />
+          <ConfigInput label="Límite de crédito ($)" value={String(card.creditLimit || "")} onChangeText={(v) => onUpdate({ creditLimit: parseFloat(v) || 0 })} keyboardType="numeric" c={c} />
           <ConfigInput label="Día de corte" value={String(card.cutDay || "")} onChangeText={(v) => onUpdate({ cutDay: parseInt(v) || 0 })} keyboardType="numeric" c={c} />
           <ConfigInput label="Día de pago" value={String(card.payDay || "")} onChangeText={(v) => onUpdate({ payDay: parseInt(v) || 0 })} keyboardType="numeric" c={c} />
         </View>
@@ -325,6 +496,24 @@ function CardItem({ card, expenses, selectedMes, onUpdate, onRemove, onPayment, 
           )}
         </View>
       )}
+    </View>
+  );
+}
+
+function CreditLimitBar({ limit, used, c }: { limit: number; used: number; c: ReturnType<typeof useColors> }) {
+  const pct = Math.min(100, Math.max(0, (used / limit) * 100));
+  const available = Math.max(0, limit - used);
+  const barColor = pct >= 80 ? "#EF4444" : pct >= 50 ? "#F59E0B" : "#16A34A";
+  return (
+    <View style={styles.limitSection}>
+      <View style={styles.limitRow}>
+        <Text style={[styles.limitLabel, { color: c.textMuted }]}>Disponible</Text>
+        <Text style={[styles.limitLabel, { color: c.textMuted }]}>${formatMXN(available)} / ${formatMXN(limit)}</Text>
+      </View>
+      <View style={[styles.limitTrack, { backgroundColor: `${barColor}22` }]}>
+        <View style={[styles.limitFill, { width: `${pct}%` as `${number}%`, backgroundColor: barColor }]} />
+      </View>
+      <Text style={[styles.limitPct, { color: barColor }]}>{pct.toFixed(0)}% utilizado</Text>
     </View>
   );
 }
@@ -418,17 +607,39 @@ const styles = StyleSheet.create({
   chargeDesc: { fontSize: TYPOGRAPHY.fontSize.xs, flex: 1 },
   chargeAmt: { fontSize: TYPOGRAPHY.fontSize.xs },
 
+  limitSection: { gap: 4, paddingTop: SPACING.xs },
+  limitRow: { flexDirection: "row", justifyContent: "space-between" },
+  limitLabel: { fontSize: 10 },
+  limitTrack: { height: 6, borderRadius: 3, overflow: "hidden" },
+  limitFill: { height: 6, borderRadius: 3 },
+  limitPct: { fontSize: 10, fontWeight: "600", textAlign: "right" },
+
+  msiSection: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: SPACING.sm, gap: SPACING.xs, borderRadius: BORDER_RADIUS.sm, padding: SPACING.sm },
+  msiRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: SPACING.sm },
+  msiBadge: { paddingHorizontal: SPACING.sm, paddingVertical: 2, borderRadius: BORDER_RADIUS.full },
+  msiBadgeText: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "700" },
+  msiAmount: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "600" },
+  msiPending: { fontSize: TYPOGRAPHY.fontSize.xs },
+
   paySection: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: SPACING.sm },
   payForm: { gap: SPACING.sm },
   payLabel: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "600" },
   payInput: { borderWidth: StyleSheet.hairlineWidth, borderRadius: BORDER_RADIUS.sm, paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs, fontSize: TYPOGRAPHY.fontSize.sm },
   payActions: { flexDirection: "row", justifyContent: "flex-end", gap: SPACING.sm },
+  payButtons: { flexDirection: "row", gap: SPACING.sm, flexWrap: "wrap" },
+  closeCycleSection: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: SPACING.sm },
+  closeCycleForm: { gap: SPACING.sm },
+  carryOverBreakdown: { borderWidth: StyleSheet.hairlineWidth, borderRadius: BORDER_RADIUS.sm, padding: SPACING.sm, gap: SPACING.xs },
+  carryOverTotal: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: SPACING.xs, marginTop: 2 },
 
   configSection: { gap: SPACING.sm, borderTopWidth: StyleSheet.hairlineWidth, paddingTop: SPACING.sm },
   configGrid: { gap: SPACING.xs },
   configRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
   configLabel: { fontSize: TYPOGRAPHY.fontSize.xs, flex: 1 },
   configInput: { borderWidth: StyleSheet.hairlineWidth, borderRadius: BORDER_RADIUS.sm, paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs, fontSize: TYPOGRAPHY.fontSize.sm, width: 90, textAlign: "right" },
+
+  reconcileForm: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: SPACING.sm, gap: SPACING.sm },
+  reconcileLink: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "600", paddingVertical: SPACING.xs },
 
   historyToggle: { paddingVertical: SPACING.xs },
   historyToggleText: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "600" },

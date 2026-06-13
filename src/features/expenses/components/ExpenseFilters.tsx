@@ -4,7 +4,7 @@ import { CustomSelect } from "@/shared/components/inputs/CustomSelect";
 import { useColors } from "@/shared/hooks/useColors";
 import { SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
 import { useExpensesStore } from "../store";
-import { getAvailableMeses, getAvailableAños, getFilteredExpenses } from "../helpers";
+import { CATEGORIES, getAvailableMeses, getAvailableAños, getFilteredExpenses } from "../helpers";
 
 export function ExpenseFilters() {
   const c = useColors();
@@ -14,17 +14,19 @@ export function ExpenseFilters() {
     filterFrecuencia,
     filterFecha,
     filterAño,
+    filterCategoria,
     setFilterMes,
     setFilterFrecuencia,
     setFilterFecha,
     setFilterAño,
+    setFilterCategoria,
   } = useExpensesStore();
 
   const availableMeses = useMemo(() => getAvailableMeses(expenses), [expenses]);
   const availableAños = useMemo(() => getAvailableAños(expenses), [expenses]);
   const filtered = useMemo(
-    () => getFilteredExpenses(expenses, filterMes, filterFrecuencia, filterFecha, filterAño),
-    [expenses, filterMes, filterFrecuencia, filterFecha, filterAño]
+    () => getFilteredExpenses(expenses, filterMes, filterFrecuencia, filterFecha, filterAño, filterCategoria),
+    [expenses, filterMes, filterFrecuencia, filterFecha, filterAño, filterCategoria]
   );
 
   const añoOptions = [
@@ -50,11 +52,17 @@ export function ExpenseFilters() {
     { label: "16-31", value: 30 },
   ];
 
+  const categoriaOptions = [
+    { label: "Categoría", value: "Todos" },
+    ...CATEGORIES.map((cat) => ({ label: cat.label, value: cat.value })),
+  ];
+
   const hasActiveFilter =
     (filterMes && filterMes !== "Todos") ||
     (filterFrecuencia && filterFrecuencia !== "Todos") ||
     filterFecha !== 0 ||
-    filterAño !== 0;
+    filterAño !== 0 ||
+    (filterCategoria && filterCategoria !== "Todos");
 
   return (
     <View style={styles.row}>
@@ -86,6 +94,13 @@ export function ExpenseFilters() {
         onChange={(v) => setFilterFecha(Number(v))}
         style={styles.select}
       />
+      <CustomSelect
+        placeholder="Categoría"
+        options={categoriaOptions}
+        value={filterCategoria}
+        onChange={(v) => setFilterCategoria(String(v))}
+        style={styles.select}
+      />
       <Text style={[styles.count, { color: c.textMuted }]}>
         {filtered.length} / {expenses.length} registros
       </Text>
@@ -96,6 +111,7 @@ export function ExpenseFilters() {
             setFilterFrecuencia("Todos");
             setFilterFecha(0);
             setFilterAño(0);
+            setFilterCategoria("Todos");
           }}
         >
           <Text style={[styles.clear, { color: c.danger }]}>✕ Limpiar</Text>

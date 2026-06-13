@@ -3,15 +3,42 @@ export type Frecuencia = "mes" | "quincenal" | "unico";
 export type Estado = "pagado" | "no pagado" | "guardado" | "no guardado";
 export type RecurringCategory = "basico" | "servicio";
 
+export type ExpenseCategory =
+  | "comida"
+  | "transporte"
+  | "salud"
+  | "entretenimiento"
+  | "servicios"
+  | "ropa"
+  | "hogar"
+  | "educacion"
+  | "viajes"
+  | "credito"
+  | "ahorro"
+  | "otro";
+
+export type RecurringSchedulingType = "monthly" | "interval";
+
 export type RecurringExpense = {
   id: string;
   title: string;
   amount: number;
-  days: number[];            // one or more days of month 1–31
+  days: number[];            // one or more days of month 1–31 (used when schedulingType="monthly")
   category: RecurringCategory;
   metodoPago: MetodoPago;
   creditCardId?: string;
   cancelledMonths: string[]; // e.g. ["Enero", "Marzo"] — skipped those months
+
+  // Scheduling: "monthly" (default) = days-of-month, "interval" = every N days or months
+  schedulingType?: RecurringSchedulingType;
+  intervalDays?: number;      // e.g. 20  — used when schedulingType="interval"
+  intervalMonths?: number;    // e.g. 6 or 12 — used when schedulingType="interval"
+  startDate?: string;         // ISO "YYYY-MM-DD" — anchor for interval calculation
+  expirationDate?: string;    // ISO "YYYY-MM-DD" — stop generating after this date
+
+  // Limited installments: if set, stops generating after totalInstallments fires
+  totalInstallments?: number;
+  paidInstallments?: number;
 };
 
 export type CreditCard = {
@@ -21,6 +48,8 @@ export type CreditCard = {
   payDay: number;
   initialDebt: number;
   debtMes: string;
+  debtAño?: number;
+  creditLimit?: number;
 };
 
 export type Expense = {
@@ -36,6 +65,8 @@ export type Expense = {
   estado: Estado;
   selected: boolean;
   creditCardId?: string;
+  category?: ExpenseCategory;
+  accountId?: string;
 };
 
 export type CreditHistoryEntry = {
@@ -60,6 +91,74 @@ export type CreditCycleInfo = {
   newCharges: number;
 };
 
+export type AccountType = "efectivo" | "debito" | "ahorro" | "inversion";
+
+export type Account = {
+  id: string;
+  name: string;
+  type: AccountType;
+  color: string;
+  initialBalance: number;
+  balanceDate?: string;
+};
+
+export type IncomeCategory = "sueldo" | "freelance" | "renta" | "negocio" | "bono" | "inversion" | "otro";
+export type IncomeEstado = "recibido" | "pendiente";
+export type IncomeFrecuencia = "mes" | "quincenal" | "unico";
+
+export type Income = {
+  id: string;
+  mes: string;
+  año?: number;
+  descripcion: string;
+  monto: number;
+  fecha: number;
+  frecuencia: IncomeFrecuencia;
+  estado: IncomeEstado;
+  category: IncomeCategory;
+  accountId?: string;
+};
+
+export type SavingsDeposit = {
+  id: string;
+  amount: number;
+  date: string;
+  notes: string;
+};
+
+export type SavingsGoal = {
+  id: string;
+  title: string;
+  targetAmount: number;
+  deadline: string;
+  notes: string;
+  color: string;
+  status: "active" | "completed" | "cancelled";
+  deposits: SavingsDeposit[];
+};
+
+export type LoanDirection = "borrowed" | "lent";
+
+export type LoanPayment = {
+  id: string;
+  amount: number;
+  date: string;
+  notes: string;
+};
+
+export type Loan = {
+  id: string;
+  title: string;
+  person: string;
+  direction: LoanDirection;
+  originalAmount: number;
+  startDate: string;
+  dueDate: string;
+  notes: string;
+  payments: LoanPayment[];
+  status: "active" | "paid";
+};
+
 export type AppData = {
   expenses: Expense[];
   creditDebt: number;
@@ -72,4 +171,8 @@ export type AppData = {
   recurringExpenses?: RecurringExpense[];
   activatedMonths?: string[];
   planningData?: import("./planning/types").PlanningData;
+  incomes?: Income[];
+  accounts?: Account[];
+  loans?: Loan[];
+  savingsGoals?: SavingsGoal[];
 };

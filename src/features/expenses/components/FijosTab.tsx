@@ -15,7 +15,7 @@ import { usePlanningStore } from "@/features/expenses/planning/store";
 import { useExpensesStore } from "../store";
 import type { InstallmentPayment } from "@/features/expenses/planning/types";
 import { currentMonthName, currentYear, formatMXN, MESES_LIST } from "../helpers";
-import type { RecurringCategory, RecurringExpense } from "../types";
+import type { RecurringCategory, RecurringExpense, RecurringSchedulingType } from "../types";
 import type { ScheduledExpenseCategory } from "../planning/types";
 
 const SUB_TABS = ["Básicos", "Servicios", "Agendados", "Pagos a meses", "Simulación"] as const;
@@ -35,10 +35,24 @@ const SCHEDULED_CATEGORY_OPTIONS: { label: string; value: ScheduledExpenseCatego
   { label: "Otro", value: "other" },
 ];
 
+type IntervalUnit = "days" | "months";
+
 type RecurringForm = {
   title: string;
   amount: string;
+  schedulingType: RecurringSchedulingType;
+  // monthly fields
   days: number[];
+  // interval fields
+  intervalUnit: IntervalUnit;
+  intervalValue: string;   // number as string
+  startDate: Date | null;
+  expirationDate: Date | null;
+  // installment limit (both types)
+  hasInstallmentLimit: boolean;
+  totalInstallments: string;
+  paidInstallments: string;
+  // payment
   metodoPago: "efectivo" | "credito";
   creditCardId: string;
 };
@@ -55,7 +69,15 @@ type ScheduledForm = {
 const blankRecurring = (): RecurringForm => ({
   title: "",
   amount: "",
+  schedulingType: "monthly",
   days: [],
+  intervalUnit: "days",
+  intervalValue: "",
+  startDate: null,
+  expirationDate: null,
+  hasInstallmentLimit: false,
+  totalInstallments: "",
+  paidInstallments: "0",
   metodoPago: "efectivo",
   creditCardId: "",
 });
@@ -228,10 +250,19 @@ function RecurringList({
 
   function startEdit(r: RecurringExpense) {
     setEditId(r.id);
+    const isInterval = r.schedulingType === "interval";
     setForm({
       title: r.title,
       amount: String(r.amount),
+      schedulingType: r.schedulingType ?? "monthly",
       days: r.days,
+      intervalUnit: r.intervalMonths ? "months" : "days",
+      intervalValue: String(r.intervalDays ?? r.intervalMonths ?? ""),
+      startDate: r.startDate ? new Date(r.startDate + "T12:00:00") : null,
+      expirationDate: r.expirationDate ? new Date(r.expirationDate + "T12:00:00") : null,
+      hasInstallmentLimit: (r.totalInstallments ?? 0) > 0,
+      totalInstallments: String(r.totalInstallments ?? ""),
+      paidInstallments: String(r.paidInstallments ?? 0),
       metodoPago: r.metodoPago,
       creditCardId: r.creditCardId ?? "",
     });
@@ -241,19 +272,34 @@ function RecurringList({
 
   function save() {
     const amount = parseFloat(form.amount.replace(/[^0-9.]/g, "")) || 0;
-    if (!form.title.trim() || amount <= 0 || form.days.length === 0) return;
+    if (!form.title.trim() || amount <= 0) return;
+    if (form.schedulingType === "monthly" && form.days.length === 0) return;
+    if (form.schedulingType === "interval" && (!form.intervalValue || !form.startDate)) return;
     if (form.metodoPago === "credito" && !form.creditCardId) {
       setCardError("Debes seleccionar una tarjeta para pagos con crédito");
       return;
     }
 
-    const patch_data = {
+    const totalInst = form.hasInstallmentLimit ? (parseInt(form.totalInstallments, 10) || undefined) : undefined;
+    const paidInst = form.hasInstallmentLimit ? (parseInt(form.paidInstallments, 10) || 0) : undefined;
+    const intervalNum = parseInt(form.intervalValue, 10) || 0;
+
+    const patch_data: Omit<RecurringExpense, "id" | "cancelledMonths"> = {
       title: form.title.trim(),
       amount,
-      days: form.days,
+      days: form.schedulingType === "monthly" ? form.days : [],
       category,
       metodoPago: form.metodoPago,
+      schedulingType: form.schedulingType,
       ...(form.metodoPago === "credito" && form.creditCardId ? { creditCardId: form.creditCardId } : {}),
+      ...(form.schedulingType === "interval" && form.startDate
+        ? {
+            startDate: formatDate(form.startDate),
+            ...(form.intervalUnit === "days" ? { intervalDays: intervalNum } : { intervalMonths: intervalNum }),
+            ...(form.expirationDate ? { expirationDate: formatDate(form.expirationDate) } : {}),
+          }
+        : {}),
+      ...(totalInst !== undefined ? { totalInstallments: totalInst, paidInstallments: paidInst ?? 0 } : {}),
     };
 
     if (editId) {
@@ -261,20 +307,22 @@ function RecurringList({
     } else {
       addRecurringExpense(patch_data);
 
-      // Push one expense entry per day into the gastos table
-      const targetMes = selectedMes !== "__all__" ? selectedMes : currentMonthName();
-      for (const day of form.days) {
-        addExpenseFromModal({
-          mes: targetMes,
-          gastos: form.title.trim(),
-          monto: amount,
-          metodoPago: form.metodoPago,
-          frecuencia: "mes",
-          fecha: day,
-          fechaMaxima: "",
-          estado: "no pagado",
-          ...(form.metodoPago === "credito" && form.creditCardId ? { creditCardId: form.creditCardId } : {}),
-        });
+      // Only push immediate expenses for monthly type (interval ones are generated via activateMonth)
+      if (form.schedulingType === "monthly") {
+        const targetMes = selectedMes !== "__all__" ? selectedMes : currentMonthName();
+        for (const day of form.days) {
+          addExpenseFromModal({
+            mes: targetMes,
+            gastos: form.title.trim(),
+            monto: amount,
+            metodoPago: form.metodoPago,
+            frecuencia: "mes",
+            fecha: day,
+            fechaMaxima: "",
+            estado: "no pagado",
+            ...(form.metodoPago === "credito" && form.creditCardId ? { creditCardId: form.creditCardId } : {}),
+          });
+        }
       }
     }
 
@@ -314,29 +362,121 @@ function RecurringList({
             onChangeText={(v) => patch({ amount: v })}
           />
 
-          {/* Days multi-selector */}
-          <View style={styles.daysSection}>
-            <Text style={[styles.formLabel, { color: c.textMuted }]}>Días del mes</Text>
-            {form.days.length > 0 && (
-              <View style={styles.daysChips}>
-                {[...form.days].sort((a, b) => a - b).map((d) => (
+          {/* Scheduling type */}
+          <View style={styles.chipRow}>
+            {(["monthly", "interval"] as RecurringSchedulingType[]).map((t) => (
+              <TouchableOpacity
+                key={t}
+                style={[styles.chip, { borderColor: c.border, flex: 1, alignItems: "center",
+                  backgroundColor: form.schedulingType === t ? c.primary : c.background }]}
+                onPress={() => patch({ schedulingType: t })}
+              >
+                <Text style={{ color: form.schedulingType === t ? c.primaryForeground : c.text, fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "600" }}>
+                  {t === "monthly" ? "Días del mes" : "Por intervalo"}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Monthly: days multi-selector */}
+          {form.schedulingType === "monthly" && (
+            <View style={styles.daysSection}>
+              <Text style={[styles.formLabel, { color: c.textMuted }]}>Días del mes</Text>
+              {form.days.length > 0 && (
+                <View style={styles.daysChips}>
+                  {[...form.days].sort((a, b) => a - b).map((d) => (
+                    <TouchableOpacity
+                      key={d}
+                      style={[styles.dayChip, { backgroundColor: c.primary }]}
+                      onPress={() => removeDay(d)}
+                    >
+                      <Text style={[styles.dayChipText, { color: c.primaryForeground }]}>{d} ×</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+              {form.days.length < 31 && (
+                <CustomSelect
+                  value={0}
+                  options={availableDayOptions}
+                  onChange={(v) => addDay(Number(v))}
+                  style={styles.dayAddSelect}
+                />
+              )}
+            </View>
+          )}
+
+          {/* Interval: unit + value + startDate + expirationDate */}
+          {form.schedulingType === "interval" && (
+            <View style={{ gap: SPACING.sm }}>
+              <View style={styles.chipRow}>
+                {(["days", "months"] as IntervalUnit[]).map((u) => (
                   <TouchableOpacity
-                    key={d}
-                    style={[styles.dayChip, { backgroundColor: c.primary }]}
-                    onPress={() => removeDay(d)}
+                    key={u}
+                    style={[styles.chip, { borderColor: c.border, flex: 1, alignItems: "center",
+                      backgroundColor: form.intervalUnit === u ? c.primary : c.background }]}
+                    onPress={() => patch({ intervalUnit: u })}
                   >
-                    <Text style={[styles.dayChipText, { color: c.primaryForeground }]}>{d} ×</Text>
+                    <Text style={{ color: form.intervalUnit === u ? c.primaryForeground : c.text, fontSize: TYPOGRAPHY.fontSize.xs }}>
+                      {u === "days" ? "Cada N días" : "Cada N meses"}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
-            )}
-            {form.days.length < 31 && (
-              <CustomSelect
-                value={0}
-                options={availableDayOptions}
-                onChange={(v) => addDay(Number(v))}
-                style={styles.dayAddSelect}
+              <TextInput
+                style={[styles.input, { color: c.text, borderColor: c.border, backgroundColor: c.background }]}
+                placeholder={form.intervalUnit === "days" ? "Cada cuántos días (ej: 20)" : "Cada cuántos meses (ej: 6)"}
+                placeholderTextColor={c.textPlaceholder}
+                keyboardType="numeric"
+                value={form.intervalValue}
+                onChangeText={(v) => patch({ intervalValue: v })}
               />
+              <CalendarPicker
+                label="Fecha de inicio *"
+                value={form.startDate}
+                onChange={(d) => patch({ startDate: d })}
+                placeholder="Seleccionar fecha"
+              />
+              <CalendarPicker
+                label="Fecha de expiración (opcional)"
+                value={form.expirationDate}
+                onChange={(d) => patch({ expirationDate: d })}
+                placeholder="Sin expiración"
+              />
+            </View>
+          )}
+
+          {/* Optional installment limit */}
+          <View style={{ gap: SPACING.xs }}>
+            <TouchableOpacity
+              style={styles.chipRow}
+              onPress={() => patch({ hasInstallmentLimit: !form.hasInstallmentLimit })}
+            >
+              <View style={[styles.checkBox, { borderColor: form.hasInstallmentLimit ? c.primary : c.border,
+                backgroundColor: form.hasInstallmentLimit ? c.primary : "transparent" }]}>
+                {form.hasInstallmentLimit && <Text style={{ color: c.background, fontSize: 10 }}>✓</Text>}
+              </View>
+              <Text style={[styles.formLabel, { color: c.textMuted }]}>Cuotas limitadas</Text>
+            </TouchableOpacity>
+            {form.hasInstallmentLimit && (
+              <View style={{ flexDirection: "row", gap: SPACING.sm }}>
+                <TextInput
+                  style={[styles.input, { flex: 1, color: c.text, borderColor: c.border, backgroundColor: c.background }]}
+                  placeholder="Total cuotas"
+                  placeholderTextColor={c.textPlaceholder}
+                  keyboardType="numeric"
+                  value={form.totalInstallments}
+                  onChangeText={(v) => patch({ totalInstallments: v })}
+                />
+                <TextInput
+                  style={[styles.input, { flex: 1, color: c.text, borderColor: c.border, backgroundColor: c.background }]}
+                  placeholder="Ya pagadas"
+                  placeholderTextColor={c.textPlaceholder}
+                  keyboardType="numeric"
+                  value={form.paidInstallments}
+                  onChangeText={(v) => patch({ paidInstallments: v })}
+                />
+              </View>
             )}
           </View>
 
@@ -399,26 +539,68 @@ function RecurringList({
       {items.map((r) => {
         const cancelled = isCancelled(r);
         const cardName = r.creditCardId ? creditCards.find((c) => c.id === r.creditCardId)?.name : undefined;
+        const isInterval = r.schedulingType === "interval";
+        const paidInst = r.paidInstallments ?? 0;
+        const totalInst = r.totalInstallments;
+        const isCompleted = totalInst !== undefined && paidInst >= totalInst;
+
+        let scheduleLabel: string;
+        if (isInterval) {
+          if (r.intervalDays) scheduleLabel = `Cada ${r.intervalDays} días desde ${r.startDate}`;
+          else if (r.intervalMonths) scheduleLabel = `Cada ${r.intervalMonths} ${r.intervalMonths === 1 ? "mes" : "meses"} desde ${r.startDate}`;
+          else scheduleLabel = "Por intervalo";
+          if (r.expirationDate) scheduleLabel += ` · vence ${r.expirationDate}`;
+        } else {
+          scheduleLabel = r.days.length === 1
+            ? `Día ${r.days[0]}`
+            : `Días ${[...r.days].sort((a, b) => a - b).join(", ")}`;
+        }
+
+        const instPct = totalInst ? paidInst / totalInst : 0;
+
         return (
           <View
             key={r.id}
-            style={[styles.itemCard, { backgroundColor: c.backgroundStrong, borderColor: c.border, opacity: cancelled ? 0.55 : 1 }]}
+            style={[styles.itemCard, { backgroundColor: c.backgroundStrong, borderColor: c.border,
+              opacity: cancelled || isCompleted ? 0.55 : 1 }]}
           >
             <View style={styles.itemMain}>
               <View style={styles.itemInfo}>
-                <Text style={[styles.itemTitle, { color: c.text, textDecorationLine: cancelled ? "line-through" : "none" }]}>
-                  {r.title}
-                </Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: SPACING.xs, flexWrap: "wrap" }}>
+                  <Text style={[styles.itemTitle, { color: c.text, textDecorationLine: cancelled || isCompleted ? "line-through" : "none" }]}>
+                    {r.title}
+                  </Text>
+                  {isInterval && (
+                    <View style={{ backgroundColor: `${c.primary}22`, paddingHorizontal: SPACING.xs, paddingVertical: 1, borderRadius: BORDER_RADIUS.sm }}>
+                      <Text style={{ fontSize: 10, color: c.primary, fontWeight: "600" }}>intervalo</Text>
+                    </View>
+                  )}
+                  {isCompleted && (
+                    <View style={{ backgroundColor: "#16A34A22", paddingHorizontal: SPACING.xs, paddingVertical: 1, borderRadius: BORDER_RADIUS.sm }}>
+                      <Text style={{ fontSize: 10, color: "#16A34A", fontWeight: "600" }}>completado</Text>
+                    </View>
+                  )}
+                </View>
                 <Text style={[styles.itemSub, { color: c.textMuted }]}>
-                  {r.days.length === 1 ? `Día ${r.days[0]}` : `Días ${[...r.days].sort((a, b) => a - b).join(", ")}`}
+                  {scheduleLabel}
                   {" · "}{r.metodoPago}
                   {cardName ? ` · ${cardName}` : ""}
                 </Text>
+                {totalInst !== undefined && (
+                  <Text style={[styles.itemSub, { color: c.textMuted }]}>
+                    {paidInst}/{totalInst} cuotas
+                  </Text>
+                )}
               </View>
-              <Text style={[styles.itemAmount, { color: c.primary }]}>${formatMXN(r.amount)}</Text>
+              <Text style={[styles.itemAmount, { color: isCompleted ? c.textMuted : c.primary }]}>${formatMXN(r.amount)}</Text>
             </View>
+            {totalInst !== undefined && (
+              <View style={[styles.progressBar, { backgroundColor: c.border }]}>
+                <View style={[styles.progressFill, { width: `${Math.round(instPct * 100)}%` as any, backgroundColor: isCompleted ? "#16A34A" : c.primary }]} />
+              </View>
+            )}
             <View style={styles.itemActions}>
-              {selectedMes !== "__all__" && (
+              {selectedMes !== "__all__" && !isCompleted && (
                 <TouchableOpacity
                   style={[styles.actionBtn, { borderColor: cancelled ? "#16A34A" : c.danger }]}
                   onPress={() => toggleCancelMonth(r.id, selectedMes)}
@@ -684,6 +866,7 @@ type InstallmentForm = {
   totalMonths: string;
   paidMonths: string;
   notes: string;
+  creditCardId: string;
 };
 
 const blankInstallmentForm = (): InstallmentForm => ({
@@ -692,12 +875,13 @@ const blankInstallmentForm = (): InstallmentForm => ({
   totalMonths: "",
   paidMonths: "0",
   notes: "",
+  creditCardId: "",
 });
 
 function PagosMesesTab({ c }: { c: ReturnType<typeof useColors> }) {
   const { installmentPayments, addInstallment, updateInstallment, removeInstallment } =
     usePlanningStore();
-  const { addExpenseFromModal } = useExpensesStore();
+  const { addExpenseFromModal, creditCards } = useExpensesStore();
 
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -721,6 +905,7 @@ function PagosMesesTab({ c }: { c: ReturnType<typeof useColors> }) {
       totalMonths: String(ip.totalMonths),
       paidMonths: String(ip.paidMonths),
       notes: ip.notes,
+      creditCardId: ip.creditCardId ?? "",
     });
     setShowForm(true);
   }
@@ -738,6 +923,7 @@ function PagosMesesTab({ c }: { c: ReturnType<typeof useColors> }) {
       paidMonths: paid,
       notes: form.notes.trim(),
       status: paid >= total ? "completed" : "active",
+      ...(form.creditCardId ? { creditCardId: form.creditCardId } : {}),
     };
 
     if (editId) {
@@ -822,6 +1008,14 @@ function PagosMesesTab({ c }: { c: ReturnType<typeof useColors> }) {
             onChangeText={(v) => patch({ notes: v })}
             multiline
           />
+          {creditCards.length > 0 && (
+            <CustomSelect
+              value={form.creditCardId}
+              options={[{ label: "Sin tarjeta (efectivo)", value: "" }, ...creditCards.map((card) => ({ label: card.name, value: card.id }))]}
+              onChange={(v) => patch({ creditCardId: String(v) })}
+              placeholder="Sin tarjeta (efectivo)"
+            />
+          )}
           <View style={styles.formActions}>
             <TouchableOpacity style={[styles.btn, { backgroundColor: c.primary }]} onPress={save}>
               <Text style={[styles.btnText, { color: c.primaryForeground }]}>Guardar</Text>
@@ -850,7 +1044,17 @@ function PagosMesesTab({ c }: { c: ReturnType<typeof useColors> }) {
           <View key={ip.id} style={[styles.itemCard, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
             <View style={styles.itemMain}>
               <View style={styles.itemInfo}>
-                <Text style={[styles.itemTitle, { color: c.text }]}>{ip.title}</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: SPACING.xs, flexWrap: "wrap" }}>
+                  <Text style={[styles.itemTitle, { color: c.text }]}>{ip.title}</Text>
+                  {ip.creditCardId && (() => {
+                    const card = creditCards.find((cc) => cc.id === ip.creditCardId);
+                    return card ? (
+                      <View style={{ backgroundColor: `${c.primary}22`, paddingHorizontal: SPACING.xs, paddingVertical: 1, borderRadius: BORDER_RADIUS.sm }}>
+                        <Text style={{ fontSize: 10, color: c.primary, fontWeight: "600" }}>💳 {card.name}</Text>
+                      </View>
+                    ) : null;
+                  })()}
+                </View>
                 <Text style={[styles.itemSub, { color: c.textMuted }]}>
                   {ip.paidMonths}/{ip.totalMonths} meses · Termina {finishStr}
                 </Text>
@@ -1152,4 +1356,5 @@ const styles = StyleSheet.create({
   addBtnText: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "600" },
   progressBar: { height: 4, borderRadius: 2, overflow: "hidden", marginVertical: 2 },
   progressFill: { height: 4, borderRadius: 2 },
+  checkBox: { width: 16, height: 16, borderRadius: 3, borderWidth: 1, alignItems: "center", justifyContent: "center" },
 });

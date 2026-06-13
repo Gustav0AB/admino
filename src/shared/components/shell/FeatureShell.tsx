@@ -42,6 +42,8 @@ export type FeatureShellProps = {
   // ── Row 1 ──────────────────────────────────────────────
   /** Page heading */
   title: string;
+  /** Extra node rendered between the title and action buttons */
+  titleExtra?: React.ReactNode;
   /** Config-driven action buttons in the header */
   saveActions?: SaveAction[];
 
@@ -85,6 +87,7 @@ export type FeatureShellProps = {
 
 export function FeatureShell({
   title,
+  titleExtra,
   saveActions = [],
   tabs,
   tabUrlKey = "view",
@@ -338,6 +341,7 @@ export function FeatureShell({
         ]}
       >
         <Text style={[styles.pageTitle, { color: c.text }]}>{title}</Text>
+        {titleExtra}
         {renderHeaderActions()}
       </View>
 

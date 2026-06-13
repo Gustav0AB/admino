@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-nativ
 import { useColors } from "@/shared/hooks/useColors";
 import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
 import { useExpensesStore } from "../store";
+import { usePlanningStore } from "../planning/store";
 import {
   currentMonthName,
   currentYear,
@@ -10,12 +11,14 @@ import {
   getCreditCycleInfoForCard,
   getCreditHistoryForCard,
   getCurrentCreditBalance,
+  getMSIPendingForCard,
 } from "../helpers";
 import type { CreditCard, Expense } from "../types";
 
 export function CreditPanel() {
   const c = useColors();
   const { expenses, creditCards, addCreditCard, updateCreditCard, removeCreditCard, addCardPayment } = useExpensesStore();
+  const { installmentPayments } = usePlanningStore();
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState("");
@@ -66,6 +69,7 @@ export function CreditPanel() {
           onRemove={() => removeCreditCard(card.id)}
           onPayment={(amount) => addCardPayment(card.id, amount, currentMonthName(), currentYear())}
           c={c}
+          installmentPayments={installmentPayments}
         />
       ))}
 
@@ -103,6 +107,7 @@ function CardSection({
   onRemove,
   onPayment,
   c,
+  installmentPayments,
 }: {
   card: CreditCard;
   expenses: Expense[];
@@ -110,6 +115,7 @@ function CardSection({
   onRemove: () => void;
   onPayment: (amount: number) => void;
   c: ReturnType<typeof useColors>;
+  installmentPayments: import("../planning/types").InstallmentPayment[];
 }) {
   const [showHistory, setShowHistory] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
@@ -119,6 +125,7 @@ function CardSection({
   const cycle = useMemo(() => getCreditCycleInfoForCard(expenses, card), [expenses, card]);
   const history = useMemo(() => getCreditHistoryForCard(expenses, card), [expenses, card]);
   const currentBalance = getCurrentCreditBalance(history, card.initialDebt);
+  const msi = useMemo(() => getMSIPendingForCard(installmentPayments, card.id), [installmentPayments, card.id]);
 
   return (
     <View style={[styles.cardSection, { borderColor: c.border }]}>
@@ -188,7 +195,23 @@ function CardSection({
           />
         )}
         <DebtRow label="Balance actual" value={currentBalance} c={c} />
+        {(card.creditLimit ?? 0) > 0 && (
+          <CreditLimitBar limit={card.creditLimit!} used={currentBalance} c={c} />
+        )}
       </View>
+
+      {msi.count > 0 && (
+        <View style={[styles.msiSection, { borderColor: c.border, backgroundColor: `${c.primary}08` }]}>
+          <Text style={[styles.msiTitle, { color: c.textMuted }]}>MSI activos</Text>
+          <View style={styles.msiRow}>
+            <View style={[styles.msiBadge, { backgroundColor: `${c.primary}18` }]}>
+              <Text style={[styles.msiBadgeText, { color: c.primary }]}>{msi.count} plan{msi.count !== 1 ? "es" : ""}</Text>
+            </View>
+            <Text style={[styles.msiAmount, { color: c.text }]}>${formatMXN(msi.monthlyTotal)}/mes</Text>
+            <Text style={[styles.msiPending, { color: c.textMuted }]}>${formatMXN(msi.totalPending)} pendiente</Text>
+          </View>
+        </View>
+      )}
 
       {cycle.frozenDebt > 0 && (
         <View style={[styles.paySection, { borderColor: c.border }]}>
@@ -245,6 +268,13 @@ function CardSection({
           c={c}
         />
         <ConfigInput
+          label="Límite de crédito ($)"
+          value={String(card.creditLimit || "")}
+          onChangeText={(v) => onUpdate({ creditLimit: parseFloat(v) || 0 })}
+          keyboardType="numeric"
+          c={c}
+        />
+        <ConfigInput
           label="Día de corte"
           value={String(card.cutDay || "")}
           onChangeText={(v) => onUpdate({ cutDay: parseInt(v) || 0 })}
@@ -293,6 +323,24 @@ function CardSection({
           )}
         </View>
       )}
+    </View>
+  );
+}
+
+function CreditLimitBar({ limit, used, c }: { limit: number; used: number; c: ReturnType<typeof useColors> }) {
+  const pct = Math.min(100, Math.max(0, (used / limit) * 100));
+  const available = Math.max(0, limit - used);
+  const barColor = pct >= 80 ? "#EF4444" : pct >= 50 ? "#F59E0B" : "#16A34A";
+  return (
+    <View style={styles.limitSection}>
+      <View style={styles.limitRow}>
+        <Text style={[styles.limitLabel, { color: c.textMuted }]}>Disponible</Text>
+        <Text style={[styles.limitLabel, { color: c.textMuted }]}>${formatMXN(available)} / ${formatMXN(limit)}</Text>
+      </View>
+      <View style={[styles.limitTrack, { backgroundColor: `${barColor}22` }]}>
+        <View style={[styles.limitFill, { width: `${pct}%` as `${number}%`, backgroundColor: barColor }]} />
+      </View>
+      <Text style={[styles.limitPct, { color: barColor }]}>{pct.toFixed(0)}% utilizado</Text>
     </View>
   );
 }
@@ -375,6 +423,21 @@ const styles = StyleSheet.create({
   historyAmounts: { alignItems: "flex-end" },
   historyAmt: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "600" },
   historyBal: { fontSize: 10 },
+
+  limitSection: { gap: 4, paddingTop: SPACING.xs },
+  limitRow: { flexDirection: "row" as const, justifyContent: "space-between" as const },
+  limitLabel: { fontSize: 10 },
+  limitTrack: { height: 6, borderRadius: 3, overflow: "hidden" as const },
+  limitFill: { height: 6, borderRadius: 3 },
+  limitPct: { fontSize: 10, fontWeight: "600" as const, textAlign: "right" as const },
+
+  msiSection: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: SPACING.sm, gap: SPACING.xs, borderRadius: BORDER_RADIUS.sm, padding: SPACING.sm },
+  msiTitle: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "700" as const, textTransform: "uppercase" as const, letterSpacing: 0.4 },
+  msiRow: { flexDirection: "row" as const, alignItems: "center" as const, flexWrap: "wrap" as const, gap: SPACING.sm },
+  msiBadge: { paddingHorizontal: SPACING.sm, paddingVertical: 2, borderRadius: BORDER_RADIUS.full },
+  msiBadgeText: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "700" as const },
+  msiAmount: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "600" as const },
+  msiPending: { fontSize: TYPOGRAPHY.fontSize.xs },
 
   paySection: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: SPACING.sm },
   payForm: { gap: SPACING.sm },

@@ -8,27 +8,29 @@ import { usePlanningStore } from "@/features/expenses/planning/store";
 
 export function SummaryPanel() {
   const c = useColors();
-  const { expenses, filterMes, filterFrecuencia, filterFecha } = useExpensesStore();
+  const { expenses, filterMes, filterFrecuencia, filterFecha, filterAño, filterCategoria } = useExpensesStore();
   const { scheduledExpenses, vacations } = usePlanningStore();
 
   const filtered = useMemo(
-    () => getFilteredExpenses(expenses, filterMes, filterFrecuencia, filterFecha),
-    [expenses, filterMes, filterFrecuencia, filterFecha],
+    () => getFilteredExpenses(expenses, filterMes, filterFrecuencia, filterFecha, filterAño, filterCategoria),
+    [expenses, filterMes, filterFrecuencia, filterFecha, filterAño, filterCategoria],
   );
 
   const selected = filtered.filter((e) => e.selected);
 
   const { pagado, sinPagar, credito, totalFiltrado } = useMemo(() => {
-    const pag = filtered
+    // Credit charges are reference-only; only cash/card-payment expenses count toward totals
+    const gastos = filtered.filter((e) => e.metodoPago !== "credito");
+    const pag = gastos
       .filter((e) => e.estado === "pagado")
       .reduce((s, e) => s + e.monto, 0);
-    const sin = filtered
+    const sin = gastos
       .filter((e) => e.estado === "no pagado" || e.estado === "no guardado")
       .reduce((s, e) => s + e.monto, 0);
     const cred = filtered
       .filter((e) => e.metodoPago === "credito")
       .reduce((s, e) => s + e.monto, 0);
-    const tot = filtered.reduce((s, e) => s + e.monto, 0);
+    const tot = gastos.reduce((s, e) => s + e.monto, 0);
     return { pagado: pag, sinPagar: sin, credito: cred, totalFiltrado: tot };
   }, [filtered]);
 

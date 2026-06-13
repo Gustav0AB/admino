@@ -6,9 +6,11 @@ import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
 import { useExpensesStore } from "../store";
 import { usePlanningStore } from "@/features/expenses/planning/store";
 import {
+  CATEGORIES,
   currentMonthName,
   currentYear,
   formatMXN,
+  getAccountBalance,
   getAvailableMeses,
   getAvailableAños,
   getCreditHistoryForCard,
@@ -18,8 +20,8 @@ import {
 
 export function ResumenTab() {
   const c = useColors();
-  const { expenses, creditCards, recurringExpenses } = useExpensesStore();
-  const { scheduledExpenses, vacations } = usePlanningStore();
+  const { expenses, creditCards, recurringExpenses, incomes, accounts } = useExpensesStore();
+  const { scheduledExpenses, vacations, installmentPayments } = usePlanningStore();
 
   const availableMeses = useMemo(() => getAvailableMeses(expenses), [expenses]);
   const availableAños = useMemo(() => getAvailableAños(expenses), [expenses]);
@@ -43,21 +45,55 @@ export function ResumenTab() {
   }, [expenses, selectedMes, selectedAño]);
 
   const stats = useMemo(() => {
-    const pagado = filtered.filter((e) => e.estado === "pagado").reduce((s, e) => s + e.monto, 0);
-    const sinPagar = filtered
+    const gastos = filtered.filter((e) => e.metodoPago !== "credito");
+    const pagado = gastos.filter((e) => e.estado === "pagado").reduce((s, e) => s + e.monto, 0);
+    const sinPagar = gastos
       .filter((e) => e.estado === "no pagado" || e.estado === "no guardado")
       .reduce((s, e) => s + e.monto, 0);
     const credito = filtered.filter((e) => e.metodoPago === "credito").reduce((s, e) => s + e.monto, 0);
-    const efectivo = filtered.filter((e) => e.metodoPago === "efectivo").reduce((s, e) => s + e.monto, 0);
-    const total = filtered.reduce((s, e) => s + e.monto, 0);
+    const efectivo = gastos.filter((e) => e.metodoPago === "efectivo").reduce((s, e) => s + e.monto, 0);
+    const total = gastos.reduce((s, e) => s + e.monto, 0);
     return { pagado, sinPagar, credito, efectivo, total };
   }, [filtered]);
+
+  // Account balances
+  const accountBalances = useMemo(
+    () => accounts.map((a) => ({ account: a, balance: getAccountBalance(a, expenses, incomes) })),
+    [accounts, expenses, incomes],
+  );
+  const totalAccountBalance = accountBalances.reduce((s, b) => s + b.balance, 0);
+
+  // Income stats
+  const incomeStats = useMemo(() => {
+    const filteredIncomes = incomes.filter((i) => {
+      if (selectedMes !== "__all__" && i.mes !== selectedMes) return false;
+      if (selectedAño > 0 && (i.año ?? currentYear()) !== selectedAño) return false;
+      return true;
+    });
+    const recibido = filteredIncomes.filter((i) => i.estado === "recibido").reduce((s, i) => s + i.monto, 0);
+    const pendiente = filteredIncomes.filter((i) => i.estado === "pendiente").reduce((s, i) => s + i.monto, 0);
+    return { recibido, pendiente, total: recibido + pendiente, count: filteredIncomes.length };
+  }, [incomes, selectedMes, selectedAño]);
+
+  // Category breakdown
+  const byCategory = useMemo(() => {
+    return CATEGORIES.map((cat) => {
+      const items = filtered.filter((e) => e.category === cat.value && e.metodoPago !== "credito");
+      if (items.length === 0) return null;
+      return { ...cat, total: items.reduce((s, e) => s + e.monto, 0), count: items.length };
+    }).filter(Boolean) as { value: string; label: string; color: string; total: number; count: number }[];
+  }, [filtered]);
+
+  const uncategorized = useMemo(
+    () => filtered.filter((e) => !e.category && e.metodoPago !== "credito").reduce((s, e) => s + e.monto, 0),
+    [filtered],
+  );
 
   // Per-month breakdown for "Todos"
   const byMonth = useMemo(() => {
     if (selectedMes !== "__all__") return [];
     return MESES_LIST.map((mes) => {
-      const items = expenses.filter((e) => e.mes === mes);
+      const items = expenses.filter((e) => e.mes === mes && e.metodoPago !== "credito");
       if (items.length === 0) return null;
       const total = items.reduce((s, e) => s + e.monto, 0);
       const pagado = items.filter((e) => e.estado === "pagado").reduce((s, e) => s + e.monto, 0);
@@ -92,6 +128,59 @@ export function ResumenTab() {
   const scheduledPending = scheduledExpenses.filter((e) => e.status === "pending" && e.amountKnown);
   const scheduledTotal = scheduledPending.reduce((s, e) => s + e.amount, 0);
 
+  // Próximos 30 días
+  const upcomingItems = useMemo(() => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const limit = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    function nextOcc(day: number): Date | null {
+      const d = new Date(today.getFullYear(), today.getMonth(), day);
+      if (d >= today) return d;
+      return new Date(today.getFullYear(), today.getMonth() + 1, day);
+    }
+
+    const items: { id: string; title: string; amount: number | null; dueDate: Date; type: string; urgency: string }[] = [];
+
+    for (const r of recurringExpenses) {
+      for (const day of r.days) {
+        const occ = nextOcc(day);
+        if (!occ || occ > limit) continue;
+        const occMes = MESES_LIST[occ.getMonth()] ?? "";
+        if (r.cancelledMonths.includes(occMes)) continue;
+        const diff = Math.round((occ.getTime() - today.getTime()) / 86400000);
+        items.push({ id: `rec-${r.id}-${day}`, title: r.title, amount: r.amount, dueDate: occ, type: "🔄", urgency: diff <= 2 ? "#EF4444" : diff <= 7 ? "#F59E0B" : "#16A34A" });
+      }
+    }
+
+    for (const s of scheduledExpenses) {
+      if (s.status !== "pending") continue;
+      const d = new Date(s.scheduledDate + "T00:00:00");
+      if (d < today || d > limit) continue;
+      const diff = Math.round((d.getTime() - today.getTime()) / 86400000);
+      items.push({ id: `sched-${s.id}`, title: s.title, amount: s.amountKnown ? s.amount : null, dueDate: d, type: "📅", urgency: diff <= 2 ? "#EF4444" : diff <= 7 ? "#F59E0B" : "#16A34A" });
+    }
+
+    for (const card of creditCards) {
+      if (!card.payDay) continue;
+      const occ = nextOcc(card.payDay);
+      if (!occ || occ > limit) continue;
+      const diff = Math.round((occ.getTime() - today.getTime()) / 86400000);
+      items.push({ id: `cc-${card.id}`, title: `Pago ${card.name}`, amount: null, dueDate: occ, type: "💳", urgency: diff <= 2 ? "#EF4444" : diff <= 7 ? "#F59E0B" : "#16A34A" });
+    }
+
+    for (const ip of installmentPayments) {
+      if (ip.status !== "active") continue;
+      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      const diff = Math.round((endOfMonth.getTime() - today.getTime()) / 86400000);
+      items.push({ id: `msi-${ip.id}`, title: ip.title, amount: ip.monthlyAmount, dueDate: endOfMonth, type: "📦", urgency: diff <= 2 ? "#EF4444" : diff <= 7 ? "#F59E0B" : "#16A34A" });
+    }
+
+    return items.sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
+  }, [recurringExpenses, scheduledExpenses, creditCards, installmentPayments]);
+
+  const upcomingTotal = upcomingItems.reduce((s, i) => s + (i.amount ?? 0), 0);
+
   // Vacations — budget is deprecated; compute from pending payments when available
   const vacationsActive = vacations.filter((v) => v.status !== "cancelled");
   const getVacationBudget = (v: (typeof vacationsActive)[0]) => {
@@ -120,6 +209,60 @@ export function ResumenTab() {
           style={styles.mesSelect}
         />
       </View>
+
+      {/* Próximos 30 días */}
+      {upcomingItems.length > 0 && (
+        <Section title={`Próximos 30 días · $${formatMXN(upcomingTotal)}`} c={c}>
+          {upcomingItems.map((item) => (
+            <View key={item.id} style={[styles.upcomingRow, { borderLeftColor: item.urgency }]}>
+              <Text style={styles.upcomingIcon}>{item.type}</Text>
+              <Text style={[styles.rowLabel, { color: c.text, flex: 1 }]} numberOfLines={1}>{item.title}</Text>
+              <Text style={[styles.rowValue, { color: item.urgency, fontWeight: "600" }]}>
+                {item.dueDate.getDate()} {MESES_LIST[item.dueDate.getMonth()]}
+              </Text>
+              <Text style={[styles.rowValue, { color: c.text, marginLeft: SPACING.sm }]}>
+                {item.amount != null ? `$${formatMXN(item.amount)}` : "—"}
+              </Text>
+            </View>
+          ))}
+        </Section>
+      )}
+
+      {/* Accounts */}
+      {accountBalances.length > 0 && (
+        <Section title="Cuentas" c={c}>
+          <View style={styles.row}>
+            <Text style={[styles.rowLabel, { color: c.text, fontWeight: "700" }]}>Saldo total</Text>
+            <Text style={[styles.rowValue, { color: totalAccountBalance >= 0 ? "#16A34A" : c.danger, fontWeight: "700" }]}>
+              ${formatMXN(totalAccountBalance)}
+            </Text>
+          </View>
+          {accountBalances.map(({ account, balance }) => (
+            <View key={account.id} style={styles.catRow}>
+              <View style={[styles.catDot, { backgroundColor: account.color }]} />
+              <Text style={[styles.rowLabel, { color: c.text, flex: 1 }]}>{account.name}</Text>
+              <Text style={[styles.rowValue, { color: balance >= 0 ? "#16A34A" : c.danger }]}>
+                ${formatMXN(balance)}
+              </Text>
+            </View>
+          ))}
+        </Section>
+      )}
+
+      {/* Balance */}
+      {incomeStats.total > 0 && (
+        <View style={styles.statsGrid}>
+          <StatCard label="Ingresos" value={incomeStats.recibido} color="#16A34A" c={c} big />
+          <StatCard label="Gastos" value={stats.total} color={c.danger} c={c} big />
+          <StatCard
+            label="Balance"
+            value={incomeStats.recibido - stats.total}
+            color={incomeStats.recibido - stats.total >= 0 ? "#16A34A" : c.danger}
+            c={c}
+            big
+          />
+        </View>
+      )}
 
       {/* Main stats */}
       <View style={styles.statsGrid}>
@@ -187,6 +330,29 @@ export function ResumenTab() {
         </Section>
       )}
 
+      {/* Category breakdown */}
+      {byCategory.length > 0 && (
+        <Section title="Por categoría" c={c}>
+          {byCategory.map((cat) => (
+            <View key={cat.value} style={styles.catRow}>
+              <View style={[styles.catDot, { backgroundColor: cat.color }]} />
+              <Text style={[styles.rowLabel, { color: c.text, flex: 1 }]}>{cat.label}</Text>
+              <Text style={[styles.rowValue, { color: c.textMuted, fontSize: TYPOGRAPHY.fontSize.xs, marginRight: SPACING.sm }]}>
+                {cat.count} registro{cat.count !== 1 ? "s" : ""}
+              </Text>
+              <Text style={[styles.rowValue, { color: cat.color, fontWeight: "600" }]}>${formatMXN(cat.total)}</Text>
+            </View>
+          ))}
+          {uncategorized > 0 && (
+            <View style={styles.catRow}>
+              <View style={[styles.catDot, { backgroundColor: c.border }]} />
+              <Text style={[styles.rowLabel, { color: c.textMuted, flex: 1 }]}>Sin categoría</Text>
+              <Text style={[styles.rowValue, { color: c.textMuted }]}>${formatMXN(uncategorized)}</Text>
+            </View>
+          )}
+        </Section>
+      )}
+
       {/* Per-month breakdown */}
       {byMonth.length > 0 && (
         <Section title="Desglose por mes" c={c}>
@@ -203,7 +369,7 @@ export function ResumenTab() {
           <View style={[styles.monthRow, styles.totalRow, { borderTopColor: c.border }]}>
             <Text style={[styles.monthName, { color: c.text, fontWeight: "700" }]}>Total</Text>
             <Text style={[styles.monthTotal, { color: c.primary, fontWeight: "700" }]}>
-              ${formatMXN(expenses.reduce((s, e) => s + e.monto, 0))}
+              ${formatMXN(expenses.filter((e) => e.metodoPago !== "credito").reduce((s, e) => s + e.monto, 0))}
             </Text>
           </View>
         </Section>
@@ -270,4 +436,8 @@ const styles = StyleSheet.create({
   monthAmt: { fontSize: TYPOGRAPHY.fontSize.xs, width: 70, textAlign: "right" },
   monthTotal: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "600", width: 80, textAlign: "right" },
   more: { fontSize: TYPOGRAPHY.fontSize.xs, textAlign: "center", paddingTop: SPACING.xs },
+  catRow: { flexDirection: "row", alignItems: "center", paddingVertical: 3, gap: SPACING.xs },
+  catDot: { width: 8, height: 8, borderRadius: 4 },
+  upcomingRow: { flexDirection: "row", alignItems: "center", gap: SPACING.xs, paddingVertical: 3, paddingLeft: SPACING.xs, borderLeftWidth: 3 },
+  upcomingIcon: { fontSize: 14, width: 20, textAlign: "center" },
 });
