@@ -2,6 +2,7 @@ export type OrgMember = {
   id: string;
   name: string;
   username: string;
+  email: string | null;
   role: "OWNER" | "ADMIN" | "MEMBER";
   isActive: boolean;
   permissions: string[];
@@ -107,6 +108,7 @@ export type OrgPlan = {
 export type CreateMemberInput = {
   name: string;
   username: string;
+  email?: string;
   password: string;
   role: "ADMIN" | "MEMBER";
   permissions: string[];
@@ -114,6 +116,7 @@ export type CreateMemberInput = {
 
 export type UpdateMemberInput = {
   name?: string;
+  email?: string | null;
   role?: "ADMIN" | "MEMBER";
   isActive?: boolean;
   permissions?: string[];

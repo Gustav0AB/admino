@@ -14,7 +14,7 @@ type CellEditModalProps = {
   onSave: (text: string) => void;
 };
 
-const CELL_HINT = `Estructura del día para el atleta:
+export const CELL_HINT = `Estructura del día para el atleta:
 • Línea 1: título del día (ej. "Fuerza")
 • Líneas siguientes: cada ejercicio en una línea → se convierte en ítem del checklist
 • trote [2x4] 40min → sección de cardio con temporizador

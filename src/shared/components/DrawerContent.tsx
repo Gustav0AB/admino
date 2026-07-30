@@ -80,11 +80,18 @@ export function DrawerContent(props: DrawerContentComponentProps) {
       feature: "finanzas",
     },
     {
-      label: "Gestión Atletas",
+      label: "Planes de entrenamiento",
       href: "/(drawer)/athlete-dashboard",
       icon: (color) => (
         <MaterialCommunityIcons name="weight-lifter" size={20} color={color} />
       ),
+      roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN"],
+      feature: "athlete_dashboard",
+    },
+    {
+      label: "Tracker",
+      href: "/(drawer)/tracker",
+      icon: (color) => <FontAwesome5 name="running" size={20} color={color} />,
       roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN"],
       feature: "athlete_dashboard",
     },
@@ -124,12 +131,6 @@ export function DrawerContent(props: DrawerContentComponentProps) {
     //   roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN"],
     //   feature: "nutritionist_planning",
     // },
-    {
-      label: "Usuarios",
-      href: "/(drawer)/members",
-      icon: (color) => <Feather name="users" size={20} color={color} />,
-      roles: ["OWNER", "ADMIN"],
-    },
     {
       label: "Miembros",
       href: "/(drawer)/miembros",

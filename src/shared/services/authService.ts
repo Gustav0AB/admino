@@ -52,6 +52,28 @@ async function realLogin(credentials: LoginCredentials): Promise<AuthSession> {
   };
 }
 
+async function realForgotPassword(username: string): Promise<{ message: string }> {
+  const res = await fetch(`${ENV.API_URL}/auth/forgot-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((body as { message?: string }).message ?? "Request failed");
+  return (body as { data: { message: string } }).data;
+}
+
+async function realResetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+  const res = await fetch(`${ENV.API_URL}/auth/reset-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, newPassword }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((body as { message?: string }).message ?? "Reset failed");
+  return (body as { data: { message: string } }).data;
+}
+
 async function realRefresh(token: string): Promise<{ token: string; expiresAt: number }> {
   const res = await fetch(`${ENV.API_URL}/auth/refresh`, {
     method: "POST",
@@ -72,4 +94,12 @@ export const authService = {
     ENV.USE_MOCK
       ? Promise.resolve({ token, expiresAt: Math.floor(Date.now() / 1000) + 3600 })
       : realRefresh(token),
+  forgotPassword: (username: string): Promise<{ message: string }> =>
+    ENV.USE_MOCK
+      ? Promise.resolve({ message: "Si el usuario existe, se envió un correo con instrucciones." })
+      : realForgotPassword(username),
+  resetPassword: (token: string, newPassword: string): Promise<{ message: string }> =>
+    ENV.USE_MOCK
+      ? Promise.resolve({ message: "Password updated successfully" })
+      : realResetPassword(token, newPassword),
 };

@@ -22,14 +22,16 @@ export function MemberFormModal({ open, onClose, member, onSubmit, isLoading }: 
   const isEditing = !!member;
 
   const [name, setName] = useState("");
-  const [username, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (open) {
       setName(member?.name ?? "");
-      setEmail(member?.username ?? "");
+      setUsername(member?.username ?? "");
+      setEmail(member?.email ?? "");
       setPassword("");
       setErrors({});
     }
@@ -41,6 +43,7 @@ export function MemberFormModal({ open, onClose, member, onSubmit, isLoading }: 
   function validate(): boolean {
     const errs: Record<string, string> = {};
     if (!name.trim()) errs.name = "El nombre es obligatorio";
+    if (email.trim() && !/^\S+@\S+\.\S+$/.test(email.trim())) errs.email = "Email inválido";
     if (!isEditing) {
       if (!/^[a-zA-Z0-9_.-]+$/.test(username.trim())) errs.username = "Solo letras, números, puntos, guiones y _";
       if (password.length < 8) errs.password = "Mínimo 8 caracteres";
@@ -52,9 +55,12 @@ export function MemberFormModal({ open, onClose, member, onSubmit, isLoading }: 
   function handleSubmit() {
     if (!validate()) return;
     if (isEditing) {
-      onSubmit({ name: name.trim() } as UpdateMemberInput);
+      onSubmit({ name: name.trim(), email: email.trim() || null } as UpdateMemberInput);
     } else {
-      onSubmit({ name: name.trim(), username: username.trim(), password, role: "MEMBER", permissions: [] } as CreateMemberInput);
+      onSubmit({
+        name: name.trim(), username: username.trim(), email: email.trim() || undefined,
+        password, role: "MEMBER", permissions: [],
+      } as CreateMemberInput);
     }
   }
 
@@ -86,31 +92,42 @@ export function MemberFormModal({ open, onClose, member, onSubmit, isLoading }: 
         />
 
         {!isEditing && (
-          <>
-            <View>
-              <CustomInput
-                label="Nombre de usuario"
-                value={username}
-                onChangeText={setEmail}
-                placeholder="ej. john_doe"
-                autoCapitalize="none"
-                {...fe("username")}
-              />
-              {slug && username.trim() && (
-                <Text style={{ color: c.textMuted, fontSize: TYPOGRAPHY.fontSize.xs, marginTop: 4 }}>
-                  Iniciará sesión como: {slug}-{username.trim()}
-                </Text>
-              )}
-            </View>
+          <View>
             <CustomInput
-              label="Contraseña"
-              value={password}
-              onChangeText={setPassword}
-              placeholder="Mínimo 8 caracteres"
-              secureTextEntry
-              {...fe("password")}
+              label="Nombre de usuario"
+              value={username}
+              onChangeText={setUsername}
+              placeholder="ej. john_doe"
+              autoCapitalize="none"
+              {...fe("username")}
             />
-          </>
+            {slug && username.trim() && (
+              <Text style={{ color: c.textMuted, fontSize: TYPOGRAPHY.fontSize.xs, marginTop: 4 }}>
+                Iniciará sesión como: {slug}-{username.trim()}
+              </Text>
+            )}
+          </View>
+        )}
+
+        <CustomInput
+          label="Email (opcional, para restablecer contraseña)"
+          value={email}
+          onChangeText={setEmail}
+          placeholder="correo@ejemplo.com"
+          autoCapitalize="none"
+          keyboardType="email-address"
+          {...fe("email")}
+        />
+
+        {!isEditing && (
+          <CustomInput
+            label="Contraseña"
+            value={password}
+            onChangeText={setPassword}
+            placeholder="Mínimo 8 caracteres"
+            secureTextEntry
+            {...fe("password")}
+          />
         )}
       </View>
     </CustomModal>

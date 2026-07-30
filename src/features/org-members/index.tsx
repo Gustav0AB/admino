@@ -1,9 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert,
 } from "react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { FeatureShell } from "@/shared/components/shell/FeatureShell";
 import { Avatar } from "@/shared/components/data-display/Avatar";
 import { StatusBadge } from "@/shared/components/data-display/StatusBadge";
 import { useColors } from "@/shared/hooks/useColors";
@@ -22,11 +21,16 @@ const ROLE_LABEL: Record<string, string> = {
   MEMBER: "Miembro",
 };
 
-export function OrgMembersScreen() {
+export function StaffContent({ onReady }: { onReady: (openCreate: () => void) => void }) {
   const c = useColors();
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<OrgMember | null>(null);
+
+  useEffect(() => {
+    onReady(() => { setEditingMember(null); setModalOpen(true); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const { data: members = [], isLoading } = useQuery<OrgMember[]>({
     queryKey: ["org-members"],
@@ -97,63 +101,55 @@ export function OrgMembersScreen() {
 
   return (
     <>
-      <FeatureShell
-        title="Usuarios"
-        tabs={[]}
-        activeTab=""
-        onTabChange={() => {}}
-        saveActions={[{ label: "Agregar usuario", type: "primary", onClick: () => { setEditingMember(null); setModalOpen(true); } }]}
-      >
-        <View style={styles.content}>
-          {isLoading ? (
-            <View style={styles.center}><ActivityIndicator color={c.primary} /></View>
-          ) : (
-            <View style={styles.list}>
-              {members.length === 0 && (
-                <Text style={{ color: c.textMuted, textAlign: "center", paddingVertical: SPACING.xl }}>Sin usuarios</Text>
-              )}
-              {members.map((member) => (
-                <View
-                  key={member.id}
-                  style={[styles.row, { backgroundColor: c.backgroundStrong, borderColor: c.border, opacity: member.isActive ? 1 : 0.6 }]}
-                >
-                  <Avatar name={member.name} size="sm" />
-                  <View style={styles.info}>
-                    <View style={styles.nameRow}>
-                      <Text style={[styles.name, { color: c.text }]} numberOfLines={1}>{member.name}</Text>
-                      <StatusBadge status={member.isActive ? "active" : "cancelled"} customLabel={member.isActive ? "Activo" : "Inactivo"} size="sm" />
-                    </View>
-                    <Text style={[{ color: c.textMuted, fontSize: TYPOGRAPHY.fontSize.xs }]} numberOfLines={1}>{member.username}</Text>
-                    <Text style={[{ color: c.primary, fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "500" }]}>
-                      {ROLE_LABEL[member.role] ?? member.role}
-                    </Text>
+      <View style={styles.content}>
+        {isLoading ? (
+          <View style={styles.center}><ActivityIndicator color={c.primary} /></View>
+        ) : (
+          <View style={styles.list}>
+            {members.length === 0 && (
+              <Text style={{ color: c.textMuted, textAlign: "center", paddingVertical: SPACING.xl }}>Sin usuarios</Text>
+            )}
+            {members.map((member) => (
+              <View
+                key={member.id}
+                style={[styles.row, { backgroundColor: c.backgroundStrong, borderColor: c.border, opacity: member.isActive ? 1 : 0.6 }]}
+              >
+                <Avatar name={member.name} size="sm" />
+                <View style={styles.info}>
+                  <View style={styles.nameRow}>
+                    <Text style={[styles.name, { color: c.text }]} numberOfLines={1}>{member.name}</Text>
+                    <StatusBadge status={member.isActive ? "active" : "cancelled"} customLabel={member.isActive ? "Activo" : "Inactivo"} size="sm" />
                   </View>
-                  <View style={styles.actions}>
-                    {member.role !== "OWNER" && (
-                      <>
-                        <TouchableOpacity
-                          style={[styles.actionBtn, { borderColor: c.border, backgroundColor: c.background }]}
-                          onPress={() => { setEditingMember(member); setModalOpen(true); }}
-                        >
-                          <Text style={[styles.actionBtnText, { color: c.text }]}>Editar</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[styles.actionBtn, { borderColor: member.isActive ? c.danger + "60" : c.border, backgroundColor: member.isActive ? c.danger + "10" : c.background }]}
-                          onPress={() => confirmToggle(member)}
-                        >
-                          <Text style={[styles.actionBtnText, { color: member.isActive ? c.danger : c.textMuted }]}>
-                            {member.isActive ? "Desactivar" : "Activar"}
-                          </Text>
-                        </TouchableOpacity>
-                      </>
-                    )}
-                  </View>
+                  <Text style={[{ color: c.textMuted, fontSize: TYPOGRAPHY.fontSize.xs }]} numberOfLines={1}>{member.username}</Text>
+                  <Text style={[{ color: c.primary, fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "500" }]}>
+                    {ROLE_LABEL[member.role] ?? member.role}
+                  </Text>
                 </View>
-              ))}
-            </View>
-          )}
-        </View>
-      </FeatureShell>
+                <View style={styles.actions}>
+                  {member.role !== "OWNER" && (
+                    <>
+                      <TouchableOpacity
+                        style={[styles.actionBtn, { borderColor: c.border, backgroundColor: c.background }]}
+                        onPress={() => { setEditingMember(member); setModalOpen(true); }}
+                      >
+                        <Text style={[styles.actionBtnText, { color: c.text }]}>Editar</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.actionBtn, { borderColor: member.isActive ? c.danger + "60" : c.border, backgroundColor: member.isActive ? c.danger + "10" : c.background }]}
+                        onPress={() => confirmToggle(member)}
+                      >
+                        <Text style={[styles.actionBtnText, { color: member.isActive ? c.danger : c.textMuted }]}>
+                          {member.isActive ? "Desactivar" : "Activar"}
+                        </Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
 
       <MemberFormModal
         open={modalOpen}

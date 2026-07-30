@@ -105,7 +105,7 @@ export default function SignInScreen() {
               <Text style={[webMobileStyles.label, { color: c.textMuted }]}>
                 {t("auth.password")}
               </Text>
-              <TouchableOpacity>
+              <TouchableOpacity onPress={() => router.push("/(auth)/forgot-password" as any)}>
                 <Text style={[webMobileStyles.forgotLink, { color: primaryColor }]}>
                   Forgot password?
                 </Text>
@@ -227,7 +227,7 @@ export default function SignInScreen() {
                 <Text style={[webStyles.label, { color: c.textMuted }]}>
                   {t("auth.password")}
                 </Text>
-                <TouchableOpacity>
+                <TouchableOpacity onPress={() => router.push("/(auth)/forgot-password" as any)}>
                   <Text style={[webStyles.forgotLink, { color: primaryColor }]}>
                     Forgot password?
                   </Text>
@@ -344,7 +344,7 @@ export default function SignInScreen() {
               <Text style={[mobileStyles.label, { color: c.textMuted }]}>
                 {t("auth.password")}
               </Text>
-              <TouchableOpacity>
+              <TouchableOpacity onPress={() => router.push("/(auth)/forgot-password" as any)}>
                 <Text style={[mobileStyles.forgotLink, { color: primaryColor }]}>
                   Forgot?
                 </Text>

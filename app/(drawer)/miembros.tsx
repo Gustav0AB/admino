@@ -1,5 +1,5 @@
-import { EndUsersScreen } from "@/features/client-settings/EndUsersScreen";
+import { MembersScreen } from "@/features/members";
 
 export default function MiembrosPage() {
-  return <EndUsersScreen />;
+  return <MembersScreen />;
 }

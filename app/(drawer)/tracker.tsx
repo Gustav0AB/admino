@@ -1,2 +1,2 @@
-import { TrackerScreen } from "@/features/tracker";
-export default TrackerScreen;
+import { AthletesTab } from "@/features/athlete-dashboard/athletes";
+export default AthletesTab;

@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Platform, Alert } from "react-native";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -11,6 +11,7 @@ import { Toolbar } from "./Toolbar";
 import { WeeklyGrid } from "./WeeklyGrid";
 import { AddEventModal } from "./AddEventModal";
 import { CellEditModal } from "./CellEditModal";
+import { RepeatPatternModal } from "./RepeatPatternModal";
 import { useColors } from "@/shared/hooks/useColors";
 import { SPACING, TYPOGRAPHY, BORDER_RADIUS } from "@/shared/theme/tokens";
 import { httpClient } from "@/shared/api/client";
@@ -21,6 +22,7 @@ import type { EditMode } from "./Toolbar";
 const PAGE_SIZE = 4;
 
 const MONTH_NAMES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+const JS_DAY_NAMES_ES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
 function formatCellLabel(dateIso: string): string {
   const d = isoToLocalDate(dateIso);
@@ -95,6 +97,7 @@ export function PlanCalendar() {
   const [draftPlan, setDraftPlan] = useState<CalendarPlan | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [addEventOpen, setAddEventOpen] = useState(false);
+  const [repeatPatternOpen, setRepeatPatternOpen] = useState(false);
   const [cellModalDateIso, setCellModalDateIso] = useState<string | null>(null);
   const [page, setPage] = useState(0);
 
@@ -155,9 +158,63 @@ export function PlanCalendar() {
     }
   }
 
-  function handleCellChange(dateIso: string, text: string) { applyCellText(dateIso, text); }
+  function applyCellsBatch(datesToText: Record<string, string>) {
+    if (editMode === "view") {
+      if (!selectedPlan) return;
+      setDraftPlan({ ...selectedPlan, cells: { ...selectedPlan.cells, ...datesToText } });
+      setEditMode("edit");
+    } else {
+      setDraftPlan((prev) => (prev ? { ...prev, cells: { ...prev.cells, ...datesToText } } : prev));
+    }
+  }
+
   function handleCellOpenModal(dateIso: string) { setCellModalDateIso(dateIso); }
-  function handleCellModalSave(text: string) { if (cellModalDateIso) applyCellText(cellModalDateIso, text); }
+
+  function handleCellModalSave(text: string) {
+    if (!cellModalDateIso) return;
+    const dateIso = cellModalDateIso;
+    applyCellText(dateIso, text);
+
+    if (activePlan?.startDate && activePlan?.endDate) {
+      const weekday = isoToLocalDate(dateIso).getDay();
+      const sameWeekdayDates = allWeeks
+        .flatMap((w) => w.days)
+        .filter((d) => d !== dateIso && d >= activePlan.startDate! && d <= activePlan.endDate! && isoToLocalDate(d).getDay() === weekday);
+
+      if (sameWeekdayDates.length > 0) {
+        const dayName = JS_DAY_NAMES_ES[weekday];
+        Alert.alert(
+          "Aplicar a todo el plan",
+          `¿Quieres agregar este entrenamiento para todos los ${dayName} del plan?`,
+          [
+            { text: "Solo este día", style: "cancel" },
+            {
+              text: "Aplicar a todos",
+              onPress: () => {
+                const batch: Record<string, string> = {};
+                sameWeekdayDates.forEach((d) => { batch[d] = text; });
+                applyCellsBatch(batch);
+              },
+            },
+          ]
+        );
+      }
+    }
+  }
+
+  function handleApplyPattern(templates: string[], startDateIso: string) {
+    if (!activePlan?.endDate) return;
+    const cursor = isoToLocalDate(startDateIso);
+    const end = isoToLocalDate(activePlan.endDate);
+    const batch: Record<string, string> = {};
+    let i = 0;
+    while (cursor <= end) {
+      batch[toIso(cursor)] = templates[i % templates.length] ?? "";
+      cursor.setDate(cursor.getDate() + 1);
+      i++;
+    }
+    applyCellsBatch(batch);
+  }
 
   function handleSave() {
     if (!draftPlan) return;
@@ -202,16 +259,18 @@ export function PlanCalendar() {
         draftName={draftName} draftStartDate={draftStartDate} draftEndDate={draftEndDate}
         totalWeeks={totalWeeks} weeksToNext={editMode !== "view" ? null : weeksToNext}
         saveError={saveError} isSaving={savePlanMutation.isPending}
+        showRepeatPattern={editable && !!activePlan?.startDate && !!activePlan?.endDate}
         onSelectPlan={handleSelectPlan} onNewPlan={handleNewPlan}
         onDraftNameChange={handleDraftNameChange} onDraftStartChange={handleDraftStartChange}
         onDraftEndChange={handleDraftEndChange} onSave={handleSave}
-        onAddEvent={() => setAddEventOpen(true)} onDownloadPdf={handleDownloadPdf}
+        onAddEvent={() => setAddEventOpen(true)} onOpenRepeatPattern={() => setRepeatPatternOpen(true)}
+        onDownloadPdf={handleDownloadPdf}
       />
 
       <WeeklyGrid
         weeks={visibleWeeks} cells={cells} events={events} editable={editable}
         planStartDate={activePlan?.startDate} planEndDate={activePlan?.endDate}
-        onCellChange={handleCellChange} onCellOpenModal={handleCellOpenModal}
+        onCellOpenModal={handleCellOpenModal}
       />
 
       {totalPages > 1 && (
@@ -244,6 +303,13 @@ export function PlanCalendar() {
       )}
 
       <AddEventModal open={addEventOpen} onClose={() => setAddEventOpen(false)} onSave={handleAddEvent} />
+
+      <RepeatPatternModal
+        open={repeatPatternOpen}
+        defaultStartDate={activePlan?.startDate || toIso(new Date())}
+        onClose={() => setRepeatPatternOpen(false)}
+        onSave={handleApplyPattern}
+      />
 
       <CellEditModal
         open={cellModalDateIso !== null}

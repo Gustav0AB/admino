@@ -21,6 +21,7 @@ type ToolbarProps = {
   weeksToNext: number | null;
   saveError: string | null;
   isSaving: boolean;
+  showRepeatPattern: boolean;
   onSelectPlan: (id: string | null) => void;
   onNewPlan: () => void;
   onDraftNameChange: (v: string) => void;
@@ -28,14 +29,15 @@ type ToolbarProps = {
   onDraftEndChange: (v: string) => void;
   onSave: () => void;
   onAddEvent: () => void;
+  onOpenRepeatPattern: () => void;
   onDownloadPdf: () => void;
 };
 
 export function Toolbar({
   plans, selectedPlanId, editMode, draftName, draftStartDate, draftEndDate,
-  totalWeeks, weeksToNext, saveError, isSaving,
+  totalWeeks, weeksToNext, saveError, isSaving, showRepeatPattern,
   onSelectPlan, onNewPlan, onDraftNameChange, onDraftStartChange, onDraftEndChange,
-  onSave, onAddEvent, onDownloadPdf,
+  onSave, onAddEvent, onOpenRepeatPattern, onDownloadPdf,
 }: ToolbarProps) {
   const c = useColors();
   const { width } = useWindowDimensions();
@@ -69,6 +71,9 @@ export function Toolbar({
             <CustomButton variant="primary" size="sm" onPress={onSave} loading={isSaving}>Guardar plan</CustomButton>
           )}
           <CustomButton variant="outline" size="sm" onPress={onAddEvent}>+ Evento</CustomButton>
+          {showRepeatPattern && (
+            <CustomButton variant="outline" size="sm" onPress={onOpenRepeatPattern}>+ Patrón repetitivo</CustomButton>
+          )}
           {showPdf && (
             <TouchableOpacity
               onPress={onDownloadPdf}

@@ -342,7 +342,7 @@ export function AthletesTab() {
             onPress={() => setActiveTab(tab)}
           >
             <Text style={[styles.tabLabel, { color: activeTab === tab ? c.primary : c.textMuted, fontWeight: activeTab === tab ? "600" : "400" }]}>
-              {tab === "general" ? "General" : "Tracker"}
+              {tab === "general" ? "General" : "Actividad"}
             </Text>
           </TouchableOpacity>
         ))}

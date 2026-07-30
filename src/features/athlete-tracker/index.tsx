@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, AppState, AppStateStatus, TextInput,
+  ActivityIndicator, AppState, AppStateStatus, TextInput, Alert,
 } from "react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { MainLayout } from "@/shared/components/MainLayout";
@@ -14,6 +14,9 @@ import type { TrainingPlan, TrainingEvent } from "@/shared/types/member";
 import {
   parseCellText, todayIso, formatSpanishDate, daysUntil, randomPhrase,
 } from "./parseWorkout";
+import { RpeSelector } from "./RpeSelector";
+
+type WorkoutFeedback = { rpe: number | null; notes: string | null };
 
 // ── Trote Timer ────────────────────────────────────────────────────────────────
 
@@ -217,6 +220,11 @@ export function AthleteTrackerScreen() {
         body: { date: today, itemIndex: index, completed },
       });
     },
+    onError: (_err, { index, completed }) => {
+      setChecked((prev) => ({ ...prev, [index]: !completed }));
+      Alert.alert("Error", "No se pudo guardar el ejercicio. Intenta de nuevo.");
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workout-checks", today] }),
   });
 
   const { data: savedChecks = [] } = useQuery<{ itemIndex: number; completed: boolean }[]>({
@@ -240,6 +248,35 @@ export function AthleteTrackerScreen() {
     setChecked((prev) => ({ ...prev, [index]: newVal }));
     toggleCheck.mutate({ index, completed: newVal });
   }
+
+  // ── ¿Cómo te sentiste? (RPE + notas) ──────────────────────────────────────
+  const [rpe, setRpe] = useState<number | null>(null);
+  const [feedbackNotes, setFeedbackNotes] = useState("");
+
+  useQuery<WorkoutFeedback | null>({
+    queryKey: ["workout-feedback", today],
+    queryFn: async () => {
+      if (ENV.USE_MOCK) return null;
+      const res = await httpClient<{ data: WorkoutFeedback | null }>(`/workout-feedback?date=${today}`);
+      return res.data;
+    },
+    onSuccess: (data: WorkoutFeedback | null) => {
+      setRpe(data?.rpe ?? null);
+      setFeedbackNotes(data?.notes ?? "");
+    },
+  } as any);
+
+  const saveFeedback = useMutation({
+    mutationFn: async () => {
+      if (ENV.USE_MOCK) return;
+      await httpClient("/workout-feedback", {
+        method: "POST",
+        body: { date: today, rpe, notes: feedbackNotes.trim() || null },
+      });
+    },
+    onError: () => Alert.alert("Error", "No se pudo guardar. Intenta de nuevo."),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workout-feedback", today] }),
+  });
 
   const cellText = plan?.cells?.[today] ?? "";
   const workout = cellText ? parseCellText(cellText) : null;
@@ -411,6 +448,30 @@ export function AthleteTrackerScreen() {
               <Text style={{ color: workout.nota ? c.text : c.textMuted, fontStyle: workout.nota ? "normal" : "italic", lineHeight: 22 }}>
                 {workout.nota ?? "No hay instrucciones extras"}
               </Text>
+            </View>
+
+            {/* ¿Cómo te sentiste? */}
+            <View style={[styles.section, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
+              <Text style={[styles.sectionTitle, { color: c.text }]}>¿Cómo te sentiste?</Text>
+              <RpeSelector value={rpe} onChange={setRpe} />
+              <TextInput
+                value={feedbackNotes}
+                onChangeText={setFeedbackNotes}
+                placeholder="¿Cómo se sintió el entrenamiento? ¿Algo que destacar?"
+                placeholderTextColor={c.textPlaceholder}
+                multiline
+                numberOfLines={3}
+                style={[styles.fieldInput, { color: c.text, borderColor: c.border, backgroundColor: c.background, minHeight: 80, textAlignVertical: "top" }]}
+              />
+              <TouchableOpacity
+                style={[styles.timerBtn, { backgroundColor: rpe !== null ? c.primary : c.border, borderColor: rpe !== null ? c.primary : c.border, alignSelf: "flex-start" }]}
+                onPress={() => saveFeedback.mutate()}
+                disabled={rpe === null || saveFeedback.isPending}
+              >
+                <Text style={{ color: rpe !== null ? "#fff" : c.textMuted, fontWeight: "600", fontSize: TYPOGRAPHY.fontSize.sm }}>
+                  {saveFeedback.isPending ? "Guardando..." : "Guardar"}
+                </Text>
+              </TouchableOpacity>
             </View>
           </>
         )}
