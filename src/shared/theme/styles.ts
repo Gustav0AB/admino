@@ -1,8 +1,7 @@
-import { StyleSheet, Platform } from "react-native";
 import { SPACING, BORDER_RADIUS, TYPOGRAPHY, SHADOWS } from "./tokens";
 
 // Common cross-platform styles
-export const commonStyles = StyleSheet.create({
+export const commonStyles = {
   // Layout
   flex1: { flex: 1 },
   flexRow: { flexDirection: "row" },
@@ -83,39 +82,27 @@ export const commonStyles = StyleSheet.create({
     opacity: 0.7,
   },
 
-  // Platform specific adjustments
-  ...Platform.select({
-    ios: {
-      // iOS specific styles
-    },
-    android: {
-      // Android specific styles
-    },
-    default: {
-      // Web specific styles
-    },
-  }),
-});
+};
 
 // Utility functions for dynamic styles
 export const createVariantStyles = <T extends Record<string, any>>(
-  baseStyles: StyleSheet.NamedStyles<any>,
+  baseStyles: Record<string, any>,
   variants: T,
 ) => {
-  return StyleSheet.create({
+  return {
     ...baseStyles,
     ...variants,
-  });
+  };
 };
 
 export const createResponsiveStyles = <T extends Record<string, any>>(
   styles: T,
 ) => {
-  return StyleSheet.create(styles);
+  return styles;
 };
 
 // Common component styles
-export const componentStyles = StyleSheet.create({
+export const componentStyles = {
   // Button base
   buttonBase: {
     height: 44,
@@ -144,7 +131,8 @@ export const componentStyles = StyleSheet.create({
 
   // Modal overlay
   modalOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: "absolute",
+    inset: 0,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
     alignItems: "center",
     justifyContent: "center",
@@ -160,4 +148,4 @@ export const componentStyles = StyleSheet.create({
     width: "90%",
     ...SHADOWS.lg,
   },
-});
+};

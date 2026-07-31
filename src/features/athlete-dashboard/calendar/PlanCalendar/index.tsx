@@ -1,7 +1,5 @@
 import { useState, useMemo } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Platform, Alert } from "react-native";
-import * as Print from "expo-print";
-import * as Sharing from "expo-sharing";
+import * as Print from "@/web/print";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   mockCalendarPlans, mockCalendarEvents, getWeeksForRange, defaultWeeks,
@@ -12,8 +10,6 @@ import { WeeklyGrid } from "./WeeklyGrid";
 import { AddEventModal } from "./AddEventModal";
 import { CellEditModal } from "./CellEditModal";
 import { RepeatPatternModal } from "./RepeatPatternModal";
-import { useColors } from "@/shared/hooks/useColors";
-import { SPACING, TYPOGRAPHY, BORDER_RADIUS } from "@/shared/theme/tokens";
 import { httpClient } from "@/shared/api/client";
 import { ENV } from "@/shared/config/env";
 import type { CalendarPlan, CalendarEvent } from "./types";
@@ -30,7 +26,6 @@ function formatCellLabel(dateIso: string): string {
 }
 
 export function PlanCalendar() {
-  const c = useColors();
   const queryClient = useQueryClient();
 
   const { data: backendPlans = [] } = useQuery<CalendarPlan[]>({
@@ -183,21 +178,11 @@ export function PlanCalendar() {
 
       if (sameWeekdayDates.length > 0) {
         const dayName = JS_DAY_NAMES_ES[weekday];
-        Alert.alert(
-          "Aplicar a todo el plan",
-          `¿Quieres agregar este entrenamiento para todos los ${dayName} del plan?`,
-          [
-            { text: "Solo este día", style: "cancel" },
-            {
-              text: "Aplicar a todos",
-              onPress: () => {
-                const batch: Record<string, string> = {};
-                sameWeekdayDates.forEach((d) => { batch[d] = text; });
-                applyCellsBatch(batch);
-              },
-            },
-          ]
-        );
+        if (window.confirm(`¿Quieres agregar este entrenamiento para todos los ${dayName} del plan?`)) {
+          const batch: Record<string, string> = {};
+          sameWeekdayDates.forEach((d) => { batch[d] = text; });
+          applyCellsBatch(batch);
+        }
       }
     }
   }
@@ -242,18 +227,14 @@ export function PlanCalendar() {
     if (!activePlan) return;
     try {
       const html = buildPlanHtml(activePlan, allWeeks, events);
-      if (Platform.OS === "web") await Print.printAsync({ html });
-      else {
-        const { uri } = await Print.printToFileAsync({ html });
-        if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(uri, { mimeType: "application/pdf" });
-      }
+      await Print.printAsync({ html });
     } catch (e) { console.error("PDF export failed", e); }
   }
 
   const editable = editMode !== "view" || selectedPlanId !== null;
 
   return (
-    <View style={styles.container}>
+    <div className="plan-calendar">
       <Toolbar
         plans={plans} selectedPlanId={selectedPlanId} editMode={editMode}
         draftName={draftName} draftStartDate={draftStartDate} draftEndDate={draftEndDate}
@@ -274,32 +255,35 @@ export function PlanCalendar() {
       />
 
       {totalPages > 1 && (
-        <View style={[styles.pagination, { borderTopColor: c.border, backgroundColor: c.background }]}>
-          <TouchableOpacity
-            onPress={() => setPage((p) => Math.max(0, p - 1))}
+        <div className="calendar-pagination">
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={safePage === 0}
-            style={[styles.pageBtn, { borderColor: c.border, opacity: safePage === 0 ? 0.35 : 1 }]}
-            activeOpacity={0.7}
+            className="pager-button"
           >
-            <Text style={[styles.pageBtnText, { color: c.text }]}>‹ Anterior</Text>
-          </TouchableOpacity>
-          <View style={styles.pageInfo}>
+            ‹ Anterior
+          </button>
+          <div className="pager-dots">
             {Array.from({ length: totalPages }, (_, i) => (
-              <TouchableOpacity
-                key={i} onPress={() => setPage(i)} activeOpacity={0.7}
-                style={[styles.pageDot, { backgroundColor: i === safePage ? c.primary : c.border, width: i === safePage ? 20 : 8 }]}
+              <button
+                key={i}
+                type="button"
+                onClick={() => setPage(i)}
+                className={`pager-dot ${i === safePage ? "pager-dot-active" : ""}`}
+                aria-label={`Página ${i + 1}`}
               />
             ))}
-          </View>
-          <TouchableOpacity
-            onPress={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
             disabled={safePage === totalPages - 1}
-            style={[styles.pageBtn, { borderColor: c.border, opacity: safePage === totalPages - 1 ? 0.35 : 1 }]}
-            activeOpacity={0.7}
+            className="pager-button"
           >
-            <Text style={[styles.pageBtnText, { color: c.text }]}>Siguiente ›</Text>
-          </TouchableOpacity>
-        </View>
+            Siguiente ›
+          </button>
+        </div>
       )}
 
       <AddEventModal open={addEventOpen} onClose={() => setAddEventOpen(false)} onSave={handleAddEvent} />
@@ -318,15 +302,6 @@ export function PlanCalendar() {
         onClose={() => setCellModalDateIso(null)}
         onSave={handleCellModalSave}
       />
-    </View>
+    </div>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, width: "100%" },
-  pagination: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, borderTopWidth: StyleSheet.hairlineWidth },
-  pageBtn: { borderWidth: 1, borderRadius: BORDER_RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs },
-  pageBtnText: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "500" },
-  pageInfo: { flexDirection: "row", alignItems: "center", gap: SPACING.xs },
-  pageDot: { height: 8, borderRadius: 4 },
-});

@@ -1,29 +1,17 @@
-import { useState, useRef } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Image,
-  Platform,
-} from "react-native";
-import { FeatureShell } from "@/shared/components/shell/FeatureShell";
-import { CustomButton } from "@/shared/components/inputs/CustomButton";
-import { ColorPicker } from "@/shared/components/inputs/ColorPicker";
-import { useColors } from "@/shared/hooks/useColors";
+import { useRef, useState } from "react";
+import { Button, Card, TextField } from "@generic/components";
 import { useClientStore } from "@/shared/store/clientStore";
-import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
 import { ChangePasswordSection } from "@/shared/components/inputs/ChangePasswordSection";
 
-const TABS = [
+const tabs = [
   { key: "branding", label: "Apariencia" },
   { key: "security", label: "Seguridad" },
-];
+] as const;
+
+type Tab = (typeof tabs)[number]["key"];
 
 export function ClientSettingsScreen() {
-  const c = useColors();
-  const [activeTab, setActiveTab] = useState("branding");
-
+  const [activeTab, setActiveTab] = useState<Tab>("branding");
   const { branding, setBranding } = useClientStore();
   const [primaryColor, setPrimaryColor] = useState(branding.primaryColor);
   const [secondaryColor, setSecondaryColor] = useState(branding.secondaryColor);
@@ -41,18 +29,12 @@ export function ClientSettingsScreen() {
 
   function handleLogoFile(file: File) {
     const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target?.result as string;
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
       setLogoPreview(dataUrl);
       setBranding({ logoUrl: dataUrl });
     };
     reader.readAsDataURL(file);
-  }
-
-  function openFilePicker() {
-    if (Platform.OS === "web" && fileInputRef.current) {
-      fileInputRef.current.click();
-    }
   }
 
   function saveBranding() {
@@ -61,90 +43,96 @@ export function ClientSettingsScreen() {
   }
 
   return (
-    <FeatureShell
-      title="Configuración"
-      tabs={TABS}
-      activeTab={activeTab}
-      onTabChange={setActiveTab}
-    >
+    <div className="flex min-h-0 flex-1 flex-col gap-4 bg-gray-50 p-6">
+      <h1 className="text-2xl font-bold text-gray-900">Configuración</h1>
+
+      <div className="flex gap-2 border-b border-gray-200">
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            className={`border-b-2 px-3 py-2 text-sm font-medium ${activeTab === tab.key ? "border-primary text-primary" : "border-transparent text-gray-500"}`}
+            onClick={() => setActiveTab(tab.key)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       {activeTab === "branding" ? (
-        <View style={styles.tabContent}>
-          {Platform.OS === "web" && (
+        <Card className="max-w-2xl">
+          <div className="flex flex-col gap-5">
+            <div>
+              <h2 className="text-base font-semibold text-gray-900">Identidad visual</h2>
+              <p className="mt-1 text-sm text-gray-500">
+                Personaliza el logo y los colores. Los cambios se aplican en tiempo real.
+              </p>
+            </div>
+
             <input
               ref={fileInputRef}
               type="file"
               accept="image/jpeg,image/png"
-              style={{ display: "none" }}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                const file = e.target.files?.[0];
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
                 if (file) handleLogoFile(file);
               }}
             />
-          )}
 
-          <View style={[styles.card, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
-            <Text style={[styles.sectionTitle, { color: c.text }]}>Identidad visual</Text>
-            <Text style={[styles.sectionHint, { color: c.textMuted }]}>
-              Personaliza el logo y los colores. Los cambios se aplican en tiempo real.
-            </Text>
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-white">
+                {logoPreview ? (
+                  <img src={logoPreview} alt="Logo" className="h-full w-full object-contain" />
+                ) : (
+                  <span className="text-3xl font-extrabold text-primary">
+                    {branding.orgName.charAt(0).toUpperCase()}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()}>
+                  Subir imagen (JPG/PNG)
+                </Button>
+                {logoPreview && (
+                  <Button type="button" variant="ghost" onClick={() => { setLogoPreview(null); setBranding({ logoUrl: null }); }}>
+                    Eliminar logo
+                  </Button>
+                )}
+              </div>
+            </div>
 
-            <View style={styles.fields}>
-              <View style={styles.logoSection}>
-                <Text style={[styles.fieldLabel, { color: c.textMuted }]}>Logo</Text>
-                <View style={styles.logoRow}>
-                  <View style={[styles.logoBox, { borderColor: c.border, backgroundColor: c.background }]}>
-                    {logoPreview ? (
-                      <Image source={{ uri: logoPreview }} style={styles.logoImage} resizeMode="contain" />
-                    ) : (
-                      <Text style={[styles.logoInitial, { color: c.primary }]}>
-                        {branding.orgName.charAt(0).toUpperCase()}
-                      </Text>
-                    )}
-                  </View>
-                  <View style={styles.logoActions}>
-                    <CustomButton onPress={openFilePicker} variant="secondary">
-                      Subir imagen (JPG/PNG)
-                    </CustomButton>
-                    {logoPreview && (
-                      <TouchableOpacity onPress={() => { setLogoPreview(null); setBranding({ logoUrl: null }); }}>
-                        <Text style={[styles.removeText, { color: c.danger }]}>Eliminar logo</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </View>
-              </View>
+            <ColorField label="Color primario" value={primaryColor} onChange={(value) => handleColorChange("primaryColor", value)} />
+            <ColorField label="Color secundario" value={secondaryColor} onChange={(value) => handleColorChange("secondaryColor", value)} />
+            <ColorField label="Color de fondo" value={backgroundColor} onChange={(value) => handleColorChange("backgroundColor", value)} />
 
-              <ColorPicker label="Color primario" value={primaryColor} onChange={(v) => handleColorChange("primaryColor", v)} />
-              <ColorPicker label="Color secundario" value={secondaryColor} onChange={(v) => handleColorChange("secondaryColor", v)} />
-              <ColorPicker label="Color de fondo" value={backgroundColor} onChange={(v) => handleColorChange("backgroundColor", v)} />
-
-              <CustomButton onPress={saveBranding}>
-                {brandingSaved ? "¡Cambios guardados!" : "Confirmar cambios"}
-              </CustomButton>
-            </View>
-          </View>
-        </View>
+            <Button type="button" onClick={saveBranding}>
+              {brandingSaved ? "¡Cambios guardados!" : "Confirmar cambios"}
+            </Button>
+          </div>
+        </Card>
       ) : (
-        <View style={styles.tabContent}>
-          <ChangePasswordSection />
-        </View>
+        <ChangePasswordSection />
       )}
-    </FeatureShell>
+    </div>
   );
 }
 
-const styles = StyleSheet.create({
-  tabContent: { padding: SPACING.md },
-  card: { borderRadius: BORDER_RADIUS.lg, borderWidth: 1, padding: SPACING.md, gap: SPACING.sm },
-  sectionTitle: { fontSize: TYPOGRAPHY.fontSize.md, fontWeight: TYPOGRAPHY.fontWeight.semibold },
-  sectionHint: { fontSize: TYPOGRAPHY.fontSize.sm },
-  fields: { gap: SPACING.md, marginTop: SPACING.sm },
-  fieldLabel: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "500", marginBottom: SPACING.xs },
-  logoSection: { gap: SPACING.xs },
-  logoRow: { flexDirection: "row", alignItems: "center", gap: SPACING.md, flexWrap: "wrap" },
-  logoBox: { width: 72, height: 72, borderRadius: BORDER_RADIUS.md, borderWidth: 1, alignItems: "center", justifyContent: "center", overflow: "hidden" },
-  logoImage: { width: 72, height: 72 },
-  logoInitial: { fontSize: 28, fontWeight: "800" },
-  logoActions: { gap: SPACING.sm, flex: 1 },
-  removeText: { fontSize: TYPOGRAPHY.fontSize.sm },
-});
+function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return (
+    <div className="flex items-end gap-3">
+      <input
+        aria-label={label}
+        type="color"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-10 w-12 cursor-pointer rounded border border-gray-200 bg-white p-1"
+      />
+      <TextField
+        label={label}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="font-mono"
+      />
+    </div>
+  );
+}

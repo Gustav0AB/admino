@@ -1,4 +1,4 @@
-import { randomUUID } from "expo-crypto";
+import { randomUUID } from "@/web/crypto";
 import type { Expense, Estado, Frecuencia, MetodoPago } from "./types";
 import { MESES_LIST } from "./helpers";
 

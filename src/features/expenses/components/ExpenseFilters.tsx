@@ -1,13 +1,35 @@
 import { useMemo } from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { CustomSelect } from "@/shared/components/inputs/CustomSelect";
-import { useColors } from "@/shared/hooks/useColors";
-import { SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
 import { useExpensesStore } from "../store";
-import { CATEGORIES, getAvailableMeses, getAvailableAños, getFilteredExpenses } from "../helpers";
+import { CATEGORIES, getAvailableAños, getAvailableMeses, getFilteredExpenses } from "../helpers";
+
+type Option = {
+  label: string;
+  value: string | number;
+};
+
+function FilterSelect({ value, options, onChange, label }: {
+  value: string | number;
+  options: Option[];
+  label: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="sr-only">{label}</span>
+      <select
+        className="h-9 min-w-28 rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-900"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      >
+        {options.map((option) => (
+          <option key={String(option.value)} value={option.value}>{option.label}</option>
+        ))}
+      </select>
+    </label>
+  );
+}
 
 export function ExpenseFilters() {
-  const c = useColors();
   const {
     expenses,
     filterMes,
@@ -29,34 +51,6 @@ export function ExpenseFilters() {
     [expenses, filterMes, filterFrecuencia, filterFecha, filterAño, filterCategoria]
   );
 
-  const añoOptions = [
-    { label: "Todos los años", value: 0 },
-    ...availableAños.map((y) => ({ label: String(y), value: y })),
-  ];
-
-  const mesOptions = [
-    { label: "Todos", value: "Todos" },
-    ...availableMeses.map((m) => ({ label: m, value: m })),
-  ];
-
-  const frecOptions = [
-    { label: "Todos", value: "Todos" },
-    { label: "Mensual", value: "mes" },
-    { label: "Quincenal", value: "quincenal" },
-    { label: "Único", value: "unico" },
-  ];
-
-  const fechaOptions = [
-    { label: "Todas", value: 0 },
-    { label: "1-15", value: 15 },
-    { label: "16-31", value: 30 },
-  ];
-
-  const categoriaOptions = [
-    { label: "Categoría", value: "Todos" },
-    ...CATEGORIES.map((cat) => ({ label: cat.label, value: cat.value })),
-  ];
-
   const hasActiveFilter =
     (filterMes && filterMes !== "Todos") ||
     (filterFrecuencia && filterFrecuencia !== "Todos") ||
@@ -65,48 +59,36 @@ export function ExpenseFilters() {
     (filterCategoria && filterCategoria !== "Todos");
 
   return (
-    <View style={styles.row}>
-      <CustomSelect
-        placeholder="Año"
-        options={añoOptions}
-        value={filterAño}
-        onChange={(v) => setFilterAño(Number(v))}
-        style={styles.select}
-      />
-      <CustomSelect
-        placeholder="Mes"
-        options={mesOptions}
-        value={filterMes}
-        onChange={(v) => setFilterMes(String(v))}
-        style={styles.select}
-      />
-      <CustomSelect
-        placeholder="Frecuencia"
-        options={frecOptions}
-        value={filterFrecuencia}
-        onChange={(v) => setFilterFrecuencia(String(v))}
-        style={styles.select}
-      />
-      <CustomSelect
-        placeholder="Fecha"
-        options={fechaOptions}
-        value={filterFecha}
-        onChange={(v) => setFilterFecha(Number(v))}
-        style={styles.select}
-      />
-      <CustomSelect
-        placeholder="Categoría"
-        options={categoriaOptions}
-        value={filterCategoria}
-        onChange={(v) => setFilterCategoria(String(v))}
-        style={styles.select}
-      />
-      <Text style={[styles.count, { color: c.textMuted }]}>
-        {filtered.length} / {expenses.length} registros
-      </Text>
+    <div className="flex flex-wrap items-center gap-2">
+      <FilterSelect label="Año" value={filterAño} onChange={(value) => setFilterAño(Number(value))} options={[
+        { label: "Todos los años", value: 0 },
+        ...availableAños.map((year) => ({ label: String(year), value: year })),
+      ]} />
+      <FilterSelect label="Mes" value={filterMes} onChange={setFilterMes} options={[
+        { label: "Todos", value: "Todos" },
+        ...availableMeses.map((month) => ({ label: month, value: month })),
+      ]} />
+      <FilterSelect label="Frecuencia" value={filterFrecuencia} onChange={setFilterFrecuencia} options={[
+        { label: "Todos", value: "Todos" },
+        { label: "Mensual", value: "mes" },
+        { label: "Quincenal", value: "quincenal" },
+        { label: "Único", value: "unico" },
+      ]} />
+      <FilterSelect label="Fecha" value={filterFecha} onChange={(value) => setFilterFecha(Number(value))} options={[
+        { label: "Todas", value: 0 },
+        { label: "1-15", value: 15 },
+        { label: "16-31", value: 30 },
+      ]} />
+      <FilterSelect label="Categoría" value={filterCategoria} onChange={setFilterCategoria} options={[
+        { label: "Categoría", value: "Todos" },
+        ...CATEGORIES.map((category) => ({ label: category.label, value: category.value })),
+      ]} />
+      <span className="text-sm text-gray-500">{filtered.length} / {expenses.length} registros</span>
       {hasActiveFilter && (
-        <TouchableOpacity
-          onPress={() => {
+        <button
+          type="button"
+          className="text-sm font-semibold text-red-600"
+          onClick={() => {
             setFilterMes("Todos");
             setFilterFrecuencia("Todos");
             setFilterFecha(0);
@@ -114,22 +96,9 @@ export function ExpenseFilters() {
             setFilterCategoria("Todos");
           }}
         >
-          <Text style={[styles.clear, { color: c.danger }]}>✕ Limpiar</Text>
-        </TouchableOpacity>
+          ✕ Limpiar
+        </button>
       )}
-    </View>
+    </div>
   );
 }
-
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    gap: SPACING.sm,
-    flex: 1,
-  },
-  select: { minWidth: 110 },
-  count: { fontSize: TYPOGRAPHY.fontSize.sm, marginLeft: SPACING.xs },
-  clear: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "600" },
-});

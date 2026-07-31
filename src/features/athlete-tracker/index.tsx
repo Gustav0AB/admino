@@ -1,35 +1,17 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, AppState, AppStateStatus, TextInput, Alert,
-} from "react-native";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { MainLayout } from "@/shared/components/MainLayout";
-import { useColors } from "@/shared/hooks/useColors";
-import { useAuthStore } from "@/shared/store/authStore";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Button, Card, TextField } from "@generic/components";
 import { httpClient } from "@/shared/api/client";
 import { ENV } from "@/shared/config/env";
-import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
-import type { TrainingPlan, TrainingEvent } from "@/shared/types/member";
-import {
-  parseCellText, todayIso, formatSpanishDate, daysUntil, randomPhrase,
-} from "./parseWorkout";
+import { useAuthStore } from "@/shared/store/authStore";
+import type { TrainingEvent, TrainingPlan } from "@/shared/types/member";
+import { daysUntil, formatSpanishDate, parseCellText, randomPhrase, todayIso } from "./parseWorkout";
 import { RpeSelector } from "./RpeSelector";
 
 type WorkoutFeedback = { rpe: number | null; notes: string | null };
-
-// ── Trote Timer ────────────────────────────────────────────────────────────────
-
 type TimerPhase = "work" | "rest";
 
-type TroteTimerProps = {
-  totalMin: number;
-  workMin: number | undefined;
-  restMin: number | undefined;
-};
-
-function TroteTimer({ totalMin, workMin, restMin }: TroteTimerProps) {
-  const c = useColors();
+function TroteTimer({ totalMin, workMin, restMin }: { totalMin: number; workMin?: number; restMin?: number }) {
   const [elapsed, setElapsed] = useState(0);
   const [running, setRunning] = useState(false);
   const [phase, setPhase] = useState<TimerPhase>("work");
@@ -45,26 +27,15 @@ function TroteTimer({ totalMin, workMin, restMin }: TroteTimerProps) {
 
   const tick = useCallback(() => {
     if (startTimeRef.current === null) return;
-    const now = Date.now();
-    const newElapsed = baseElapsedRef.current + Math.floor((now - startTimeRef.current) / 1000);
+    const newElapsed = baseElapsedRef.current + Math.floor((Date.now() - startTimeRef.current) / 1000);
     setElapsed(Math.min(newElapsed, totalSec));
-
     if (hasIntervals && cycleSec > 0) {
       const cyclePos = newElapsed % cycleSec;
-      if (cyclePos < workSec) {
-        setPhase("work");
-        setPhaseElapsed(cyclePos);
-      } else {
-        setPhase("rest");
-        setPhaseElapsed(cyclePos - workSec);
-      }
+      setPhase(cyclePos < workSec ? "work" : "rest");
+      setPhaseElapsed(cyclePos < workSec ? cyclePos : cyclePos - workSec);
     }
-
-    if (newElapsed >= totalSec) {
-      setRunning(false);
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    }
-  }, [totalSec, hasIntervals, cycleSec, workSec, restSec]);
+    if (newElapsed >= totalSec) setRunning(false);
+  }, [cycleSec, hasIntervals, totalSec, workSec]);
 
   useEffect(() => {
     if (running) {
@@ -80,14 +51,6 @@ function TroteTimer({ totalMin, workMin, restMin }: TroteTimerProps) {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [running, tick]);
 
-  // Recover state after returning from background
-  useEffect(() => {
-    const sub = AppState.addEventListener("change", (state: AppStateStatus) => {
-      if (state === "active" && running) tick();
-    });
-    return () => sub.remove();
-  }, [running, tick]);
-
   function reset() {
     setRunning(false);
     setElapsed(0);
@@ -97,95 +60,52 @@ function TroteTimer({ totalMin, workMin, restMin }: TroteTimerProps) {
     startTimeRef.current = null;
   }
 
-  const elapsedMin = Math.floor(elapsed / 60);
   const done = elapsed >= totalSec;
   const phaseSec = phase === "work" ? workSec : restSec;
   const phaseRemaining = Math.max(phaseSec - phaseElapsed, 0);
-
-  const phaseColor = phase === "work" ? "#22c55e" : "#3b82f6";
   const progressPct = totalSec > 0 ? (elapsed / totalSec) * 100 : 0;
+  const phaseColor = phase === "work" ? "#22c55e" : "#3b82f6";
 
   return (
-    <View style={[styles.troteCard, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
-      <View style={styles.troteHeader}>
-        <Text style={[styles.troteTitle, { color: c.text }]}>🏃 Trote</Text>
-        <Text style={[styles.troteProgress, { color: done ? "#22c55e" : c.primary }]}>
-          {elapsedMin}min / {totalMin}min
-        </Text>
-      </View>
-
-      {/* Progress bar */}
-      <View style={[styles.progressBar, { backgroundColor: c.border }]}>
-        <View style={[styles.progressFill, { width: `${progressPct}%` as any, backgroundColor: done ? "#22c55e" : c.primary }]} />
-      </View>
-
+    <Card className="flex flex-col gap-3">
+      <div className="flex justify-between gap-3">
+        <p className="font-bold text-gray-900">🏃 Trote</p>
+        <p className={`font-bold ${done ? "text-green-600" : "text-primary"}`}>{Math.floor(elapsed / 60)}min / {totalMin}min</p>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-gray-200"><div className="h-full rounded-full" style={{ width: `${progressPct}%`, backgroundColor: done ? "#22c55e" : "#2563eb" }} /></div>
       {hasIntervals && !done && (
-        <View style={[styles.phaseChip, { backgroundColor: phaseColor + "20" }]}>
-          <Text style={[styles.phaseText, { color: phaseColor }]}>
-            {phase === "work" ? `💪 Trabajo` : `😮‍💨 Descanso`}
-            {" — "}{Math.floor(phaseRemaining / 60)}:{String(phaseRemaining % 60).padStart(2, "0")} restantes
-          </Text>
-        </View>
+        <div className="rounded-md px-3 py-2 text-sm font-semibold" style={{ backgroundColor: `${phaseColor}22`, color: phaseColor }}>
+          {phase === "work" ? "💪 Trabajo" : "😮‍💨 Descanso"} — {Math.floor(phaseRemaining / 60)}:{String(phaseRemaining % 60).padStart(2, "0")} restantes
+        </div>
       )}
-
-      {done ? (
-        <View style={styles.troteActions}>
-          <Text style={{ color: "#22c55e", fontWeight: "600" }}>✓ Completado</Text>
-          <TouchableOpacity onPress={reset} style={[styles.timerBtn, { borderColor: c.border }]}>
-            <Text style={{ color: c.textMuted, fontSize: TYPOGRAPHY.fontSize.sm }}>Reiniciar</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <View style={styles.troteActions}>
-          <TouchableOpacity
-            style={[styles.timerBtn, { backgroundColor: running ? "#ef444420" : c.primary, borderColor: running ? "#ef4444" : c.primary }]}
-            onPress={() => setRunning((v) => !v)}
-          >
-            <Text style={{ color: running ? "#ef4444" : "#fff", fontWeight: "600", fontSize: TYPOGRAPHY.fontSize.sm }}>
-              {running ? "⏸ Pausar" : elapsed > 0 ? "▶ Continuar" : "▶ Iniciar"}
-            </Text>
-          </TouchableOpacity>
-          {elapsed > 0 && (
-            <TouchableOpacity onPress={reset} style={[styles.timerBtn, { borderColor: c.border }]}>
-              <Text style={{ color: c.textMuted, fontSize: TYPOGRAPHY.fontSize.sm }}>↺ Reset</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
-    </View>
+      <div className="flex flex-wrap items-center gap-2">
+        {done ? <span className="font-semibold text-green-600">✓ Completado</span> : <Button size="sm" variant={running ? "danger" : "primary"} onClick={() => setRunning((value) => !value)}>{running ? "⏸ Pausar" : elapsed > 0 ? "▶ Continuar" : "▶ Iniciar"}</Button>}
+        {(elapsed > 0 || done) && <Button size="sm" variant="ghost" onClick={reset}>↺ Reset</Button>}
+      </div>
+    </Card>
   );
 }
-
-// ── Checklist item ─────────────────────────────────────────────────────────────
 
 function CheckItem({ label, checked, onToggle }: { label: string; checked: boolean; onToggle: () => void }) {
-  const c = useColors();
   return (
-    <TouchableOpacity style={styles.checkRow} onPress={onToggle} activeOpacity={0.7}>
-      <View style={[styles.checkbox, { borderColor: checked ? c.primary : c.border, backgroundColor: checked ? c.primary : "transparent" }]}>
-        {checked && <Text style={{ color: "#fff", fontSize: 11, fontWeight: "800" }}>✓</Text>}
-      </View>
-      <Text style={[styles.checkLabel, { color: checked ? c.textMuted : c.text, textDecorationLine: checked ? "line-through" : "none" }]}>
-        {label}
-      </Text>
-    </TouchableOpacity>
+    <button type="button" className="grid grid-cols-[auto_1fr] gap-3 text-left" onClick={onToggle}>
+      <span className={`mt-0.5 flex h-6 w-6 items-center justify-center rounded-md border-2 ${checked ? "border-primary bg-primary text-white" : "border-gray-300"}`}>{checked ? "✓" : ""}</span>
+      <span className={`text-sm leading-6 ${checked ? "text-gray-400 line-through" : "text-gray-900"}`}>{label}</span>
+    </button>
   );
 }
 
-// ── Main screen ────────────────────────────────────────────────────────────────
-
 export function AthleteTrackerScreen() {
-  const c = useColors();
-  const user = useAuthStore((s) => s.user);
+  const user = useAuthStore((state) => state.user);
   const today = todayIso();
   const [phrase] = useState(() => randomPhrase());
   const [checked, setChecked] = useState<Record<number, boolean>>({});
-  const queryClient = useQueryClient();
-
-  // Self-update form
   const [showDataForm, setShowDataForm] = useState(false);
   const [editName, setEditName] = useState(user?.name ?? "");
   const [editPeso, setEditPeso] = useState("");
+  const [rpe, setRpe] = useState<number | null>(null);
+  const [feedbackNotes, setFeedbackNotes] = useState("");
+  const queryClient = useQueryClient();
 
   const updateSelf = useMutation({
     mutationFn: async (data: { name?: string; peso?: number | null }) => {
@@ -197,11 +117,6 @@ export function AthleteTrackerScreen() {
       setShowDataForm(false);
     },
   });
-
-  function handleSaveSelf() {
-    const pesoNum = editPeso ? parseFloat(editPeso) : null;
-    updateSelf.mutate({ name: editName.trim() || undefined, peso: pesoNum });
-  }
 
   const { data: plan, isLoading, refetch, isFetching } = useQuery<TrainingPlan | null>({
     queryKey: ["my-training-plan"],
@@ -215,43 +130,28 @@ export function AthleteTrackerScreen() {
   const toggleCheck = useMutation({
     mutationFn: async ({ index, completed }: { index: number; completed: boolean }) => {
       if (ENV.USE_MOCK) return;
-      await httpClient("/workout-checks", {
-        method: "POST",
-        body: { date: today, itemIndex: index, completed },
-      });
+      await httpClient("/workout-checks", { method: "POST", body: { date: today, itemIndex: index, completed } });
     },
-    onError: (_err, { index, completed }) => {
+    onError: (_error, { index, completed }) => {
       setChecked((prev) => ({ ...prev, [index]: !completed }));
-      Alert.alert("Error", "No se pudo guardar el ejercicio. Intenta de nuevo.");
+      window.alert("No se pudo guardar el ejercicio. Intenta de nuevo.");
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workout-checks", today] }),
   });
 
-  const { data: savedChecks = [] } = useQuery<{ itemIndex: number; completed: boolean }[]>({
+  useQuery<{ itemIndex: number; completed: boolean }[]>({
     queryKey: ["workout-checks", today],
     queryFn: async () => {
       if (ENV.USE_MOCK) return [];
-      const res = await httpClient<{ data: { itemIndex: number; completed: boolean }[] }>(
-        `/workout-checks?date=${today}`
-      );
+      const res = await httpClient<{ data: { itemIndex: number; completed: boolean }[] }>(`/workout-checks?date=${today}`);
       return res.data;
     },
     onSuccess: (data: { itemIndex: number; completed: boolean }[]) => {
       const map: Record<number, boolean> = {};
-      data.forEach((c) => { map[c.itemIndex] = c.completed; });
+      data.forEach((item) => { map[item.itemIndex] = item.completed; });
       setChecked(map);
     },
   } as any);
-
-  function handleToggle(index: number) {
-    const newVal = !checked[index];
-    setChecked((prev) => ({ ...prev, [index]: newVal }));
-    toggleCheck.mutate({ index, completed: newVal });
-  }
-
-  // ── ¿Cómo te sentiste? (RPE + notas) ──────────────────────────────────────
-  const [rpe, setRpe] = useState<number | null>(null);
-  const [feedbackNotes, setFeedbackNotes] = useState("");
 
   useQuery<WorkoutFeedback | null>({
     queryKey: ["workout-feedback", today],
@@ -269,257 +169,119 @@ export function AthleteTrackerScreen() {
   const saveFeedback = useMutation({
     mutationFn: async () => {
       if (ENV.USE_MOCK) return;
-      await httpClient("/workout-feedback", {
-        method: "POST",
-        body: { date: today, rpe, notes: feedbackNotes.trim() || null },
-      });
+      await httpClient("/workout-feedback", { method: "POST", body: { date: today, rpe, notes: feedbackNotes.trim() || null } });
     },
-    onError: () => Alert.alert("Error", "No se pudo guardar. Intenta de nuevo."),
+    onError: () => window.alert("No se pudo guardar. Intenta de nuevo."),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workout-feedback", today] }),
   });
 
   const cellText = plan?.cells?.[today] ?? "";
   const workout = cellText ? parseCellText(cellText) : null;
-
-  // Find next upcoming event
-  const events: TrainingEvent[] = plan?.events ?? [];
-  const nextEvent = events
-    .filter((e) => new Date(e.date) >= new Date())
+  const nextEvent: TrainingEvent | undefined = (plan?.events ?? [])
+    .filter((event) => new Date(event.date) >= new Date())
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
-
   const daysTillEvent = nextEvent ? daysUntil(nextEvent.date) : null;
 
-  if (isLoading) {
-    return (
-      <MainLayout scrollable={false} padding={false}>
-        <View style={styles.center}>
-          <ActivityIndicator color={c.primary} />
-        </View>
-      </MainLayout>
-    );
+  function handleSaveSelf() {
+    updateSelf.mutate({ name: editName.trim() || undefined, peso: editPeso ? Number(editPeso) : null });
   }
+
+  function handleToggle(index: number) {
+    const completed = !checked[index];
+    setChecked((prev) => ({ ...prev, [index]: completed }));
+    toggleCheck.mutate({ index, completed });
+  }
+
+  if (isLoading) return <div className="page empty-state">Cargando…</div>;
 
   if (!plan) {
     return (
-      <MainLayout scrollable padding>
-        <View style={styles.center}>
-          <Text style={{ fontSize: 40 }}>🏋️</Text>
-          <Text style={[styles.emptyTitle, { color: c.text }]}>Sin plan asignado</Text>
-          <Text style={[styles.emptySubtitle, { color: c.textMuted }]}>
-            Tu entrenador aún no te ha asignado un plan de entrenamiento.
-          </Text>
-        </View>
-      </MainLayout>
+      <div className="page empty-state">
+        <p className="text-4xl">🏋️</p>
+        <h2>Sin plan asignado</h2>
+        <p>Tu entrenador aún no te ha asignado un plan de entrenamiento.</p>
+      </div>
     );
   }
 
   return (
-    <MainLayout scrollable padding={false}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        {/* Welcome header */}
-        <View style={[styles.welcomeCard, { backgroundColor: c.primary + "15", borderColor: c.primary + "30" }]}>
-          <View style={styles.welcomeTop}>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.welcomeGreeting, { color: c.primary }]}>¡Bienvenido de vuelta! 👋</Text>
-              <Text style={[styles.welcomeDate, { color: c.text }]}>
-                {formatSpanishDate(today)} — hoy toca{" "}
-                <Text style={{ fontWeight: "700" }}>{workout?.title || "descanso"}</Text>
-              </Text>
-              {nextEvent && daysTillEvent !== null && daysTillEvent >= 0 && (
-                <Text style={[styles.eventCountdown, { color: c.textMuted }]}>
-                  Faltan {daysTillEvent === 0 ? "0 días (¡hoy!)" : `${daysTillEvent} día${daysTillEvent === 1 ? "" : "s"}`} para{" "}
-                  <Text style={{ fontWeight: "600" }}>{nextEvent.name}</Text>
-                </Text>
-              )}
-            </View>
-            <View style={{ gap: SPACING.xs }}>
-              <TouchableOpacity
-                style={[styles.iconBtn, { borderColor: c.border, backgroundColor: c.background }]}
-                onPress={() => refetch()}
-                disabled={isFetching}
-              >
-                <Text style={{ color: isFetching ? c.textMuted : c.primary, fontSize: 16 }}>↺</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.iconBtn, { borderColor: c.border, backgroundColor: c.background }]}
-                onPress={() => { setShowDataForm((v) => !v); setEditName(user?.name ?? ""); setEditPeso(""); }}
-              >
-                <Text style={{ color: c.textMuted, fontSize: 14 }}>✎</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-          <Text style={[styles.phrase, { color: c.textMuted }]}>"{phrase}"</Text>
-        </View>
-
-        {/* Self-update form */}
-        {showDataForm && (
-          <View style={[styles.section, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
-            <Text style={[styles.sectionTitle, { color: c.text }]}>Mis datos</Text>
-            <View style={{ gap: SPACING.sm }}>
-              <View>
-                <Text style={[styles.fieldLabel, { color: c.textMuted }]}>Nombre</Text>
-                <TextInput
-                  value={editName}
-                  onChangeText={setEditName}
-                  style={[styles.fieldInput, { color: c.text, borderColor: c.border, backgroundColor: c.background }]}
-                  placeholder="Tu nombre"
-                  placeholderTextColor={c.textPlaceholder}
-                />
-              </View>
-              <View>
-                <Text style={[styles.fieldLabel, { color: c.textMuted }]}>Peso (kg)</Text>
-                <TextInput
-                  value={editPeso}
-                  onChangeText={setEditPeso}
-                  keyboardType="decimal-pad"
-                  style={[styles.fieldInput, { color: c.text, borderColor: c.border, backgroundColor: c.background }]}
-                  placeholder="ej. 75.5"
-                  placeholderTextColor={c.textPlaceholder}
-                />
-              </View>
-              <View style={{ flexDirection: "row", gap: SPACING.sm }}>
-                <TouchableOpacity
-                  style={[styles.timerBtn, { backgroundColor: c.primary, borderColor: c.primary, flex: 1 }]}
-                  onPress={handleSaveSelf}
-                  disabled={updateSelf.isPending}
-                >
-                  <Text style={{ color: "#fff", fontWeight: "600", fontSize: TYPOGRAPHY.fontSize.sm, textAlign: "center" }}>
-                    {updateSelf.isPending ? "Guardando..." : "Guardar"}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.timerBtn, { borderColor: c.border }]}
-                  onPress={() => setShowDataForm(false)}
-                >
-                  <Text style={{ color: c.textMuted, fontSize: TYPOGRAPHY.fontSize.sm }}>Cancelar</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        )}
-
-        {!workout || !workout.title ? (
-          <View style={[styles.restCard, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
-            <Text style={{ fontSize: 32 }}>😴</Text>
-            <Text style={[{ color: c.text, fontWeight: "600", fontSize: TYPOGRAPHY.fontSize.md }]}>
-              Hoy es día de descanso
-            </Text>
-            <Text style={{ color: c.textMuted }}>Recupera y vuelve mañana más fuerte.</Text>
-          </View>
-        ) : (
-          <>
-            {/* Exercises checklist */}
-            {workout.exercises.length > 0 && (
-              <View style={[styles.section, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
-                <Text style={[styles.sectionTitle, { color: c.text }]}>Ejercicios para hoy</Text>
-                <View style={styles.checklist}>
-                  {workout.exercises.map((ex, i) => (
-                    <CheckItem
-                      key={i}
-                      label={ex}
-                      checked={!!checked[i]}
-                      onToggle={() => handleToggle(i)}
-                    />
-                  ))}
-                </View>
-                <Text style={[styles.checkProgress, { color: c.textMuted }]}>
-                  {Object.values(checked).filter(Boolean).length} / {workout.exercises.length} completados
-                </Text>
-              </View>
+    <div className="page feature-page">
+      <Card className="border-blue-100 bg-blue-50">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-lg font-bold text-primary">¡Bienvenido de vuelta! 👋</p>
+            <p className="text-gray-900">{formatSpanishDate(today)} — hoy toca <span className="font-bold">{workout?.title || "descanso"}</span></p>
+            {nextEvent && daysTillEvent !== null && daysTillEvent >= 0 && (
+              <p className="text-sm text-gray-500">Faltan {daysTillEvent === 0 ? "0 días (¡hoy!)" : `${daysTillEvent} día${daysTillEvent === 1 ? "" : "s"}`} para <span className="font-semibold">{nextEvent.name}</span></p>
             )}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" disabled={isFetching} onClick={() => refetch()}>↺</Button>
+            <Button variant="ghost" size="sm" onClick={() => { setShowDataForm((value) => !value); setEditName(user?.name ?? ""); setEditPeso(""); }}>✎</Button>
+          </div>
+        </div>
+        <p className="mt-2 text-sm italic text-gray-500">"{phrase}"</p>
+      </Card>
 
-            {/* Trote section */}
-            <View style={[styles.section, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
-              <Text style={[styles.sectionTitle, { color: c.text }]}>Cardio / Trote</Text>
-              {workout.trote ? (
-                <TroteTimer
-                  totalMin={workout.trote.totalMin}
-                  workMin={workout.trote.workMin}
-                  restMin={workout.trote.restMin}
-                />
-              ) : (
-                <Text style={{ color: c.textMuted, fontStyle: "italic" }}>Hoy no toca trote</Text>
-              )}
-            </View>
+      {showDataForm && (
+        <Card>
+          <div className="flex flex-col gap-3">
+            <h2 className="font-bold text-gray-900">Mis datos</h2>
+            <TextField label="Nombre" value={editName} onChange={(event) => setEditName(event.target.value)} placeholder="Tu nombre" />
+            <TextField label="Peso (kg)" type="number" value={editPeso} onChange={(event) => setEditPeso(event.target.value)} placeholder="ej. 75.5" />
+            <div className="flex gap-2">
+              <Button size="sm" loading={updateSelf.isPending} loadingText="Guardando..." onClick={handleSaveSelf}>Guardar</Button>
+              <Button variant="ghost" size="sm" onClick={() => setShowDataForm(false)}>Cancelar</Button>
+            </div>
+          </div>
+        </Card>
+      )}
 
-            {/* Nota */}
-            <View style={[styles.section, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
-              <Text style={[styles.sectionTitle, { color: c.text }]}>📝 Instrucciones del entrenador</Text>
-              <Text style={{ color: workout.nota ? c.text : c.textMuted, fontStyle: workout.nota ? "normal" : "italic", lineHeight: 22 }}>
-                {workout.nota ?? "No hay instrucciones extras"}
-              </Text>
-            </View>
+      {!workout?.title ? (
+        <Card className="text-center">
+          <p className="text-4xl">😴</p>
+          <p className="font-semibold text-gray-900">Hoy es día de descanso</p>
+          <p className="text-gray-500">Recupera y vuelve mañana más fuerte.</p>
+        </Card>
+      ) : (
+        <>
+          {workout.exercises.length > 0 && (
+            <Card>
+              <div className="flex flex-col gap-3">
+                <h2 className="font-bold text-gray-900">Ejercicios para hoy</h2>
+                {workout.exercises.map((exercise, index) => <CheckItem key={index} label={exercise} checked={!!checked[index]} onToggle={() => handleToggle(index)} />)}
+                <p className="text-right text-xs text-gray-500">{Object.values(checked).filter(Boolean).length} / {workout.exercises.length} completados</p>
+              </div>
+            </Card>
+          )}
 
-            {/* ¿Cómo te sentiste? */}
-            <View style={[styles.section, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
-              <Text style={[styles.sectionTitle, { color: c.text }]}>¿Cómo te sentiste?</Text>
+          <Card>
+            <div className="flex flex-col gap-3">
+              <h2 className="font-bold text-gray-900">Cardio / Trote</h2>
+              {workout.trote ? <TroteTimer totalMin={workout.trote.totalMin} workMin={workout.trote.workMin} restMin={workout.trote.restMin} /> : <p className="text-sm italic text-gray-500">Hoy no toca trote</p>}
+            </div>
+          </Card>
+
+          <Card>
+            <h2 className="font-bold text-gray-900">📝 Instrucciones del entrenador</h2>
+            <p className={`mt-2 leading-6 ${workout.nota ? "text-gray-900" : "italic text-gray-500"}`}>{workout.nota ?? "No hay instrucciones extras"}</p>
+          </Card>
+
+          <Card>
+            <div className="flex flex-col gap-3">
+              <h2 className="font-bold text-gray-900">¿Cómo te sentiste?</h2>
               <RpeSelector value={rpe} onChange={setRpe} />
-              <TextInput
+              <textarea
+                className="min-h-20 rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                 value={feedbackNotes}
-                onChangeText={setFeedbackNotes}
+                onChange={(event) => setFeedbackNotes(event.target.value)}
                 placeholder="¿Cómo se sintió el entrenamiento? ¿Algo que destacar?"
-                placeholderTextColor={c.textPlaceholder}
-                multiline
-                numberOfLines={3}
-                style={[styles.fieldInput, { color: c.text, borderColor: c.border, backgroundColor: c.background, minHeight: 80, textAlignVertical: "top" }]}
               />
-              <TouchableOpacity
-                style={[styles.timerBtn, { backgroundColor: rpe !== null ? c.primary : c.border, borderColor: rpe !== null ? c.primary : c.border, alignSelf: "flex-start" }]}
-                onPress={() => saveFeedback.mutate()}
-                disabled={rpe === null || saveFeedback.isPending}
-              >
-                <Text style={{ color: rpe !== null ? "#fff" : c.textMuted, fontWeight: "600", fontSize: TYPOGRAPHY.fontSize.sm }}>
-                  {saveFeedback.isPending ? "Guardando..." : "Guardar"}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
-      </ScrollView>
-    </MainLayout>
+              <Button size="sm" className="self-start" disabled={rpe === null || saveFeedback.isPending} loading={saveFeedback.isPending} loadingText="Guardando..." onClick={() => saveFeedback.mutate()}>Guardar</Button>
+            </div>
+          </Card>
+        </>
+      )}
+    </div>
   );
 }
-
-const styles = StyleSheet.create({
-  scroll: { padding: SPACING.md, gap: SPACING.md, flexGrow: 1 },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: SPACING.xl, gap: SPACING.md },
-  emptyTitle: { fontSize: TYPOGRAPHY.fontSize.xl, fontWeight: "700", textAlign: "center" },
-  emptySubtitle: { fontSize: TYPOGRAPHY.fontSize.sm, textAlign: "center", lineHeight: 22 },
-
-  welcomeCard: { borderRadius: BORDER_RADIUS.lg, borderWidth: 1, padding: SPACING.md, gap: SPACING.xs },
-  welcomeTop: { flexDirection: "row", alignItems: "flex-start", gap: SPACING.sm },
-  welcomeGreeting: { fontSize: TYPOGRAPHY.fontSize.lg, fontWeight: "700" },
-  welcomeDate: { fontSize: TYPOGRAPHY.fontSize.md },
-  eventCountdown: { fontSize: TYPOGRAPHY.fontSize.sm },
-  phrase: { fontSize: TYPOGRAPHY.fontSize.sm, fontStyle: "italic", marginTop: SPACING.xs },
-  iconBtn: { width: 32, height: 32, borderRadius: BORDER_RADIUS.sm, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  fieldLabel: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "600", marginBottom: 4 },
-  fieldInput: { borderWidth: 1, borderRadius: BORDER_RADIUS.md, paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs, fontSize: TYPOGRAPHY.fontSize.sm, minHeight: 40 },
-
-  restCard: { borderRadius: BORDER_RADIUS.lg, borderWidth: 1, padding: SPACING.xl, alignItems: "center", gap: SPACING.sm },
-
-  section: { borderRadius: BORDER_RADIUS.lg, borderWidth: 1, padding: SPACING.md, gap: SPACING.sm },
-  sectionTitle: { fontSize: TYPOGRAPHY.fontSize.md, fontWeight: "700" },
-
-  checklist: { gap: 10 },
-  checkRow: { flexDirection: "row", alignItems: "flex-start", gap: SPACING.sm },
-  checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, alignItems: "center", justifyContent: "center", marginTop: 1 },
-  checkLabel: { flex: 1, fontSize: TYPOGRAPHY.fontSize.sm, lineHeight: 22 },
-  checkProgress: { fontSize: TYPOGRAPHY.fontSize.xs, textAlign: "right" },
-
-  troteCard: { borderRadius: BORDER_RADIUS.md, borderWidth: 1, padding: SPACING.md, gap: SPACING.sm },
-  troteHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  troteTitle: { fontSize: TYPOGRAPHY.fontSize.md, fontWeight: "700" },
-  troteProgress: { fontSize: TYPOGRAPHY.fontSize.md, fontWeight: "700" },
-  progressBar: { height: 8, borderRadius: 4, overflow: "hidden" },
-  progressFill: { height: "100%", borderRadius: 4 },
-  phaseChip: { borderRadius: BORDER_RADIUS.sm, paddingHorizontal: SPACING.sm, paddingVertical: 6 },
-  phaseText: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "600" },
-  troteActions: { flexDirection: "row", gap: SPACING.sm, alignItems: "center" },
-  timerBtn: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 8,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-  },
-});

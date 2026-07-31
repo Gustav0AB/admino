@@ -1,14 +1,8 @@
 import { useEffect, useState } from "react";
-import {
-  View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert,
-} from "react-native";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Avatar } from "@/shared/components/data-display/Avatar";
-import { StatusBadge } from "@/shared/components/data-display/StatusBadge";
-import { useColors } from "@/shared/hooks/useColors";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Badge, Button, Card } from "@generic/components";
 import { ENV } from "@/shared/config/env";
 import { httpClient } from "@/shared/api/client";
-import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
 import { EndUserFormModal } from "./EndUserFormModal";
 import type {
   EndUserMember,
@@ -20,8 +14,8 @@ const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 function calcAge(birthdate: string | null): number | null {
   if (!birthdate) return null;
-  const dob = new Date(birthdate.slice(0, 10) + "T12:00:00");
-  if (isNaN(dob.getTime())) return null;
+  const dob = new Date(`${birthdate.slice(0, 10)}T12:00:00`);
+  if (Number.isNaN(dob.getTime())) return null;
   const today = new Date();
   let age = today.getFullYear() - dob.getFullYear();
   const m = today.getMonth() - dob.getMonth();
@@ -29,16 +23,18 @@ function calcAge(birthdate: string | null): number | null {
   return age >= 0 ? age : null;
 }
 
+function initials(name: string) {
+  return name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+}
+
 export function AtletasContent({ onReady }: { onReady: (openCreate: () => void) => void }) {
-  const c = useColors();
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<EndUserMember | null>(null);
 
   useEffect(() => {
     onReady(() => { setEditingMember(null); setModalOpen(true); });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [onReady]);
 
   const { data: members = [], isLoading } = useQuery<EndUserMember[]>({
     queryKey: ["end-user-members"],
@@ -58,8 +54,8 @@ export function AtletasContent({ onReady }: { onReady: (openCreate: () => void) 
       const res = await httpClient<{ data: EndUserMember }>("/members", { method: "POST", body: data });
       return res.data;
     },
-    onSuccess: (m) => {
-      queryClient.setQueryData<EndUserMember[]>(["end-user-members"], (old = []) => [m, ...old]);
+    onSuccess: (member) => {
+      queryClient.setQueryData<EndUserMember[]>(["end-user-members"], (old = []) => [member, ...old]);
       setModalOpen(false);
     },
   });
@@ -72,7 +68,7 @@ export function AtletasContent({ onReady }: { onReady: (openCreate: () => void) 
     },
     onSuccess: (updated, { id }) => {
       queryClient.setQueryData<EndUserMember[]>(["end-user-members"], (old = []) =>
-        old.map((m) => (m.id === id ? { ...m, ...updated } : m))
+        old.map((member) => (member.id === id ? { ...member, ...updated } : member))
       );
       setModalOpen(false);
       setEditingMember(null);
@@ -87,94 +83,60 @@ export function AtletasContent({ onReady }: { onReady: (openCreate: () => void) 
     },
     onSuccess: (_, { id, isActive }) => {
       queryClient.setQueryData<EndUserMember[]>(["end-user-members"], (old = []) =>
-        old.map((m) => (m.id === id ? { ...m, isActive } : m))
+        old.map((member) => (member.id === id ? { ...member, isActive } : member))
       );
     },
   });
 
   function confirmToggle(member: EndUserMember) {
-    Alert.alert(
-      `¿${member.isActive ? "Desactivar" : "Activar"} miembro?`,
-      `Esto ${member.isActive ? "desactivará" : "activará"} a ${member.name} ${member.lastname}.`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: member.isActive ? "Desactivar" : "Activar",
-          style: member.isActive ? "destructive" : "default",
-          onPress: () => toggleActive.mutate({ id: member.id, isActive: !member.isActive }),
-        },
-      ]
-    );
+    const ok = window.confirm(`¿${member.isActive ? "Desactivar" : "Activar"} miembro ${member.name} ${member.lastname}?`);
+    if (ok) toggleActive.mutate({ id: member.id, isActive: !member.isActive });
   }
 
   function handleSubmit(data: CreateEndUserMemberInput | UpdateEndUserMemberInput) {
-    if (editingMember) {
-      updateMember.mutate({ id: editingMember.id, data: data as UpdateEndUserMemberInput });
-    } else {
-      createMember.mutate(data as CreateEndUserMemberInput);
-    }
+    if (editingMember) updateMember.mutate({ id: editingMember.id, data: data as UpdateEndUserMemberInput });
+    else createMember.mutate(data as CreateEndUserMemberInput);
   }
 
   return (
     <>
-      <View style={styles.content}>
+      <div className="p-4">
         {isLoading ? (
-          <View style={styles.center}><ActivityIndicator color={c.primary} /></View>
+          <p className="py-10 text-center text-sm text-gray-500">Cargando…</p>
+        ) : members.length === 0 ? (
+          <p className="py-10 text-center text-sm text-gray-500">Sin miembros</p>
         ) : (
-          <View style={styles.list}>
-            {members.length === 0 && (
-              <Text style={{ color: c.textMuted, textAlign: "center", paddingVertical: SPACING.xl }}>
-                Sin miembros
-              </Text>
-            )}
+          <div className="flex flex-col gap-2">
             {members.map((member) => {
               const age = calcAge(member.birthdate);
+              const fullName = `${member.name} ${member.lastname}`;
               return (
-                <View
-                  key={member.id}
-                  style={[styles.row, { backgroundColor: c.backgroundStrong, borderColor: c.border, opacity: member.isActive ? 1 : 0.6 }]}
-                >
-                  <Avatar name={`${member.name} ${member.lastname}`} size="sm" />
-                  <View style={styles.info}>
-                    <View style={styles.nameRow}>
-                      <Text style={[styles.name, { color: c.text }]} numberOfLines={1}>
-                        {member.name} {member.lastname}
-                      </Text>
-                      <StatusBadge
-                        status={member.isActive ? "active" : "cancelled"}
-                        customLabel={member.isActive ? "Activo" : "Inactivo"}
-                        size="sm"
-                      />
-                    </View>
-                    {age !== null && (
-                      <Text style={{ color: c.textMuted, fontSize: TYPOGRAPHY.fontSize.xs }}>{age} años</Text>
-                    )}
-                    {member.username && (
-                      <Text style={{ color: c.primary, fontSize: TYPOGRAPHY.fontSize.xs }}>@{member.username}</Text>
-                    )}
-                  </View>
-                  <View style={styles.actions}>
-                    <TouchableOpacity
-                      style={[styles.actionBtn, { borderColor: c.border, backgroundColor: c.background }]}
-                      onPress={() => { setEditingMember(member); setModalOpen(true); }}
-                    >
-                      <Text style={[styles.actionBtnText, { color: c.text }]}>Editar</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.actionBtn, { borderColor: member.isActive ? c.danger + "60" : c.border, backgroundColor: member.isActive ? c.danger + "10" : c.background }]}
-                      onPress={() => confirmToggle(member)}
-                    >
-                      <Text style={[styles.actionBtnText, { color: member.isActive ? c.danger : c.textMuted }]}>
+                <Card key={member.id} padding="sm" className={member.isActive ? "" : "opacity-60"}>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">
+                      {initials(fullName)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate text-sm font-semibold text-gray-900">{fullName}</p>
+                        <Badge color={member.isActive ? "green" : "red"}>{member.isActive ? "Activo" : "Inactivo"}</Badge>
+                      </div>
+                      {age !== null && <p className="text-xs text-gray-500">{age} años</p>}
+                      {member.username && <p className="text-xs text-primary">@{member.username}</p>}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="ghost" onClick={() => { setEditingMember(member); setModalOpen(true); }}>Editar</Button>
+                      <Button size="sm" variant={member.isActive ? "danger" : "ghost"} onClick={() => confirmToggle(member)}>
                         {member.isActive ? "Desactivar" : "Activar"}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
               );
             })}
-          </View>
+          </div>
         )}
-      </View>
+      </div>
 
       <EndUserFormModal
         open={modalOpen}
@@ -186,16 +148,3 @@ export function AtletasContent({ onReady }: { onReady: (openCreate: () => void) 
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  content: { padding: SPACING.md },
-  list: { gap: SPACING.sm },
-  center: { paddingVertical: SPACING.xl, alignItems: "center" },
-  row: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, padding: SPACING.sm, borderRadius: BORDER_RADIUS.md, borderWidth: 1 },
-  info: { flex: 1, gap: 2, minWidth: 0 },
-  nameRow: { flexDirection: "row", alignItems: "center", gap: SPACING.xs, flexWrap: "wrap" },
-  name: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "600", flexShrink: 1 },
-  actions: { flexDirection: "row", gap: SPACING.xs },
-  actionBtn: { paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs, borderRadius: BORDER_RADIUS.sm, borderWidth: 1 },
-  actionBtnText: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "500" },
-});

@@ -1,7 +1,5 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import { Platform } from "react-native";
 import { authService } from "@/shared/services/authService";
 import type { AuthSession, LoginCredentials, User, UserRole } from "@/shared/types/auth";
 
@@ -29,9 +27,7 @@ function getTrackerStore() {
   }
 }
 
-const storage = createJSONStorage(() =>
-  Platform.OS === "web" ? localStorage : AsyncStorage
-);
+const storage = createJSONStorage(() => localStorage);
 
 export const MOCK_USERS: Record<UserRole, User> = {
   SYSTEM_ADMIN: {

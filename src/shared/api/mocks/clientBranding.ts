@@ -6,8 +6,10 @@ export const mockGetOrganizationBranding: ApiResponse<ClientBranding> = {
   message: "OK",
   data: {
     orgName: "Demo Athletics",
+    slug: "demo-athletics",
     primaryColor: "#2563EB",
     secondaryColor: "#1E40AF",
+    backgroundColor: "#FFFFFF",
     logoUrl: null,
   },
 };

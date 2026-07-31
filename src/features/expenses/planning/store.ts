@@ -1,6 +1,4 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { randomUUID } from "expo-crypto";
-import { Platform } from "react-native";
+import { randomUUID } from "@/web/crypto";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { useAuthStore } from "@/shared/store/authStore";
@@ -19,18 +17,17 @@ function getUserId() {
 const userScopedStorage = createJSONStorage(() => ({
   getItem: (name: string) => {
     const key = `${name}-${getUserId()}`;
-    if (Platform.OS === "web") return Promise.resolve(localStorage.getItem(key));
-    return AsyncStorage.getItem(key);
+    return Promise.resolve(localStorage.getItem(key));
   },
   setItem: (name: string, value: string) => {
     const key = `${name}-${getUserId()}`;
-    if (Platform.OS === "web") { localStorage.setItem(key, value); return Promise.resolve(); }
-    return AsyncStorage.setItem(key, value);
+    localStorage.setItem(key, value);
+    return Promise.resolve();
   },
   removeItem: (name: string) => {
     const key = `${name}-${getUserId()}`;
-    if (Platform.OS === "web") { localStorage.removeItem(key); return Promise.resolve(); }
-    return AsyncStorage.removeItem(key);
+    localStorage.removeItem(key);
+    return Promise.resolve();
   },
 }));
 

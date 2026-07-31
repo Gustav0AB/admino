@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Platform } from "react-native";
 import { useAuthStore } from "@/shared/store/authStore";
 import { useNetworkStatus } from "@/shared/hooks/useNetworkStatus";
 
@@ -109,11 +108,9 @@ export function useSessionGuard(): SessionGuardState {
     };
   }, [isAuthenticated, tokenExpiresAt]);
 
-  // Offline monitoring — on mobile, the OfflineBanner handles UX and data
-  // is preserved locally, so we skip the logout countdown entirely.
+  // Offline monitoring.
   useEffect(() => {
     if (!isAuthenticated) return;
-    if (Platform.OS !== "web") return;
 
     if (!isConnected) {
       showModal("offline", OFFLINE_COUNTDOWN_SECONDS, () => {

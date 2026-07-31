@@ -1,48 +1,45 @@
 import { useState } from "react";
-import {
-  View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView, TextInput,
-} from "react-native";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useColors } from "@/shared/hooks/useColors";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Badge, Button, Card, Dropdown, TextField } from "@generic/components";
 import { httpClient } from "@/shared/api/client";
 import { ENV } from "@/shared/config/env";
-import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
-import { Avatar } from "@/shared/components/data-display/Avatar";
-import { StatusBadge } from "@/shared/components/data-display/StatusBadge";
-import { CustomSelect } from "@/shared/components/inputs/CustomSelect";
-import { CustomInput } from "@/shared/components/inputs/CustomInput";
-import { CustomButton } from "@/shared/components/inputs/CustomButton";
-import type { EndUserMember, TrainingPlan, AthleteCategory, UpdateEndUserMemberInput } from "@/shared/types/member";
+import type { AthleteCategory, EndUserMember, TrainingPlan, UpdateEndUserMemberInput } from "@/shared/types/member";
 
-const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-const CATEGORIA_OPTIONS = [
+const CATEGORIA_OPTIONS: { label: string; value: AthleteCategory }[] = [
   { label: "Principiante", value: "principiante" },
   { label: "Intermedio", value: "intermedio" },
   { label: "Avanzado", value: "avanzado" },
   { label: "Semi-profesional", value: "semi-profesional" },
   { label: "Profesional", value: "profesional" },
 ];
+const CATEGORIA_FILTER_OPTIONS = [{ label: "Todas las categorías", value: "" }, ...CATEGORIA_OPTIONS];
 
-const CATEGORIA_FILTER_OPTIONS = [
-  { label: "Todas las categorías", value: "" },
-  ...CATEGORIA_OPTIONS,
-];
-
-function calcAge(birthdate: string | null): number | null {
+function calcAge(birthdate: string | null) {
   if (!birthdate) return null;
-  const dob = new Date(birthdate.slice(0, 10) + "T12:00:00");
-  if (isNaN(dob.getTime())) return null;
+  const dob = new Date(`${birthdate.slice(0, 10)}T12:00:00`);
+  if (Number.isNaN(dob.getTime())) return null;
   const today = new Date();
   let age = today.getFullYear() - dob.getFullYear();
-  const m = today.getMonth() - dob.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+  const month = today.getMonth() - dob.getMonth();
+  if (month < 0 || (month === 0 && today.getDate() < dob.getDate())) age--;
   return age >= 0 ? age : null;
 }
 
-// ── Athlete Row ────────────────────────────────────────────────────────────────
+function initials(name: string) {
+  return name.split(" ").filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "?";
+}
 
-type AthleteRowProps = {
+function AthleteRow({
+  athlete,
+  plans,
+  assignedPlanId,
+  onSaveData,
+  onAssignPlan,
+  onUnassignPlan,
+  isSaving,
+}: {
   athlete: EndUserMember;
   plans: TrainingPlan[];
   assignedPlanId: string | null;
@@ -50,218 +47,117 @@ type AthleteRowProps = {
   onAssignPlan: (memberId: string, planId: string) => void;
   onUnassignPlan: (memberId: string, planId: string) => void;
   isSaving: boolean;
-};
-
-function AthleteRow({ athlete, plans, assignedPlanId, onSaveData, onAssignPlan, onUnassignPlan, isSaving }: AthleteRowProps) {
-  const c = useColors();
+}) {
   const [expanded, setExpanded] = useState(false);
   const [peso, setPeso] = useState(athlete.peso?.toString() ?? "");
   const [altura, setAltura] = useState(athlete.altura?.toString() ?? "");
   const [categoria, setCategoria] = useState<AthleteCategory | "">(athlete.categoria ?? "");
   const [grado, setGrado] = useState(athlete.grado ?? "");
-  const [selectedPlan, setSelectedPlan] = useState(assignedPlanId ?? "");
-
   const age = calcAge(athlete.birthdate);
+  const currentPlanName = assignedPlanId ? plans.find((plan) => plan.id === assignedPlanId)?.name ?? "Plan asignado" : null;
 
   function handleSave() {
     onSaveData(athlete.id, {
-      peso: peso ? parseFloat(peso) : null,
-      altura: altura ? parseFloat(altura) : null,
-      categoria: (categoria as AthleteCategory) || null,
+      peso: peso ? Number(peso) : null,
+      altura: altura ? Number(altura) : null,
+      categoria: categoria || null,
       grado: grado || null,
     });
   }
 
   function handlePlanChange(planId: string) {
-    setSelectedPlan(planId);
-    if (planId) {
-      onAssignPlan(athlete.id, planId);
-    } else if (assignedPlanId) {
-      onUnassignPlan(athlete.id, assignedPlanId);
-    }
+    if (planId) onAssignPlan(athlete.id, planId);
+    else if (assignedPlanId) onUnassignPlan(athlete.id, assignedPlanId);
   }
 
-  const planOptions = [
-    { label: "Sin plan", value: "" },
-    ...plans.map((p) => ({ label: p.name, value: p.id })),
-  ];
-
-  const currentPlanName = assignedPlanId
-    ? plans.find((p) => p.id === assignedPlanId)?.name ?? "Plan asignado"
-    : null;
-
   return (
-    <View style={[styles.card, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
-      <TouchableOpacity style={styles.cardHeader} onPress={() => setExpanded((v) => !v)}>
-        <Avatar name={`${athlete.name} ${athlete.lastname}`} size="sm" />
-        <View style={styles.athleteInfo}>
-          <View style={styles.nameRow}>
-            <Text style={[styles.athleteName, { color: c.text }]} numberOfLines={1}>
-              {athlete.name} {athlete.lastname}
-            </Text>
-            {athlete.username && (
-              <Text style={[styles.username, { color: c.primary }]}>@{athlete.username}</Text>
-            )}
-          </View>
-          <View style={styles.metaRow}>
-            {age !== null && <Text style={[styles.meta, { color: c.textMuted }]}>{age} años</Text>}
-            {athlete.categoria && (
-              <Text style={[styles.metaBadge, { backgroundColor: c.primary + "20", color: c.primary }]}>
-                {athlete.categoria}
-              </Text>
-            )}
-            {athlete.peso && (
-              <Text style={[styles.meta, { color: c.textMuted }]}>{athlete.peso}kg</Text>
-            )}
-            {currentPlanName && (
-              <Text style={[styles.metaBadge, { backgroundColor: c.backgroundHover ?? c.border, color: c.textMuted }]} numberOfLines={1}>
-                📋 {currentPlanName}
-              </Text>
-            )}
-          </View>
-        </View>
-        <View style={styles.cardRight}>
-          <StatusBadge status={athlete.isActive ? "active" : "cancelled"} customLabel={athlete.isActive ? "Activo" : "Inactivo"} size="sm" />
-          <Text style={{ color: c.textMuted, fontSize: 12 }}>{expanded ? "▲" : "▼"}</Text>
-        </View>
-      </TouchableOpacity>
+    <Card padding="sm">
+      <button type="button" className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-3 text-left" onClick={() => setExpanded((value) => !value)}>
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">{initials(`${athlete.name} ${athlete.lastname}`)}</span>
+        <span className="min-w-0">
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="truncate font-semibold text-gray-900">{athlete.name} {athlete.lastname}</span>
+            {athlete.username && <span className="text-xs text-primary">@{athlete.username}</span>}
+          </span>
+          <span className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+            {age !== null && <span>{age} años</span>}
+            {athlete.categoria && <Badge color="blue">{athlete.categoria}</Badge>}
+            {athlete.peso && <span>{athlete.peso}kg</span>}
+            {currentPlanName && <Badge>📋 {currentPlanName}</Badge>}
+          </span>
+        </span>
+        <span className="flex flex-col items-end gap-1">
+          <Badge color={athlete.isActive ? "green" : "red"}>{athlete.isActive ? "Activo" : "Inactivo"}</Badge>
+          <span className="text-xs text-gray-500">{expanded ? "▲" : "▼"}</span>
+        </span>
+      </button>
 
       {expanded && (
-        <View style={[styles.panel, { borderTopColor: c.border }]}>
-          <Text style={[styles.sectionLabel, { color: c.textMuted }]}>Datos del atleta</Text>
-
-          <View style={styles.row2}>
-            <View style={{ flex: 1 }}>
-              <CustomInput label="Peso (kg)" value={peso} onChangeText={setPeso} placeholder="70.5" keyboardType="decimal-pad" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <CustomInput label="Altura (cm)" value={altura} onChangeText={setAltura} placeholder="175" keyboardType="decimal-pad" />
-            </View>
-          </View>
-
-          <CustomSelect
-            label="Categoría"
-            value={categoria}
-            options={CATEGORIA_OPTIONS}
-            onChange={(v) => setCategoria(v as AthleteCategory)}
-            placeholder="Seleccionar categoría"
-          />
-
-          <CustomInput label="Grado" value={grado} onChangeText={setGrado} placeholder="Cinturón negro, nivel 3, etc." />
-
+        <div className="mt-4 flex flex-col gap-3 border-t border-gray-100 pt-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Datos del atleta</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <TextField label="Peso (kg)" type="number" value={peso} onChange={(event) => setPeso(event.target.value)} placeholder="70.5" />
+            <TextField label="Altura (cm)" type="number" value={altura} onChange={(event) => setAltura(event.target.value)} placeholder="175" />
+          </div>
+          <Dropdown label="Categoría" value={categoria} options={CATEGORIA_OPTIONS} onChange={(value) => setCategoria(value as AthleteCategory)} placeholder="Seleccionar categoría" />
+          <TextField label="Grado" value={grado} onChange={(event) => setGrado(event.target.value)} placeholder="Cinturón negro, nivel 3, etc." />
           {athlete.username && (
             <>
-              <Text style={[styles.sectionLabel, { color: c.textMuted, marginTop: SPACING.xs }]}>Plan de entrenamiento</Text>
-              <CustomSelect
-                label="Asignar plan"
-                value={selectedPlan}
-                options={planOptions}
-                onChange={(v) => handlePlanChange(String(v))}
-                placeholder="Sin plan asignado"
-              />
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Plan de entrenamiento</p>
+              <Dropdown label="Asignar plan" value={assignedPlanId ?? ""} options={[{ label: "Sin plan", value: "" }, ...plans.map((plan) => ({ label: plan.name, value: plan.id }))]} onChange={handlePlanChange} />
             </>
           )}
-
-          <CustomButton onPress={handleSave} loading={isSaving} size="sm">
-            Guardar datos
-          </CustomButton>
-        </View>
+          <Button size="sm" className="self-start" loading={isSaving} loadingText="Guardando..." onClick={handleSave}>Guardar datos</Button>
+        </div>
       )}
-    </View>
+    </Card>
   );
 }
-
-// ── Tracker Tab ────────────────────────────────────────────────────────────────
 
 function TrackerTab({ athletes, plans }: { athletes: EndUserMember[]; plans: TrainingPlan[] }) {
-  const c = useColors();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-
-  const selectedAthlete = athletes.find((a) => a.id === selectedId) ?? null;
-  const assignedPlan = selectedAthlete?.trainingPlanId
-    ? plans.find((p) => p.id === selectedAthlete.trainingPlanId) ?? null
-    : null;
-
+  const [selectedId, setSelectedId] = useState("");
+  const selectedAthlete = athletes.find((athlete) => athlete.id === selectedId) ?? null;
+  const assignedPlan = selectedAthlete?.trainingPlanId ? plans.find((plan) => plan.id === selectedAthlete.trainingPlanId) ?? null : null;
   const today = new Date().toISOString().slice(0, 10);
 
-  const athleteOptions = athletes.map((a) => ({
-    label: `${a.name} ${a.lastname}`,
-    value: a.id,
-  }));
-
   return (
-    <View style={{ flex: 1 }}>
-      <View style={[styles.trackerHeader, { borderBottomColor: c.border, backgroundColor: c.backgroundStrong }]}>
-        <CustomSelect
-          label=""
-          value={selectedId ?? ""}
-          options={[{ label: "Seleccionar atleta...", value: "" }, ...athleteOptions]}
-          onChange={(v) => setSelectedId(String(v) || null)}
-          placeholder="Seleccionar atleta..."
-        />
-      </View>
-
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="border-b border-gray-200 bg-white p-4">
+        <Dropdown value={selectedId} options={[{ label: "Seleccionar atleta...", value: "" }, ...athletes.map((athlete) => ({ label: `${athlete.name} ${athlete.lastname}`, value: athlete.id }))]} onChange={setSelectedId} />
+      </div>
       {!selectedAthlete ? (
-        <View style={styles.center}>
-          <Text style={{ color: c.textMuted, textAlign: "center" }}>
-            Selecciona un atleta para ver su actividad.
-          </Text>
-        </View>
+        <div className="flex flex-1 items-center justify-center p-6 text-center text-gray-500">Selecciona un atleta para ver su actividad.</div>
       ) : (
-        <ScrollView contentContainerStyle={{ padding: SPACING.md, gap: SPACING.md }}>
-          {/* Athlete summary */}
-          <View style={[styles.card, { backgroundColor: c.backgroundStrong, borderColor: c.border, padding: SPACING.md }]}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: SPACING.sm }}>
-              <Avatar name={`${selectedAthlete.name} ${selectedAthlete.lastname}`} size="md" />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.athleteName, { color: c.text }]}>{selectedAthlete.name} {selectedAthlete.lastname}</Text>
-                {selectedAthlete.categoria && (
-                  <Text style={[styles.meta, { color: c.textMuted }]}>{selectedAthlete.categoria}</Text>
-                )}
-                <View style={{ flexDirection: "row", gap: SPACING.sm, marginTop: 4 }}>
-                  {selectedAthlete.peso && <Text style={[styles.metaBadge, { backgroundColor: c.primary + "20", color: c.primary }]}>{selectedAthlete.peso}kg</Text>}
-                  {selectedAthlete.altura && <Text style={[styles.metaBadge, { backgroundColor: c.primary + "20", color: c.primary }]}>{selectedAthlete.altura}cm</Text>}
-                </View>
-              </View>
-            </View>
-          </View>
-
-          {/* Assigned plan */}
-          {assignedPlan ? (
-            <View style={[styles.card, { backgroundColor: c.backgroundStrong, borderColor: c.border, padding: SPACING.md, gap: SPACING.sm }]}>
-              <Text style={[styles.sectionLabel, { color: c.textMuted }]}>Plan asignado</Text>
-              <Text style={[styles.athleteName, { color: c.text }]}>📋 {assignedPlan.name}</Text>
-              {assignedPlan.startDate && (
-                <Text style={[styles.meta, { color: c.textMuted }]}>{assignedPlan.startDate} → {assignedPlan.endDate}</Text>
-              )}
-
-              {/* Today's workout */}
-              {assignedPlan.cells?.[today] ? (
-                <View style={[{ backgroundColor: c.primary + "10", borderRadius: BORDER_RADIUS.sm, padding: SPACING.sm }]}>
-                  <Text style={[styles.sectionLabel, { color: c.primary, marginBottom: 4 }]}>Hoy</Text>
-                  <Text style={[{ color: c.text, fontSize: TYPOGRAPHY.fontSize.sm, lineHeight: 20 }]}>
-                    {assignedPlan.cells[today]}
-                  </Text>
-                </View>
-              ) : (
-                <Text style={[styles.meta, { color: c.textMuted, fontStyle: "italic" }]}>Sin actividad registrada para hoy.</Text>
-              )}
-            </View>
-          ) : (
-            <View style={[styles.card, { backgroundColor: c.backgroundStrong, borderColor: c.border, padding: SPACING.md }]}>
-              <Text style={[{ color: c.textMuted, fontStyle: "italic" }]}>Sin plan asignado.</Text>
-            </View>
-          )}
-        </ScrollView>
+        <div className="flex flex-col gap-4 overflow-y-auto p-4">
+          <Card>
+            <div className="flex items-center gap-3">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary font-bold text-white">{initials(`${selectedAthlete.name} ${selectedAthlete.lastname}`)}</span>
+              <div>
+                <p className="font-semibold text-gray-900">{selectedAthlete.name} {selectedAthlete.lastname}</p>
+                {selectedAthlete.categoria && <p className="text-xs text-gray-500">{selectedAthlete.categoria}</p>}
+                <div className="mt-1 flex gap-2">{selectedAthlete.peso && <Badge color="blue">{selectedAthlete.peso}kg</Badge>}{selectedAthlete.altura && <Badge color="blue">{selectedAthlete.altura}cm</Badge>}</div>
+              </div>
+            </div>
+          </Card>
+          <Card>
+            {assignedPlan ? (
+              <div className="flex flex-col gap-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Plan asignado</p>
+                <p className="font-semibold text-gray-900">📋 {assignedPlan.name}</p>
+                {assignedPlan.startDate && <p className="text-xs text-gray-500">{assignedPlan.startDate} → {assignedPlan.endDate}</p>}
+                {assignedPlan.cells?.[today] ? <div className="rounded-lg bg-blue-50 p-3 text-sm text-gray-900"><p className="mb-1 font-semibold text-primary">Hoy</p>{assignedPlan.cells[today]}</div> : <p className="text-sm italic text-gray-500">Sin actividad registrada para hoy.</p>}
+              </div>
+            ) : (
+              <p className="text-sm italic text-gray-500">Sin plan asignado.</p>
+            )}
+          </Card>
+        </div>
       )}
-    </View>
+    </div>
   );
 }
 
-// ── Main component ─────────────────────────────────────────────────────────────
-
 export function AthletesTab() {
-  const c = useColors();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"general" | "tracker">("general");
   const [localAssignments, setLocalAssignments] = useState<Record<string, string>>({});
@@ -276,7 +172,6 @@ export function AthletesTab() {
       return res.data;
     },
   });
-
   const { data: plans = [] } = useQuery<TrainingPlan[]>({
     queryKey: ["training-plans"],
     queryFn: async () => {
@@ -293,7 +188,6 @@ export function AthletesTab() {
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["athletes"] }),
   });
-
   const assignPlan = useMutation({
     mutationFn: async ({ memberId, planId }: { memberId: string; planId: string }) => {
       if (ENV.USE_MOCK) { await delay(400); return; }
@@ -301,13 +195,18 @@ export function AthletesTab() {
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["athletes"] }),
   });
-
   const unassignPlan = useMutation({
     mutationFn: async ({ memberId, planId }: { memberId: string; planId: string }) => {
       if (ENV.USE_MOCK) { await delay(400); return; }
       await httpClient(`/training-plans/assign/${memberId}/${planId}`, { method: "DELETE" });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["athletes"] }),
+  });
+
+  const filteredAthletes = athletes.filter((athlete) => {
+    const fullName = `${athlete.name} ${athlete.lastname}`.toLowerCase();
+    return (!search || fullName.includes(search.toLowerCase()) || (athlete.username ?? "").toLowerCase().includes(search.toLowerCase())) &&
+      (!filterCategoria || athlete.categoria === filterCategoria);
   });
 
   function handleAssign(memberId: string, planId: string) {
@@ -317,78 +216,41 @@ export function AthletesTab() {
 
   function handleUnassign(memberId: string, planId: string) {
     unassignPlan.mutate({ memberId, planId });
-    setLocalAssignments((prev) => { const n = { ...prev }; delete n[memberId]; return n; });
+    setLocalAssignments((prev) => {
+      const next = { ...prev };
+      delete next[memberId];
+      return next;
+    });
   }
 
-  const filteredAthletes = athletes.filter((a) => {
-    const fullName = `${a.name} ${a.lastname}`.toLowerCase();
-    const matchSearch = !search || fullName.includes(search.toLowerCase()) || (a.username ?? "").toLowerCase().includes(search.toLowerCase());
-    const matchCat = !filterCategoria || a.categoria === filterCategoria;
-    return matchSearch && matchCat;
-  });
-
-  if (athletesLoading) {
-    return <View style={styles.center}><ActivityIndicator color={c.primary} /></View>;
-  }
+  if (athletesLoading) return <div className="page empty-state">Cargando…</div>;
 
   return (
-    <View style={{ flex: 1 }}>
-      {/* Tab bar */}
-      <View style={[styles.tabBar, { borderBottomColor: c.border, backgroundColor: c.background }]}>
+    <div className="page feature-page">
+      <header className="feature-header">
+        <div>
+          <p className="eyebrow">Planes</p>
+          <h1 className="page-title">Atletas</h1>
+        </div>
+      </header>
+      <div className="tabs">
         {(["general", "tracker"] as const).map((tab) => (
-          <TouchableOpacity
-            key={tab}
-            style={[styles.tabBtn, activeTab === tab && { borderBottomColor: c.primary, borderBottomWidth: 2 }]}
-            onPress={() => setActiveTab(tab)}
-          >
-            <Text style={[styles.tabLabel, { color: activeTab === tab ? c.primary : c.textMuted, fontWeight: activeTab === tab ? "600" : "400" }]}>
-              {tab === "general" ? "General" : "Actividad"}
-            </Text>
-          </TouchableOpacity>
+          <button key={tab} type="button" className={`tab ${activeTab === tab ? "tab-active" : ""}`} onClick={() => setActiveTab(tab)}>
+            {tab === "general" ? "General" : "Actividad"}
+          </button>
         ))}
-      </View>
+      </div>
 
       {activeTab === "general" ? (
         <>
-          {/* Search + filter */}
-          <View style={[styles.filterRow, { backgroundColor: c.background, borderBottomColor: c.border }]}>
-            <View style={[styles.searchBox, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
-              <Text style={{ color: c.textMuted, fontSize: 14 }}>🔍</Text>
-              <TextInput
-                value={search}
-                onChangeText={setSearch}
-                placeholder="Buscar atleta..."
-                placeholderTextColor={c.textPlaceholder}
-                style={{ flex: 1, color: c.text, fontSize: TYPOGRAPHY.fontSize.sm, paddingVertical: 0 }}
-              />
-              {search.length > 0 && (
-                <TouchableOpacity onPress={() => setSearch("")}>
-                  <Text style={{ color: c.textMuted }}>✕</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-            <View style={{ width: 160 }}>
-              <CustomSelect
-                label=""
-                value={filterCategoria}
-                options={CATEGORIA_FILTER_OPTIONS}
-                onChange={(v) => setFilterCategoria(String(v))}
-                placeholder="Categoría"
-              />
-            </View>
-          </View>
-
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.list}>
-            {filteredAthletes.length === 0 && (
-              <View style={styles.center}>
-                <Text style={{ color: c.textMuted, textAlign: "center" }}>
-                  {athletes.length === 0
-                    ? "Sin atletas registrados.\nAñade miembros desde Configuración → Miembros."
-                    : "Sin resultados para la búsqueda."}
-                </Text>
-              </View>
-            )}
-            {filteredAthletes.map((athlete) => (
+          <div className="filter-bar">
+            <TextField value={search} onChange={(event) => setSearch(event.target.value)} placeholder="🔍 Buscar atleta..." />
+            <Dropdown value={filterCategoria} options={CATEGORIA_FILTER_OPTIONS} onChange={setFilterCategoria} />
+          </div>
+          <div className="stack-list">
+            {filteredAthletes.length === 0 ? (
+              <div className="empty-state">{athletes.length === 0 ? "Sin atletas registrados. Añade miembros desde Configuración → Miembros." : "Sin resultados para la búsqueda."}</div>
+            ) : filteredAthletes.map((athlete) => (
               <AthleteRow
                 key={athlete.id}
                 athlete={athlete}
@@ -400,35 +262,11 @@ export function AthletesTab() {
                 isSaving={updateAthlete.isPending}
               />
             ))}
-          </ScrollView>
+          </div>
         </>
       ) : (
         <TrackerTab athletes={athletes} plans={plans} />
       )}
-    </View>
+    </div>
   );
 }
-
-const styles = StyleSheet.create({
-  list: { padding: SPACING.md, gap: SPACING.sm, flexGrow: 1 },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: SPACING.xl },
-  card: { borderRadius: BORDER_RADIUS.md, borderWidth: 1, overflow: "hidden" },
-  cardHeader: { flexDirection: "row", alignItems: "center", padding: SPACING.sm, gap: SPACING.sm },
-  athleteInfo: { flex: 1, gap: 2, minWidth: 0 },
-  nameRow: { flexDirection: "row", alignItems: "center", gap: SPACING.xs, flexWrap: "wrap" },
-  athleteName: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "600", flexShrink: 1 },
-  username: { fontSize: TYPOGRAPHY.fontSize.xs },
-  metaRow: { flexDirection: "row", alignItems: "center", gap: SPACING.xs, flexWrap: "wrap" },
-  meta: { fontSize: TYPOGRAPHY.fontSize.xs },
-  metaBadge: { fontSize: TYPOGRAPHY.fontSize.xs, paddingHorizontal: 6, paddingVertical: 2, borderRadius: BORDER_RADIUS.sm, fontWeight: "500" },
-  cardRight: { alignItems: "flex-end", gap: 4 },
-  panel: { padding: SPACING.md, borderTopWidth: StyleSheet.hairlineWidth, gap: SPACING.md },
-  sectionLabel: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5 },
-  row2: { flexDirection: "row", gap: SPACING.sm },
-  tabBar: { flexDirection: "row", borderBottomWidth: StyleSheet.hairlineWidth },
-  tabBtn: { flex: 1, alignItems: "center", paddingVertical: SPACING.sm, borderBottomWidth: 2, borderBottomColor: "transparent" },
-  tabLabel: { fontSize: TYPOGRAPHY.fontSize.sm },
-  filterRow: { flexDirection: "row", gap: SPACING.sm, paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, borderBottomWidth: StyleSheet.hairlineWidth, alignItems: "center" },
-  searchBox: { flex: 1, flexDirection: "row", alignItems: "center", gap: SPACING.xs, borderWidth: 1, borderRadius: BORDER_RADIUS.md, paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs, minHeight: 40 },
-  trackerHeader: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, borderBottomWidth: StyleSheet.hairlineWidth },
-});

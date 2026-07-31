@@ -5,6 +5,7 @@ import type { AuthSession, LoginCredentials, UserRole } from "@/shared/types/aut
 const MOCK_CREDENTIALS: Record<string, keyof typeof MOCK_USERS> = {
   "admin@admino.app": "SYSTEM_ADMIN",
   "coach@admino.app": "OWNER",
+  "manager@admino.app": "ADMIN",
   "athlete@admino.app": "MEMBER",
 };
 

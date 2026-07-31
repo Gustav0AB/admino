@@ -1,17 +1,5 @@
-import { useEffect, useState } from "react";
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { CustomModal } from "@/shared/components/feedback/CustomModal";
-import { CustomButton } from "@/shared/components/inputs/CustomButton";
-import { CustomSelect } from "@/shared/components/inputs/CustomSelect";
-import { useColors } from "@/shared/hooks/useColors";
-import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
+import { useEffect, useState, type ReactNode } from "react";
+import { Button, Dropdown, Modal, TextField } from "@generic/components";
 import { useExpensesStore } from "../store";
 import { CATEGORIES, currentMonthName, MESES_LIST } from "../helpers";
 import type { Estado, Expense, ExpenseCategory, Frecuencia, MetodoPago } from "../types";
@@ -38,11 +26,10 @@ type Props = {
   onDelete?: () => void;
 };
 
-const MES_OPTIONS = MESES_LIST.map((m) => ({ label: m, value: m }));
-
+const MES_OPTIONS = MESES_LIST.map((month) => ({ label: month, value: month }));
 const FECHA_OPTIONS = [
-  { label: "Sin fecha", value: 0 },
-  ...Array.from({ length: 31 }, (_, i) => ({ label: String(i + 1), value: i + 1 })),
+  { label: "Sin fecha", value: "0" },
+  ...Array.from({ length: 31 }, (_, index) => ({ label: String(index + 1), value: String(index + 1) })),
 ];
 
 function blankForm(): FormState {
@@ -61,51 +48,45 @@ function blankForm(): FormState {
   };
 }
 
-function expenseToForm(e: Expense): FormState {
+function expenseToForm(expense: Expense): FormState {
   return {
-    mes: e.mes,
-    gastos: e.gastos,
-    monto: e.monto,
-    metodoPago: e.metodoPago,
-    frecuencia: e.frecuencia,
-    fecha: e.fecha,
-    fechaMaxima: e.fechaMaxima,
-    estado: e.estado,
-    creditCardId: e.creditCardId ?? "",
-    category: e.category ?? "",
-    accountId: e.accountId ?? "",
+    mes: expense.mes,
+    gastos: expense.gastos,
+    monto: expense.monto,
+    metodoPago: expense.metodoPago,
+    frecuencia: expense.frecuencia,
+    fecha: expense.fecha,
+    fechaMaxima: expense.fechaMaxima,
+    estado: expense.estado,
+    creditCardId: expense.creditCardId ?? "",
+    category: expense.category ?? "",
+    accountId: expense.accountId ?? "",
   };
 }
 
 export function ExpenseModal({ open, onClose, expense, onSave, onDelete }: Props) {
-  const c = useColors();
   const { creditCards, accounts } = useExpensesStore();
   const isEdit = expense !== undefined;
-
   const [form, setForm] = useState<FormState>(isEdit ? expenseToForm(expense) : blankForm());
   const [cardError, setCardError] = useState("");
 
   useEffect(() => {
-    if (open) {
-      setForm(expense ? expenseToForm(expense) : blankForm());
-      setCardError("");
-    }
+    if (!open) return;
+    setForm(expense ? expenseToForm(expense) : blankForm());
+    setCardError("");
   }, [open, expense]);
 
   useEffect(() => {
-    if (creditCards.length === 0 && form.metodoPago === "credito") {
-      patch({ metodoPago: "efectivo" });
-    }
-  }, [creditCards.length]);
+    if (creditCards.length === 0 && form.metodoPago === "credito") patch({ metodoPago: "efectivo", creditCardId: "" });
+  }, [creditCards.length, form.metodoPago]);
 
   function patch(update: Partial<FormState>) {
-    setForm((prev) => ({ ...prev, ...update }));
+    setForm((current) => ({ ...current, ...update }));
     if (update.creditCardId) setCardError("");
   }
 
   function handleSelectCredito() {
-    const firstCard = creditCards[0]?.id ?? "";
-    patch({ metodoPago: "credito", creditCardId: form.creditCardId || firstCard });
+    patch({ metodoPago: "credito", creditCardId: form.creditCardId || creditCards[0]?.id || "" });
   }
 
   function handleSave() {
@@ -113,6 +94,7 @@ export function ExpenseModal({ open, onClose, expense, onSave, onDelete }: Props
       setCardError("Debes seleccionar una tarjeta para pagos con crédito");
       return;
     }
+
     const data: Omit<Expense, "id" | "selected"> = {
       mes: form.mes,
       gastos: form.gastos,
@@ -129,223 +111,118 @@ export function ExpenseModal({ open, onClose, expense, onSave, onDelete }: Props
     onSave(data);
   }
 
-  const cardOptions = creditCards.map((c) => ({ label: c.name, value: c.id }));
-
-  const footer = (
-    <View style={styles.footerRow}>
-      <View style={styles.footerLeft}>
-        {isEdit && onDelete && (
-          <CustomButton variant="outline" size="sm" onPress={onDelete}>
-            Eliminar
-          </CustomButton>
-        )}
-      </View>
-      <View style={styles.footerRight}>
-        <CustomButton variant="outline" size="sm" onPress={onClose}>
-          Cancelar
-        </CustomButton>
-        <CustomButton variant="primary" size="sm" onPress={handleSave}>
-          Guardar
-        </CustomButton>
-      </View>
-    </View>
-  );
-
   return (
-    <CustomModal
+    <Modal
       open={open}
-      onOpenChange={(v) => { if (!v) onClose(); }}
+      onClose={onClose}
       title={isEdit ? "Editar gasto" : "Agregar gasto"}
-      size="md"
-      footer={footer}
+      footer={
+        <div className="flex w-full justify-between gap-3">
+          <div>{isEdit && onDelete && <Button variant="danger" size="sm" onClick={onDelete}>Eliminar</Button>}</div>
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={onClose}>Cancelar</Button>
+            <Button size="sm" onClick={handleSave}>Guardar</Button>
+          </div>
+        </div>
+      }
     >
-      <ScrollView showsVerticalScrollIndicator={false} style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-
-        <FormSection label="Descripción">
-          <TextInput
-            style={[styles.textInput, { color: c.text, borderColor: c.border, backgroundColor: c.backgroundStrong }]}
-            value={form.gastos}
-            onChangeText={(v) => patch({ gastos: v })}
-            placeholder="Descripción del gasto"
-            placeholderTextColor={c.textPlaceholder}
-          />
-        </FormSection>
-
-        <FormSection label="Mes">
-          <CustomSelect
-            value={form.mes}
-            options={MES_OPTIONS}
-            onChange={(v) => patch({ mes: String(v) })}
-            placeholder="Seleccionar mes"
-          />
-        </FormSection>
-
-        <FormSection label="Monto">
-          <View style={styles.montoRow}>
-            <Text style={[styles.montoPrefix, { color: c.textMuted }]}>$</Text>
-            <TextInput
-              style={[styles.textInput, styles.montoInput, { color: c.text, borderColor: c.border, backgroundColor: c.backgroundStrong }]}
-              value={form.monto === 0 ? "" : String(form.monto)}
-              onChangeText={(v) => patch({ monto: parseFloat(v) || 0 })}
-              keyboardType="numeric"
-              placeholder="0"
-              placeholderTextColor={c.textPlaceholder}
-            />
-          </View>
-        </FormSection>
+      <div className="flex max-h-[65vh] flex-col gap-4 overflow-y-auto pr-1">
+        <TextField label="Descripción" value={form.gastos} onChange={(event) => patch({ gastos: event.target.value })} placeholder="Descripción del gasto" />
+        <Dropdown label="Mes" value={form.mes} options={MES_OPTIONS} onChange={(value) => patch({ mes: value })} />
+        <TextField label="Monto" type="number" value={form.monto === 0 ? "" : String(form.monto)} onChange={(event) => patch({ monto: Number(event.target.value) || 0 })} placeholder="0" />
 
         <FormSection label="Método de pago">
-          <View style={styles.chipRow}>
-            <Chip label="Efectivo" selected={form.metodoPago === "efectivo"} onPress={() => patch({ metodoPago: "efectivo", creditCardId: "" })} c={c} />
-            <Chip
-              label="Crédito"
-              selected={form.metodoPago === "credito"}
-              onPress={handleSelectCredito}
-              disabled={creditCards.length === 0}
-              c={c}
-            />
-          </View>
+          <Chip label="Efectivo" selected={form.metodoPago === "efectivo"} onClick={() => patch({ metodoPago: "efectivo", creditCardId: "" })} />
+          <Chip label="Crédito" selected={form.metodoPago === "credito"} onClick={handleSelectCredito} disabled={creditCards.length === 0} />
         </FormSection>
 
         {form.metodoPago === "credito" && (
-          <FormSection label="Tarjeta de crédito *">
-            <CustomSelect
-              value={form.creditCardId}
-              options={cardOptions}
-              onChange={(v) => patch({ creditCardId: String(v) })}
-              placeholder="Seleccionar tarjeta"
-            />
-            {cardError ? (
-              <Text style={{ color: c.danger, fontSize: TYPOGRAPHY.fontSize.xs, marginTop: 2 }}>
-                {cardError}
-              </Text>
-            ) : null}
-          </FormSection>
+          <Dropdown
+            label="Tarjeta de crédito *"
+            value={form.creditCardId}
+            options={creditCards.map((card) => ({ label: card.name, value: card.id }))}
+            onChange={(value) => patch({ creditCardId: value })}
+            error={cardError}
+          />
         )}
 
         {accounts.length > 0 && form.metodoPago === "efectivo" && (
-          <FormSection label="Cuenta de origen (opcional)">
-            <CustomSelect
-              value={form.accountId}
-              options={[{ label: "Sin vincular", value: "" }, ...accounts.map((a) => ({ label: a.name, value: a.id }))]}
-              onChange={(v) => patch({ accountId: String(v) })}
-              placeholder="Sin vincular"
-            />
-          </FormSection>
+          <Dropdown
+            label="Cuenta de origen (opcional)"
+            value={form.accountId}
+            options={[{ label: "Sin vincular", value: "" }, ...accounts.map((account) => ({ label: account.name, value: account.id }))]}
+            onChange={(value) => patch({ accountId: value })}
+          />
         )}
 
         <FormSection label="Frecuencia">
-          <View style={styles.chipRow}>
-            <Chip label="Mensual" selected={form.frecuencia === "mes"} onPress={() => patch({ frecuencia: "mes" })} c={c} />
-            <Chip label="Quincenal" selected={form.frecuencia === "quincenal"} onPress={() => patch({ frecuencia: "quincenal" })} c={c} />
-            <Chip label="Único" selected={form.frecuencia === "unico"} onPress={() => patch({ frecuencia: "unico" })} c={c} />
-          </View>
+          <Chip label="Mensual" selected={form.frecuencia === "mes"} onClick={() => patch({ frecuencia: "mes" })} />
+          <Chip label="Quincenal" selected={form.frecuencia === "quincenal"} onClick={() => patch({ frecuencia: "quincenal" })} />
+          <Chip label="Único" selected={form.frecuencia === "unico"} onClick={() => patch({ frecuencia: "unico" })} />
         </FormSection>
 
-        <FormSection label="Fecha de cobro">
-          <CustomSelect
-            value={form.fecha}
-            options={FECHA_OPTIONS}
-            onChange={(v) => patch({ fecha: Number(v) })}
-            placeholder="Sin fecha"
-          />
-        </FormSection>
+        <Dropdown label="Fecha de cobro" value={String(form.fecha)} options={FECHA_OPTIONS} onChange={(value) => patch({ fecha: Number(value) })} />
 
         <FormSection label="Estado">
-          <View style={styles.chipRow}>
-            <Chip label="Pagado" selected={form.estado === "pagado"} onPress={() => patch({ estado: "pagado" })} c={c} />
-            <Chip label="No pagado" selected={form.estado === "no pagado"} onPress={() => patch({ estado: "no pagado" })} c={c} />
-            <Chip label="Guardado" selected={form.estado === "guardado"} onPress={() => patch({ estado: "guardado" })} c={c} />
-            <Chip label="No guardado" selected={form.estado === "no guardado"} onPress={() => patch({ estado: "no guardado" })} c={c} />
-          </View>
+          <Chip label="Pagado" selected={form.estado === "pagado"} onClick={() => patch({ estado: "pagado" })} />
+          <Chip label="No pagado" selected={form.estado === "no pagado"} onClick={() => patch({ estado: "no pagado" })} />
+          <Chip label="Guardado" selected={form.estado === "guardado"} onClick={() => patch({ estado: "guardado" })} />
+          <Chip label="No guardado" selected={form.estado === "no guardado"} onClick={() => patch({ estado: "no guardado" })} />
         </FormSection>
 
         <FormSection label="Categoría">
-          <View style={styles.chipRow}>
-            {CATEGORIES.map((cat) => (
-              <TouchableOpacity
-                key={cat.value}
-                onPress={() => patch({ category: form.category === cat.value ? "" : cat.value })}
-                style={[
-                  styles.chip,
-                  {
-                    borderColor: form.category === cat.value ? cat.color : c.border,
-                    backgroundColor: form.category === cat.value ? `${cat.color}22` : "transparent",
-                  },
-                ]}
-              >
-                <Text style={[styles.chipText, { color: form.category === cat.value ? cat.color : c.text }]}>
-                  {cat.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          {CATEGORIES.map((category) => (
+            <Chip
+              key={category.value}
+              label={category.label}
+              selected={form.category === category.value}
+              color={category.color}
+              onClick={() => patch({ category: form.category === category.value ? "" : category.value })}
+            />
+          ))}
         </FormSection>
 
-        <FormSection label="Nota">
-          <TextInput
-            style={[styles.textInput, { color: c.text, borderColor: c.border, backgroundColor: c.backgroundStrong }]}
-            value={form.fechaMaxima}
-            onChangeText={(v) => patch({ fechaMaxima: v })}
-            placeholder="Nota opcional"
-            placeholderTextColor={c.textPlaceholder}
-          />
-        </FormSection>
-
-      </ScrollView>
-    </CustomModal>
+        <TextField label="Nota" value={form.fechaMaxima} onChange={(event) => patch({ fechaMaxima: event.target.value })} placeholder="Nota opcional" />
+      </div>
+    </Modal>
   );
 }
 
-function FormSection({ label, children }: { label: string; children: React.ReactNode }) {
-  const c = useColors();
+function FormSection({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <View style={styles.formSection}>
-      <Text style={[styles.sectionLabel, { color: c.textMuted }]}>{label}</Text>
-      {children}
-    </View>
+    <div className="flex flex-col gap-2">
+      <span className="text-xs font-semibold uppercase text-gray-500">{label}</span>
+      <div className="flex flex-wrap gap-2">{children}</div>
+    </div>
   );
 }
 
 function Chip({
-  label, selected, onPress, disabled = false, c,
+  label,
+  selected,
+  onClick,
+  disabled,
+  color,
 }: {
-  label: string; selected: boolean; onPress: () => void; disabled?: boolean; c: ReturnType<typeof useColors>;
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+  disabled?: boolean;
+  color?: string;
 }) {
   return (
-    <TouchableOpacity
-      onPress={onPress}
+    <button
+      type="button"
       disabled={disabled}
-      style={[
-        styles.chip,
-        { borderColor: selected ? c.primary : c.border, backgroundColor: selected ? `${c.primary}20` : "transparent" },
-        disabled && { opacity: 0.4 },
-      ]}
+      className="rounded-full border px-3 py-1 text-xs disabled:opacity-40"
+      style={{
+        borderColor: selected ? (color ?? "#2563EB") : "#E5E7EB",
+        backgroundColor: selected ? `${color ?? "#2563EB"}22` : "transparent",
+        color: selected ? (color ?? "#2563EB") : "#374151",
+      }}
+      onClick={onClick}
     >
-      <Text style={[styles.chipText, { color: selected ? c.primary : c.text }]}>{label}</Text>
-    </TouchableOpacity>
+      {label}
+    </button>
   );
 }
-
-const styles = StyleSheet.create({
-  scroll: { maxHeight: 520 },
-  scrollContent: { gap: SPACING.md, paddingBottom: SPACING.sm },
-  formSection: { gap: SPACING.xs },
-  sectionLabel: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "600", textTransform: "uppercase" },
-  textInput: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: BORDER_RADIUS.sm,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
-    fontSize: TYPOGRAPHY.fontSize.sm,
-  },
-  montoRow: { flexDirection: "row", alignItems: "center", gap: SPACING.xs },
-  montoPrefix: { fontSize: TYPOGRAPHY.fontSize.md, fontWeight: "600" },
-  montoInput: { flex: 1 },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.xs },
-  chip: { paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs, borderRadius: BORDER_RADIUS.full, borderWidth: 1 },
-  chipText: { fontSize: TYPOGRAPHY.fontSize.xs },
-  footerRow: { flexDirection: "row", justifyContent: "space-between", flex: 1 },
-  footerLeft: {},
-  footerRight: { flexDirection: "row", gap: SPACING.sm },
-});

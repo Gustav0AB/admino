@@ -1,11 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions } from "react-native";
-import { useColors } from "@/shared/hooks/useColors";
-import { CustomSelect } from "@/shared/components/inputs/CustomSelect";
-import { CustomInput } from "@/shared/components/inputs/CustomInput";
-import { CustomButton } from "@/shared/components/inputs/CustomButton";
-import { CalendarPicker } from "@/shared/components/inputs/CalendarPicker";
-import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
-import { toIso, isoToLocalDate } from "./calendarUtils";
+import { Button, DatePicker, Dropdown, TextField } from "@generic/components";
 import type { CalendarPlan } from "./types";
 
 export type EditMode = "view" | "new" | "edit";
@@ -24,9 +17,9 @@ type ToolbarProps = {
   showRepeatPattern: boolean;
   onSelectPlan: (id: string | null) => void;
   onNewPlan: () => void;
-  onDraftNameChange: (v: string) => void;
-  onDraftStartChange: (v: string) => void;
-  onDraftEndChange: (v: string) => void;
+  onDraftNameChange: (value: string) => void;
+  onDraftStartChange: (value: string) => void;
+  onDraftEndChange: (value: string) => void;
   onSave: () => void;
   onAddEvent: () => void;
   onOpenRepeatPattern: () => void;
@@ -34,131 +27,67 @@ type ToolbarProps = {
 };
 
 export function Toolbar({
-  plans, selectedPlanId, editMode, draftName, draftStartDate, draftEndDate,
-  totalWeeks, weeksToNext, saveError, isSaving, showRepeatPattern,
-  onSelectPlan, onNewPlan, onDraftNameChange, onDraftStartChange, onDraftEndChange,
-  onSave, onAddEvent, onOpenRepeatPattern, onDownloadPdf,
+  plans,
+  selectedPlanId,
+  editMode,
+  draftName,
+  draftStartDate,
+  draftEndDate,
+  totalWeeks,
+  weeksToNext,
+  saveError,
+  isSaving,
+  showRepeatPattern,
+  onSelectPlan,
+  onNewPlan,
+  onDraftNameChange,
+  onDraftStartChange,
+  onDraftEndChange,
+  onSave,
+  onAddEvent,
+  onOpenRepeatPattern,
+  onDownloadPdf,
 }: ToolbarProps) {
-  const c = useColors();
-  const { width } = useWindowDimensions();
-  const isMobile = width < 768;
-
-  const planOptions = [
-    { label: "Sin plan", value: "" },
-    ...plans.map((p) => ({ label: p.name, value: p.id })),
-  ];
-
   const showSave = editMode === "new" || editMode === "edit";
-  const showPdf = !!selectedPlanId;
-  const showForm = editMode === "new" || editMode === "edit";
-  const showStats = showSave && (totalWeeks !== null || weeksToNext !== null);
+  const showForm = showSave;
 
   return (
-    <View style={[styles.wrapper, { borderBottomColor: c.border, backgroundColor: c.background }]}>
-      <View style={[styles.row, isMobile && styles.rowWrap]}>
-        <View style={styles.selectorWrap}>
-          <CustomSelect
-            options={planOptions}
+    <div className="calendar-toolbar">
+      <div className="calendar-toolbar-row">
+        <div className="calendar-plan-select">
+          <Dropdown
+            options={[{ label: "Sin plan", value: "" }, ...plans.map((plan) => ({ label: plan.name, value: plan.id }))]}
             value={selectedPlanId ?? ""}
-            onChange={(v) => onSelectPlan(v ? String(v) : null)}
+            onChange={(value) => onSelectPlan(value ? value : null)}
             placeholder="Seleccionar plan..."
-            style={styles.selectorField}
           />
-        </View>
-        <View style={styles.btnGroup}>
-          <CustomButton variant="outline" size="sm" onPress={onNewPlan}>+ Nuevo plan</CustomButton>
-          {showSave && (
-            <CustomButton variant="primary" size="sm" onPress={onSave} loading={isSaving}>Guardar plan</CustomButton>
-          )}
-          <CustomButton variant="outline" size="sm" onPress={onAddEvent}>+ Evento</CustomButton>
-          {showRepeatPattern && (
-            <CustomButton variant="outline" size="sm" onPress={onOpenRepeatPattern}>+ Patrón repetitivo</CustomButton>
-          )}
-          {showPdf && (
-            <TouchableOpacity
-              onPress={onDownloadPdf}
-              style={[styles.pdfBtn, { borderColor: c.border, backgroundColor: c.backgroundStrong }]}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.pdfBtnText, { color: c.text }]}>⬇ PDF</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
+        </div>
+        <Button variant="ghost" size="sm" onClick={onNewPlan}>+ Nuevo plan</Button>
+        {showSave && <Button size="sm" loading={isSaving} onClick={onSave}>Guardar plan</Button>}
+        <Button variant="ghost" size="sm" onClick={onAddEvent}>+ Evento</Button>
+        {showRepeatPattern && <Button variant="ghost" size="sm" onClick={onOpenRepeatPattern}>+ Patrón repetitivo</Button>}
+        {selectedPlanId && <Button variant="ghost" size="sm" onClick={onDownloadPdf}>⬇ PDF</Button>}
+      </div>
 
       {showForm && (
-        <View style={[styles.row, isMobile && styles.rowWrap, styles.formRow]}>
-          <CustomInput
-            label="Nombre del plan"
-            value={draftName}
-            onChangeText={onDraftNameChange}
-            placeholder="Ej. Macrociclo Mayo"
-            containerStyle={styles.nameField}
-            error={saveError && !draftName.trim() ? "Obligatorio" : undefined}
-          />
-          <CalendarPicker
-            label="Fecha inicio"
-            value={draftStartDate ? isoToLocalDate(draftStartDate) : null}
-            onChange={(d) => onDraftStartChange(toIso(d))}
-            placeholder="Inicio"
-            style={styles.dateField}
-          />
-          <CalendarPicker
-            label="Fecha fin"
-            value={draftEndDate ? isoToLocalDate(draftEndDate) : null}
-            onChange={(d) => onDraftEndChange(toIso(d))}
-            placeholder="Fin"
-            {...(draftStartDate ? { minimumDate: isoToLocalDate(draftStartDate) } : {})}
-            style={styles.dateField}
-          />
-        </View>
+        <div className="calendar-form-grid">
+          <TextField label="Nombre del plan" value={draftName} onChange={(event) => onDraftNameChange(event.target.value)} placeholder="Ej. Macrociclo Mayo" error={saveError && !draftName.trim() ? "Obligatorio" : undefined} />
+          <DatePicker label="Fecha inicio" value={draftStartDate} onChange={onDraftStartChange} locale="es-MX" placeholder="Seleccionar fecha" clearText="Limpiar" />
+          <DatePicker label="Fecha fin" value={draftEndDate} onChange={onDraftEndChange} locale="es-MX" placeholder="Seleccionar fecha" clearText="Limpiar" />
+        </div>
       )}
 
-      {saveError && (
-        <View style={[styles.errorRow, { backgroundColor: "#fef2f2" }]}>
-          <Text style={styles.errorText}>⚠ {saveError}</Text>
-        </View>
+      {saveError && <div className="form-error">⚠ {saveError}</div>}
+      {(totalWeeks !== null || weeksToNext !== null) && (
+        <div className="calendar-stats">
+          {totalWeeks !== null && <StatPill value={String(totalWeeks)} label={totalWeeks === 1 ? "semana" : "semanas"} />}
+          {weeksToNext !== null && <StatPill value={String(weeksToNext)} label="sem. hasta próximo evento" />}
+        </div>
       )}
-
-      {showStats && (
-        <View style={[styles.statsRow, { borderTopColor: c.border, backgroundColor: c.backgroundStrong }]}>
-          {totalWeeks !== null && (
-            <StatPill value={`${totalWeeks}`} label={totalWeeks === 1 ? "semana" : "semanas"} c={c} />
-          )}
-          {weeksToNext !== null && (
-            <StatPill value={`${weeksToNext}`} label="sem. hasta próximo evento" c={c} />
-          )}
-        </View>
-      )}
-    </View>
+    </div>
   );
 }
 
-function StatPill({ value, label, c }: { value: string; label: string; c: ReturnType<typeof useColors> }) {
-  return (
-    <View style={styles.statPill}>
-      <Text style={[styles.statValue, { color: c.primary }]}>{value}</Text>
-      <Text style={[styles.statLabel, { color: c.textMuted }]}>{label}</Text>
-    </View>
-  );
+function StatPill({ value, label }: { value: string; label: string }) {
+  return <span><strong>{value}</strong> <span>{label}</span></span>;
 }
-
-const styles = StyleSheet.create({
-  wrapper: { borderBottomWidth: StyleSheet.hairlineWidth, gap: 0 },
-  row: { flexDirection: "row", alignItems: "flex-end", gap: SPACING.sm, paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm },
-  rowWrap: { flexWrap: "wrap" },
-  formRow: { paddingTop: 0, paddingBottom: SPACING.sm, alignItems: "flex-start" },
-  selectorWrap: { flex: 1, minWidth: 160, maxWidth: 280 },
-  selectorField: { marginBottom: 0 },
-  btnGroup: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm, alignItems: "center" },
-  pdfBtn: { borderWidth: 1, borderRadius: BORDER_RADIUS.md, paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs + 2 },
-  pdfBtnText: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "500" },
-  nameField: { flex: 2, minWidth: 160, marginBottom: 0 },
-  dateField: { flex: 1, minWidth: 130, marginBottom: 0 },
-  errorRow: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs, borderRadius: BORDER_RADIUS.sm, marginHorizontal: SPACING.md, marginBottom: SPACING.xs },
-  errorText: { color: "#dc2626", fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "500" },
-  statsRow: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.md, paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, borderTopWidth: StyleSheet.hairlineWidth },
-  statPill: { flexDirection: "row", alignItems: "baseline", gap: SPACING.xs },
-  statValue: { fontSize: TYPOGRAPHY.fontSize.lg, fontWeight: "700" },
-  statLabel: { fontSize: TYPOGRAPHY.fontSize.sm },
-});

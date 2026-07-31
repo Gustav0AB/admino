@@ -6,6 +6,7 @@ export const mockLogin: ApiResponse<AuthSession> = {
   message: "Login successful",
   data: {
     token: "mock-token-client",
+    expiresAt: Math.floor(Date.now() / 1000) + 3600,
     user: {
       id: "mock-client-1",
       name: "John Athlete",

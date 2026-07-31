@@ -1,30 +1,13 @@
 import { useMemo, useState } from "react";
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { CustomButton } from "@/shared/components/inputs/CustomButton";
-import { CustomSelect } from "@/shared/components/inputs/CustomSelect";
-import { useColors } from "@/shared/hooks/useColors";
-import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
+import { Button, Card, Dropdown, TextField } from "@generic/components";
 import { useExpensesStore } from "../store";
-import {
-  currentMonthName,
-  currentYear,
-  formatMXN,
-  INCOME_CATEGORIES,
-  MESES_LIST,
-} from "../helpers";
+import { currentMonthName, currentYear, formatMXN, INCOME_CATEGORIES, MESES_LIST } from "../helpers";
 import type { Income, IncomeCategory, IncomeEstado, IncomeFrecuencia } from "../types";
 
-const MES_OPTIONS = MESES_LIST.map((m) => ({ label: m, value: m }));
+const MES_OPTIONS = MESES_LIST.map((month) => ({ label: month, value: month }));
 const FECHA_OPTIONS = [
-  { label: "Sin fecha", value: 0 },
-  ...Array.from({ length: 31 }, (_, i) => ({ label: String(i + 1), value: i + 1 })),
+  { label: "Sin fecha", value: "0" },
+  ...Array.from({ length: 31 }, (_, index) => ({ label: String(index + 1), value: String(index + 1) })),
 ];
 
 type IncomeForm = {
@@ -39,42 +22,31 @@ type IncomeForm = {
 };
 
 function blankForm(mes: string): IncomeForm {
-  return {
-    mes,
-    descripcion: "",
-    monto: 0,
-    fecha: 0,
-    frecuencia: "mes",
-    estado: "pendiente",
-    category: "sueldo",
-    accountId: "",
-  };
+  return { mes, descripcion: "", monto: 0, fecha: 0, frecuencia: "mes", estado: "pendiente", category: "sueldo", accountId: "" };
 }
 
-function incomeToForm(i: Income): IncomeForm {
+function incomeToForm(income: Income): IncomeForm {
   return {
-    mes: i.mes,
-    descripcion: i.descripcion,
-    monto: i.monto,
-    fecha: i.fecha,
-    frecuencia: i.frecuencia,
-    estado: i.estado,
-    category: i.category,
-    accountId: i.accountId ?? "",
+    mes: income.mes,
+    descripcion: income.descripcion,
+    monto: income.monto,
+    fecha: income.fecha,
+    frecuencia: income.frecuencia,
+    estado: income.estado,
+    category: income.category,
+    accountId: income.accountId ?? "",
   };
 }
 
 export function IncomesTab() {
-  const c = useColors();
   const { incomes, accounts, addIncome, removeIncome, updateIncome } = useExpensesStore();
-
   const [selectedMes, setSelectedMes] = useState(currentMonthName());
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<IncomeForm>(blankForm(currentMonthName()));
 
-  function patch(u: Partial<IncomeForm>) {
-    setForm((f) => ({ ...f, ...u }));
+  function patch(update: Partial<IncomeForm>) {
+    setForm((current) => ({ ...current, ...update }));
   }
 
   function openAdd() {
@@ -93,307 +65,156 @@ export function IncomesTab() {
     if (!form.descripcion.trim() || form.monto <= 0) return;
     const { accountId, ...rest } = form;
     const data: Omit<Income, "id"> = { ...rest, año: currentYear(), ...(accountId ? { accountId } : {}) };
-    if (editingId) {
-      updateIncome(editingId, data);
-    } else {
-      addIncome(data);
-    }
+    if (editingId) updateIncome(editingId, data);
+    else addIncome(data);
     setShowForm(false);
     setEditingId(null);
   }
 
-  function handleCancel() {
-    setShowForm(false);
-    setEditingId(null);
-  }
-
-  const filtered = useMemo(
-    () => incomes.filter((i) => i.mes === selectedMes),
-    [incomes, selectedMes],
-  );
-
-  const totalRecibido = filtered
-    .filter((i) => i.estado === "recibido")
-    .reduce((s, i) => s + i.monto, 0);
-  const totalPendiente = filtered
-    .filter((i) => i.estado === "pendiente")
-    .reduce((s, i) => s + i.monto, 0);
+  const filtered = useMemo(() => incomes.filter((income) => income.mes === selectedMes), [incomes, selectedMes]);
+  const totalRecibido = filtered.filter((income) => income.estado === "recibido").reduce((sum, income) => sum + income.monto, 0);
+  const totalPendiente = filtered.filter((income) => income.estado === "pendiente").reduce((sum, income) => sum + income.monto, 0);
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      {/* Top bar */}
-      <View style={styles.topBar}>
-        <CustomSelect
-          value={selectedMes}
-          options={MES_OPTIONS}
-          onChange={(v) => setSelectedMes(String(v))}
-          style={styles.mesSelect}
-        />
-        <CustomButton variant="outline" size="sm" onPress={openAdd}>
-          + Ingreso
-        </CustomButton>
-      </View>
+    <div className="flex flex-col gap-4 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <Dropdown value={selectedMes} options={MES_OPTIONS} onChange={setSelectedMes} />
+        <Button variant="ghost" size="sm" onClick={openAdd}>+ Ingreso</Button>
+      </div>
 
-      {/* Summary */}
-      <View style={styles.summaryRow}>
-        <View style={[styles.summaryCard, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
-          <Text style={[styles.summaryValue, { color: "#16A34A" }]}>${formatMXN(totalRecibido)}</Text>
-          <Text style={[styles.summaryLabel, { color: c.textMuted }]}>Recibido</Text>
-        </View>
-        <View style={[styles.summaryCard, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
-          <Text style={[styles.summaryValue, { color: c.textMuted }]}>${formatMXN(totalPendiente)}</Text>
-          <Text style={[styles.summaryLabel, { color: c.textMuted }]}>Pendiente</Text>
-        </View>
-        <View style={[styles.summaryCard, { backgroundColor: c.backgroundStrong, borderColor: c.border, flex: 1.5 }]}>
-          <Text style={[styles.summaryValue, { color: c.primary }]}>${formatMXN(totalRecibido + totalPendiente)}</Text>
-          <Text style={[styles.summaryLabel, { color: c.textMuted }]}>Total {selectedMes}</Text>
-        </View>
-      </View>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <SummaryCard label="Recibido" value={totalRecibido} className="text-green-600" />
+        <SummaryCard label="Pendiente" value={totalPendiente} className="text-gray-500" />
+        <SummaryCard label={`Total ${selectedMes}`} value={totalRecibido + totalPendiente} className="text-primary" />
+      </div>
 
-      {/* Form */}
       {showForm && (
-        <View style={[styles.form, { backgroundColor: c.backgroundStrong, borderColor: c.primary }]}>
-          <Text style={[styles.formTitle, { color: c.text }]}>
-            {editingId ? "Editar ingreso" : "Nuevo ingreso"}
-          </Text>
-
-          <View style={styles.field}>
-            <Text style={[styles.fieldLabel, { color: c.textMuted }]}>Descripción</Text>
-            <TextInput
-              style={[styles.input, { color: c.text, borderColor: c.border, backgroundColor: c.background }]}
-              value={form.descripcion}
-              onChangeText={(v) => patch({ descripcion: v })}
-              placeholder="Ej. Sueldo quincena"
-              placeholderTextColor={c.textPlaceholder}
+        <Card className="border-primary">
+          <div className="flex flex-col gap-4">
+            <h2 className="text-sm font-bold text-gray-900">{editingId ? "Editar ingreso" : "Nuevo ingreso"}</h2>
+            <TextField label="Descripción" value={form.descripcion} onChange={(event) => patch({ descripcion: event.target.value })} placeholder="Ej. Sueldo quincena" />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <TextField label="Monto ($)" type="number" value={form.monto === 0 ? "" : String(form.monto)} onChange={(event) => patch({ monto: Number(event.target.value) || 0 })} placeholder="0" />
+              <Dropdown label="Mes" value={form.mes} options={MES_OPTIONS} onChange={(value) => patch({ mes: value })} />
+              <Dropdown label="Fecha" value={String(form.fecha)} options={FECHA_OPTIONS} onChange={(value) => patch({ fecha: Number(value) })} />
+              <ChipGroup
+                label="Frecuencia"
+                options={[
+                  { label: "Mensual", value: "mes" },
+                  { label: "Quincenal", value: "quincenal" },
+                  { label: "Único", value: "unico" },
+                ]}
+                value={form.frecuencia}
+                onChange={(value) => patch({ frecuencia: value as IncomeFrecuencia })}
+              />
+            </div>
+            <ChipGroup
+              label="Estado"
+              options={[
+                { label: "Recibido", value: "recibido" },
+                { label: "Pendiente", value: "pendiente" },
+              ]}
+              value={form.estado}
+              onChange={(value) => patch({ estado: value as IncomeEstado })}
             />
-          </View>
-
-          <View style={styles.row2}>
-            <View style={[styles.field, { flex: 1 }]}>
-              <Text style={[styles.fieldLabel, { color: c.textMuted }]}>Monto ($)</Text>
-              <TextInput
-                style={[styles.input, { color: c.text, borderColor: c.border, backgroundColor: c.background }]}
-                value={form.monto === 0 ? "" : String(form.monto)}
-                onChangeText={(v) => patch({ monto: parseFloat(v) || 0 })}
-                keyboardType="numeric"
-                placeholder="0"
-                placeholderTextColor={c.textPlaceholder}
-              />
-            </View>
-            <View style={[styles.field, { flex: 1 }]}>
-              <Text style={[styles.fieldLabel, { color: c.textMuted }]}>Mes</Text>
-              <CustomSelect
-                value={form.mes}
-                options={MES_OPTIONS}
-                onChange={(v) => patch({ mes: String(v) })}
-              />
-            </View>
-          </View>
-
-          <View style={styles.row2}>
-            <View style={[styles.field, { flex: 1 }]}>
-              <Text style={[styles.fieldLabel, { color: c.textMuted }]}>Fecha</Text>
-              <CustomSelect
-                value={form.fecha}
-                options={FECHA_OPTIONS}
-                onChange={(v) => patch({ fecha: Number(v) })}
-              />
-            </View>
-            <View style={[styles.field, { flex: 1 }]}>
-              <Text style={[styles.fieldLabel, { color: c.textMuted }]}>Frecuencia</Text>
-              <View style={styles.chips}>
-                {(["mes", "quincenal", "unico"] as IncomeFrecuencia[]).map((f) => (
-                  <Chip
-                    key={f}
-                    label={f === "mes" ? "Mensual" : f === "quincenal" ? "Quincenal" : "Único"}
-                    selected={form.frecuencia === f}
-                    onPress={() => patch({ frecuencia: f })}
-                    c={c}
-                  />
-                ))}
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.field}>
-            <Text style={[styles.fieldLabel, { color: c.textMuted }]}>Estado</Text>
-            <View style={styles.chips}>
-              <Chip label="Recibido" selected={form.estado === "recibido"} onPress={() => patch({ estado: "recibido" })} c={c} color="#16A34A" />
-              <Chip label="Pendiente" selected={form.estado === "pendiente"} onPress={() => patch({ estado: "pendiente" })} c={c} color={c.textMuted} />
-            </View>
-          </View>
-
-          <View style={styles.field}>
-            <Text style={[styles.fieldLabel, { color: c.textMuted }]}>Categoría</Text>
-            <View style={styles.chips}>
-              {INCOME_CATEGORIES.map((cat) => (
-                <Chip
-                  key={cat.value}
-                  label={cat.label}
-                  selected={form.category === cat.value}
-                  onPress={() => patch({ category: cat.value })}
-                  c={c}
-                  color={cat.color}
-                />
-              ))}
-            </View>
-          </View>
-
-          {accounts.length > 0 && (
-            <View style={styles.field}>
-              <Text style={[styles.fieldLabel, { color: c.textMuted }]}>Cuenta destino (opcional)</Text>
-              <CustomSelect
+            <ChipGroup
+              label="Categoría"
+              options={INCOME_CATEGORIES.map((category) => ({ label: category.label, value: category.value }))}
+              value={form.category}
+              onChange={(value) => patch({ category: value as IncomeCategory })}
+            />
+            {accounts.length > 0 && (
+              <Dropdown
+                label="Cuenta destino (opcional)"
                 value={form.accountId}
-                options={[{ label: "Sin vincular", value: "" }, ...accounts.map((a) => ({ label: a.name, value: a.id }))]}
-                onChange={(v) => patch({ accountId: String(v) })}
-                placeholder="Sin vincular"
+                options={[{ label: "Sin vincular", value: "" }, ...accounts.map((account) => ({ label: account.name, value: account.id }))]}
+                onChange={(value) => patch({ accountId: value })}
               />
-            </View>
-          )}
-
-          <View style={styles.formActions}>
-            <CustomButton variant="outline" size="sm" onPress={handleCancel}>Cancelar</CustomButton>
-            <CustomButton variant="primary" size="sm" onPress={handleSave}>Guardar</CustomButton>
-          </View>
-        </View>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" size="sm" onClick={() => { setShowForm(false); setEditingId(null); }}>Cancelar</Button>
+              <Button size="sm" onClick={handleSave}>Guardar</Button>
+            </div>
+          </div>
+        </Card>
       )}
 
-      {/* Empty */}
       {filtered.length === 0 && !showForm && (
-        <View style={[styles.empty, { borderColor: c.border }]}>
-          <Text style={[styles.emptyText, { color: c.textMuted }]}>
-            Sin ingresos en {selectedMes}.{"\n"}Agrega uno con el botón de arriba.
-          </Text>
-        </View>
+        <Card className="border-dashed text-center text-sm text-gray-500">
+          Sin ingresos en {selectedMes}.<br />Agrega uno con el botón de arriba.
+        </Card>
       )}
 
-      {/* List */}
       {filtered.map((income) => (
         <IncomeRow
           key={income.id}
           income={income}
           onEdit={() => openEdit(income)}
           onRemove={() => removeIncome(income.id)}
-          onToggleEstado={() =>
-            updateIncome(income.id, { estado: income.estado === "recibido" ? "pendiente" : "recibido" })
-          }
-          c={c}
+          onToggleEstado={() => updateIncome(income.id, { estado: income.estado === "recibido" ? "pendiente" : "recibido" })}
         />
       ))}
-    </ScrollView>
+    </div>
   );
 }
 
-function IncomeRow({
-  income, onEdit, onRemove, onToggleEstado, c,
-}: {
-  income: Income;
-  onEdit: () => void;
-  onRemove: () => void;
-  onToggleEstado: () => void;
-  c: ReturnType<typeof useColors>;
-}) {
+function SummaryCard({ label, value, className }: { label: string; value: number; className: string }) {
+  return (
+    <Card className="text-center">
+      <p className={`text-lg font-extrabold ${className}`}>${formatMXN(value)}</p>
+      <p className="text-xs text-gray-500">{label}</p>
+    </Card>
+  );
+}
+
+function IncomeRow({ income, onEdit, onRemove, onToggleEstado }: { income: Income; onEdit: () => void; onRemove: () => void; onToggleEstado: () => void }) {
   const [confirmRemove, setConfirmRemove] = useState(false);
-  const cat = INCOME_CATEGORIES.find((c) => c.value === income.category);
+  const category = INCOME_CATEGORIES.find((item) => item.value === income.category);
   const isRecibido = income.estado === "recibido";
 
   return (
-    <View style={[styles.incomeRow, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
-      <TouchableOpacity onPress={onToggleEstado} style={[styles.estadoDot, { backgroundColor: isRecibido ? "#16A34A" : c.border }]} />
-      <View style={styles.incomeInfo}>
-        <Text style={[styles.incomeDesc, { color: c.text }]} numberOfLines={1}>{income.descripcion}</Text>
-        <View style={styles.incomeMeta}>
-          {cat && (
-            <View style={[styles.catChip, { backgroundColor: `${cat.color}22` }]}>
-              <Text style={[styles.catChipText, { color: cat.color }]}>{cat.label}</Text>
-            </View>
-          )}
-          {income.fecha > 0 && (
-            <Text style={[styles.metaText, { color: c.textMuted }]}>día {income.fecha}</Text>
-          )}
-          <Text style={[styles.metaText, { color: isRecibido ? "#16A34A" : c.textMuted }]}>
-            {isRecibido ? "Recibido" : "Pendiente"}
-          </Text>
-        </View>
-      </View>
-      <Text style={[styles.incomeMonto, { color: "#16A34A" }]}>+${formatMXN(income.monto)}</Text>
-      <TouchableOpacity onPress={onEdit} style={styles.actionBtn}>
-        <Text style={[styles.actionText, { color: c.primary }]}>✎</Text>
-      </TouchableOpacity>
-      {confirmRemove ? (
-        <View style={styles.confirmRow}>
-          <TouchableOpacity onPress={onRemove}>
-            <Text style={[styles.actionText, { color: c.danger }]}>Sí</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setConfirmRemove(false)}>
-            <Text style={[styles.actionText, { color: c.textMuted }]}>No</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <TouchableOpacity onPress={() => setConfirmRemove(true)} style={styles.actionBtn}>
-          <Text style={[styles.actionText, { color: c.textMuted }]}>✕</Text>
-        </TouchableOpacity>
-      )}
-    </View>
+    <Card padding="sm">
+      <div className="flex items-center gap-3">
+        <button type="button" className={`h-4 w-4 rounded-full ${isRecibido ? "bg-green-600" : "bg-gray-300"}`} onClick={onToggleEstado} />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-gray-900">{income.descripcion}</p>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            {category && <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">{category.label}</span>}
+            {income.fecha > 0 && <span className="text-xs text-gray-500">día {income.fecha}</span>}
+            <span className={`text-xs ${isRecibido ? "text-green-600" : "text-gray-500"}`}>{isRecibido ? "Recibido" : "Pendiente"}</span>
+          </div>
+        </div>
+        <p className="font-bold text-green-600">+${formatMXN(income.monto)}</p>
+        <Button size="sm" variant="ghost" onClick={onEdit}>✎</Button>
+        {confirmRemove ? (
+          <div className="flex gap-2 text-sm">
+            <button type="button" className="font-semibold text-red-600" onClick={onRemove}>Sí</button>
+            <button type="button" className="text-gray-500" onClick={() => setConfirmRemove(false)}>No</button>
+          </div>
+        ) : (
+          <Button size="sm" variant="ghost" onClick={() => setConfirmRemove(true)}>✕</Button>
+        )}
+      </div>
+    </Card>
   );
 }
 
-function Chip({
-  label, selected, onPress, c, color,
-}: {
-  label: string; selected: boolean; onPress: () => void; c: ReturnType<typeof useColors>; color?: string;
-}) {
-  const activeColor = color ?? c.primary;
+function ChipGroup({ label, options, value, onChange }: { label: string; options: { label: string; value: string }[]; value: string; onChange: (value: string) => void }) {
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      style={[
-        styles.chip,
-        { borderColor: selected ? activeColor : c.border, backgroundColor: selected ? `${activeColor}22` : "transparent" },
-      ]}
-    >
-      <Text style={[styles.chipText, { color: selected ? activeColor : c.text }]}>{label}</Text>
-    </TouchableOpacity>
+    <div className="flex flex-col gap-2">
+      <span className="text-xs font-semibold text-gray-500">{label}</span>
+      <div className="flex flex-wrap gap-2">
+        {options.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            className={`rounded-full border px-3 py-1 text-xs ${value === option.value ? "border-primary bg-blue-50 text-primary" : "border-gray-200 text-gray-700"}`}
+            onClick={() => onChange(option.value)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1 },
-  content: { padding: SPACING.md, gap: SPACING.md, paddingBottom: SPACING.xl },
-
-  topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: SPACING.sm },
-  mesSelect: { minWidth: 150 },
-
-  summaryRow: { flexDirection: "row", gap: SPACING.sm },
-  summaryCard: { flex: 1, borderRadius: BORDER_RADIUS.md, borderWidth: StyleSheet.hairlineWidth, padding: SPACING.sm, alignItems: "center", gap: 2 },
-  summaryValue: { fontSize: TYPOGRAPHY.fontSize.md, fontWeight: "700" },
-  summaryLabel: { fontSize: TYPOGRAPHY.fontSize.xs },
-
-  form: { borderRadius: BORDER_RADIUS.md, borderWidth: 1, padding: SPACING.md, gap: SPACING.md },
-  formTitle: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "700" },
-  formActions: { flexDirection: "row", justifyContent: "flex-end", gap: SPACING.sm },
-
-  field: { gap: 4 },
-  fieldLabel: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "600" },
-  input: { borderWidth: StyleSheet.hairlineWidth, borderRadius: BORDER_RADIUS.sm, paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs, fontSize: TYPOGRAPHY.fontSize.sm },
-  row2: { flexDirection: "row", gap: SPACING.sm },
-  chips: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.xs },
-  chip: { paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs, borderRadius: BORDER_RADIUS.full, borderWidth: 1 },
-  chipText: { fontSize: TYPOGRAPHY.fontSize.xs },
-
-  empty: { borderWidth: 1, borderStyle: "dashed", borderRadius: BORDER_RADIUS.md, padding: SPACING.xl, alignItems: "center" },
-  emptyText: { fontSize: TYPOGRAPHY.fontSize.sm, textAlign: "center", lineHeight: 22 },
-
-  incomeRow: { flexDirection: "row", alignItems: "center", borderRadius: BORDER_RADIUS.md, borderWidth: StyleSheet.hairlineWidth, padding: SPACING.sm, gap: SPACING.sm },
-  estadoDot: { width: 10, height: 10, borderRadius: 5 },
-  incomeInfo: { flex: 1, gap: 2 },
-  incomeDesc: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "500" },
-  incomeMeta: { flexDirection: "row", alignItems: "center", gap: SPACING.xs, flexWrap: "wrap" },
-  catChip: { paddingHorizontal: SPACING.xs, paddingVertical: 1, borderRadius: BORDER_RADIUS.sm },
-  catChipText: { fontSize: 10, fontWeight: "600" },
-  metaText: { fontSize: 10 },
-  incomeMonto: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "700" },
-  actionBtn: { padding: SPACING.xs },
-  actionText: { fontSize: TYPOGRAPHY.fontSize.sm },
-  confirmRow: { flexDirection: "row", gap: SPACING.xs },
-});

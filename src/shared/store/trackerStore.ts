@@ -1,7 +1,5 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Platform } from "react-native";
 
 export type WorkoutStatus = "pending" | "in_progress" | "completed" | "modified";
 
@@ -40,9 +38,7 @@ type TrackerState = {
   reset: () => void;
 };
 
-const storage = createJSONStorage(() =>
-  Platform.OS === "web" ? localStorage : AsyncStorage
-);
+const storage = createJSONStorage(() => localStorage);
 
 const today = () => new Date().toISOString().split("T")[0];
 

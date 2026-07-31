@@ -1,23 +1,10 @@
-import { useState } from "react";
-import {
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { CustomButton } from "@/shared/components/inputs/CustomButton";
-import { CalendarPicker } from "@/shared/components/inputs/CalendarPicker";
-import { CustomModal } from "@/shared/components/feedback/CustomModal";
-import { useColors } from "@/shared/hooks/useColors";
-import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
-import { randomUUID } from "expo-crypto";
-import { usePlanningStore } from "../store";
+import { useState, type ReactNode } from "react";
+import { Badge, Button, Card, Modal, TextField } from "@generic/components";
+import { randomUUID } from "@/web/crypto";
 import { useExpensesStore } from "@/features/expenses/store";
-import { MESES_LIST, currentMonthName } from "@/features/expenses/helpers";
-import type { VacationDay, VacationPayment, VacationPlan, VacationStatus, VacationTask } from "../types";
+import { currentMonthName, formatMXN, MESES_LIST } from "@/features/expenses/helpers";
+import { usePlanningStore } from "../store";
+import type { VacationPayment, VacationPlan, VacationStatus, VacationTask } from "../types";
 
 const STATUS_LABELS: Record<VacationStatus, string> = {
   planning: "Planeando",
@@ -25,25 +12,19 @@ const STATUS_LABELS: Record<VacationStatus, string> = {
   completed: "Completado",
   cancelled: "Cancelado",
 };
-
-const STATUS_COLORS: Record<VacationStatus, string> = {
-  planning: "#3b82f6",
-  confirmed: "#22c55e",
-  completed: "#6b7280",
-  cancelled: "#ef4444",
+const STATUS_COLOR: Record<VacationStatus, "blue" | "green" | "gray" | "red"> = {
+  planning: "blue",
+  confirmed: "green",
+  completed: "gray",
+  cancelled: "red",
 };
-
-const STATUSES: VacationStatus[] = ["planning", "confirmed", "completed", "cancelled"];
-
-function formatDateStr(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
+const STATUSES = Object.keys(STATUS_LABELS) as VacationStatus[];
 
 type PlanFormState = {
   name: string;
   destination: string;
-  startDate: Date | null;
-  endDate: Date | null;
+  startDate: string;
+  endDate: string;
   notes: string;
   status: VacationStatus;
   persons: string[];
@@ -57,17 +38,13 @@ type PlanFormState = {
   newPaymentTrackInGastos: boolean;
 };
 
-type DayFormState = {
-  date: string;
-  activity: string;
-  estimatedCost: string;
-};
+type DayFormState = { date: string; activity: string; estimatedCost: string };
 
 const blankPlanForm = (): PlanFormState => ({
   name: "",
   destination: "",
-  startDate: null,
-  endDate: null,
+  startDate: "",
+  endDate: "",
   notes: "",
   status: "planning",
   persons: [],
@@ -80,61 +57,44 @@ const blankPlanForm = (): PlanFormState => ({
   newPaymentPerPerson: false,
   newPaymentTrackInGastos: true,
 });
-
 const blankDayForm = (): DayFormState => ({ date: "", activity: "", estimatedCost: "" });
 
-function calcPaymentTotal(payments: VacationPayment[], personCount: number): number {
-  return payments
-    .filter((p) => !p.done)
-    .reduce((sum, p) => sum + p.amount * (p.perPerson ? Math.max(personCount, 1) : 1), 0);
+function calcPaymentTotal(payments: VacationPayment[], personCount: number) {
+  return payments.filter((payment) => !payment.done).reduce((sum, payment) => sum + payment.amount * (payment.perPerson ? Math.max(personCount, 1) : 1), 0);
 }
 
 export function VacationPlanner() {
-  const c = useColors();
-  const { vacations, addVacation, updateVacation, removeVacation, addVacationDay, removeVacationDay } =
-    usePlanningStore();
+  const { vacations, addVacation, updateVacation, removeVacation, addVacationDay, removeVacationDay } = usePlanningStore();
   const { addExpenseFromModal } = useExpensesStore();
-
   const [planModalOpen, setPlanModalOpen] = useState(false);
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [planForm, setPlanForm] = useState<PlanFormState>(blankPlanForm());
-
   const [dayModalOpen, setDayModalOpen] = useState(false);
   const [dayTargetVacationId, setDayTargetVacationId] = useState<string | null>(null);
   const [dayForm, setDayForm] = useState<DayFormState>(blankDayForm());
-
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const totalBudget = vacations
-    .filter((v) => v.status !== "cancelled")
-    .reduce((sum, v) => {
-      const pc = (v.persons ?? []).length;
-      return sum + (v.payments ?? []).reduce((s, p) => s + p.amount * (p.perPerson ? Math.max(pc, 1) : 1), 0);
-    }, 0);
+  const totalBudget = vacations.filter((item) => item.status !== "cancelled").reduce((sum, item) => sum + item.payments.reduce((s, payment) => s + payment.amount * (payment.perPerson ? Math.max(item.persons.length, 1) : 1), 0), 0);
+  const totalPending = vacations.filter((item) => item.status !== "cancelled").reduce((sum, item) => sum + calcPaymentTotal(item.payments, item.persons.length), 0);
 
-  const totalPaymentsPending = vacations
-    .filter((v) => v.status !== "cancelled")
-    .reduce((sum, v) => sum + calcPaymentTotal(v.payments ?? [], v.persons?.length ?? 0), 0);
-
-  // ── Plan modal ───────────────────────────────────────────────────────────────
-  const openAddPlan = () => {
+  function openAddPlan() {
     setEditingPlanId(null);
     setPlanForm(blankPlanForm());
     setPlanModalOpen(true);
-  };
+  }
 
-  const openEditPlan = (plan: VacationPlan) => {
+  function openEditPlan(plan: VacationPlan) {
     setEditingPlanId(plan.id);
     setPlanForm({
       name: plan.name,
       destination: plan.destination,
-      startDate: plan.startDate ? new Date(plan.startDate + "T12:00:00") : null,
-      endDate: plan.endDate ? new Date(plan.endDate + "T12:00:00") : null,
+      startDate: plan.startDate,
+      endDate: plan.endDate,
       notes: plan.notes,
       status: plan.status,
-      persons: plan.persons ?? [],
-      tasks: plan.tasks ?? [],
-      payments: plan.payments ?? [],
+      persons: plan.persons,
+      tasks: plan.tasks,
+      payments: plan.payments,
       newPerson: "",
       newTask: "",
       newPaymentDescription: "",
@@ -143,953 +103,299 @@ export function VacationPlanner() {
       newPaymentTrackInGastos: true,
     });
     setPlanModalOpen(true);
-  };
+  }
 
-  const handleSavePlan = () => {
+  function handleSavePlan() {
     if (!planForm.name.trim()) return;
-    const startDateStr = planForm.startDate ? formatDateStr(planForm.startDate) : "";
     const payload: Omit<VacationPlan, "id" | "days"> = {
       name: planForm.name.trim(),
       destination: planForm.destination.trim(),
-      startDate: startDateStr,
-      endDate: planForm.endDate ? formatDateStr(planForm.endDate) : "",
+      startDate: planForm.startDate,
+      endDate: planForm.endDate,
       notes: planForm.notes.trim(),
       status: planForm.status,
       persons: planForm.persons,
       tasks: planForm.tasks,
       payments: planForm.payments,
     };
-
-    const prevStatus = editingPlanId ? vacations.find((v) => v.id === editingPlanId)?.status : undefined;
-    const justConfirmed = planForm.status === "confirmed" && prevStatus !== "confirmed";
-
-    if (editingPlanId) {
-      updateVacation(editingPlanId, payload);
-    } else {
-      addVacation(payload);
-    }
-
-    // When newly confirmed, push all already-done trackInGastos payments to gastos
-    if (justConfirmed) {
-      const startMes = planForm.startDate
-        ? MESES_LIST[planForm.startDate.getMonth()] ?? currentMonthName()
-        : currentMonthName();
-      const startDay = planForm.startDate ? planForm.startDate.getDate() : 1;
-      const personCount = planForm.persons.length;
-      for (const p of planForm.payments) {
-        if (p.done && p.trackInGastos !== false) {
-          addExpenseFromModal({
-            mes: startMes,
-            gastos: p.description,
-            monto: p.amount * (p.perPerson ? Math.max(personCount, 1) : 1),
-            metodoPago: "efectivo",
-            frecuencia: "unico",
-            fecha: startDay,
-            fechaMaxima: "",
-            estado: "pagado",
-          });
-        }
-      }
-    }
-
+    const prevStatus = editingPlanId ? vacations.find((item) => item.id === editingPlanId)?.status : undefined;
+    if (editingPlanId) updateVacation(editingPlanId, payload);
+    else addVacation(payload);
+    if (planForm.status === "confirmed" && prevStatus !== "confirmed") pushDonePaymentsToGastos(planForm, addExpenseFromModal);
     setPlanModalOpen(false);
-  };
+  }
 
-  const handleDeletePlan = () => {
-    if (editingPlanId) {
-      removeVacation(editingPlanId);
-      setPlanModalOpen(false);
-    }
-  };
-
-  const setPlanField = <K extends keyof PlanFormState>(key: K, value: PlanFormState[K]) =>
-    setPlanForm((f) => ({ ...f, [key]: value }));
-
-  // ── Persons helpers ──────────────────────────────────────────────────────────
-  const handleAddPerson = () => {
-    const p = planForm.newPerson.trim();
-    if (!p || planForm.persons.includes(p)) return;
-    setPlanForm((f) => ({ ...f, persons: [...f.persons, p], newPerson: "" }));
-  };
-
-  const handleRemovePerson = (person: string) =>
-    setPlanForm((f) => ({ ...f, persons: f.persons.filter((p) => p !== person) }));
-
-  // ── Tasks helpers ────────────────────────────────────────────────────────────
-  const handleAddTask = () => {
-    const task = planForm.newTask.trim();
-    if (!task) return;
-    setPlanForm((f) => ({
-      ...f,
-      tasks: [...f.tasks, { id: randomUUID(), task, done: false }],
-      newTask: "",
-    }));
-  };
-
-  const handleToggleTask = (id: string) =>
-    setPlanForm((f) => ({
-      ...f,
-      tasks: f.tasks.map((t) => (t.id === id ? { ...t, done: !t.done } : t)),
-    }));
-
-  const handleRemoveTask = (id: string) =>
-    setPlanForm((f) => ({ ...f, tasks: f.tasks.filter((t) => t.id !== id) }));
-
-  // ── Payments helpers ─────────────────────────────────────────────────────────
-  const handleAddPayment = () => {
-    const desc = planForm.newPaymentDescription.trim();
-    if (!desc) return;
-    const amount = parseFloat(planForm.newPaymentAmount) || 0;
-    setPlanForm((f) => ({
-      ...f,
-      payments: [
-        ...f.payments,
-        {
-          id: randomUUID(),
-          description: desc,
-          amount,
-          perPerson: f.newPaymentPerPerson,
-          done: false,
-          trackInGastos: f.newPaymentTrackInGastos,
-        },
-      ],
-      newPaymentDescription: "",
-      newPaymentAmount: "",
-      newPaymentPerPerson: false,
-      newPaymentTrackInGastos: true,
-    }));
-  };
-
-  const handleTogglePayment = (id: string) =>
-    setPlanForm((f) => ({
-      ...f,
-      payments: f.payments.map((p) => (p.id === id ? { ...p, done: !p.done } : p)),
-    }));
-
-  const handleRemovePayment = (id: string) =>
-    setPlanForm((f) => ({ ...f, payments: f.payments.filter((p) => p.id !== id) }));
-
-  // ── Day modal ────────────────────────────────────────────────────────────────
-  const openAddDay = (vacationId: string) => {
-    setDayTargetVacationId(vacationId);
-    setDayForm(blankDayForm());
-    setDayModalOpen(true);
-  };
-
-  const handleSaveDay = () => {
+  function handleSaveDay() {
     if (!dayTargetVacationId || !dayForm.activity.trim()) return;
-    addVacationDay(dayTargetVacationId, {
-      date: dayForm.date.trim(),
-      activity: dayForm.activity.trim(),
-      estimatedCost: parseFloat(dayForm.estimatedCost) || 0,
-    });
+    addVacationDay(dayTargetVacationId, { date: dayForm.date, activity: dayForm.activity.trim(), estimatedCost: Number(dayForm.estimatedCost) || 0 });
     setDayModalOpen(false);
-  };
-
-  const setDayField = <K extends keyof DayFormState>(key: K, value: DayFormState[K]) =>
-    setDayForm((f) => ({ ...f, [key]: value }));
-
-  const calcDays = (start: string, end: string) => {
-    const s = new Date(start);
-    const e = new Date(end);
-    if (isNaN(s.getTime()) || isNaN(e.getTime())) return null;
-    const diff = Math.round((e.getTime() - s.getTime()) / 86400000) + 1;
-    return diff > 0 ? diff : null;
-  };
-
-  // ── Form payment total (for modal preview) ───────────────────────────────────
-  const formPaymentTotal = calcPaymentTotal(planForm.payments, planForm.persons.length);
-  const formPaymentDoneTotal = planForm.payments
-    .filter((p) => p.done)
-    .reduce((sum, p) => sum + p.amount * (p.perPerson ? Math.max(planForm.persons.length, 1) : 1), 0);
+  }
 
   return (
-    <View style={styles.root}>
-      {/* Summary */}
-      <View style={[styles.summaryBar, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
-        <View style={styles.summaryItem}>
-          <Text style={[styles.summaryValue, { color: c.text }]}>{vacations.length}</Text>
-          <Text style={[styles.summaryLabel, { color: c.textMuted }]}>Viajes</Text>
-        </View>
-        <View style={[styles.summaryDivider, { backgroundColor: c.border }]} />
-        <View style={styles.summaryItem}>
-          <Text style={[styles.summaryValue, { color: c.text }]}>
-            ${totalBudget.toLocaleString("es-MX", { minimumFractionDigits: 0 })}
-          </Text>
-          <Text style={[styles.summaryLabel, { color: c.textMuted }]}>Presupuesto</Text>
-        </View>
-        <View style={[styles.summaryDivider, { backgroundColor: c.border }]} />
-        <View style={styles.summaryItem}>
-          <Text style={[styles.summaryValue, { color: c.text }]}>
-            ${totalPaymentsPending.toLocaleString("es-MX", { minimumFractionDigits: 0 })}
-          </Text>
-          <Text style={[styles.summaryLabel, { color: c.textMuted }]}>Por pagar</Text>
-        </View>
-      </View>
+    <div className="flex flex-col gap-4 p-4">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Summary value={String(vacations.length)} label="Viajes" />
+        <Summary value={`$${formatMXN(totalBudget)}`} label="Presupuesto" />
+        <Summary value={`$${formatMXN(totalPending)}`} label="Por pagar" />
+      </div>
 
-      {/* Add */}
-      <View style={styles.addViajeRow}>
-        <CustomButton variant="primary" size="sm" onPress={openAddPlan}>
-          + Agregar viaje
-        </CustomButton>
-      </View>
+      <Button size="sm" onClick={openAddPlan}>+ Agregar viaje</Button>
 
-      {/* List */}
       {vacations.length === 0 ? (
-        <View style={styles.empty}>
-          <Text style={styles.emptyIcon}>✈️</Text>
-          <Text style={[styles.emptyText, { color: c.textMuted }]}>No hay viajes planeados</Text>
-          <Text style={[styles.emptyHint, { color: c.textPlaceholder }]}>
-            Agrega tus próximas vacaciones y lleva el control de tareas y pagos
-          </Text>
-        </View>
+        <Card className="border-dashed text-center">
+          <p className="text-4xl">✈️</p>
+          <p className="font-semibold text-gray-700">No hay viajes planeados</p>
+          <p className="text-sm text-gray-400">Agrega tus próximas vacaciones y lleva el control de tareas y pagos</p>
+        </Card>
       ) : (
-        <ScrollView showsVerticalScrollIndicator={false}>
-          <View style={styles.list}>
-            {vacations.map((plan) => {
-              const isExpanded = expandedId === plan.id;
-              const days = calcDays(plan.startDate, plan.endDate);
-              const personCount = (plan.persons ?? []).length;
-              const pendingPaymentTotal = calcPaymentTotal(plan.payments ?? [], personCount);
-              const donePaymentTotal = (plan.payments ?? [])
-                .filter((p) => p.done)
-                .reduce((sum, p) => sum + p.amount * (p.perPerson ? Math.max(personCount, 1) : 1), 0);
-              const tasksDone = (plan.tasks ?? []).filter((t) => t.done).length;
-              const tasksTotal = (plan.tasks ?? []).length;
+        vacations.map((plan) => {
+          const isExpanded = expandedId === plan.id;
+          const personCount = plan.persons.length;
+          const pending = calcPaymentTotal(plan.payments, personCount);
+          const paid = plan.payments.filter((payment) => payment.done).reduce((sum, payment) => sum + payment.amount * (payment.perPerson ? Math.max(personCount, 1) : 1), 0);
+          const tasksDone = plan.tasks.filter((task) => task.done).length;
+          return (
+            <Card key={plan.id}>
+              <div className="flex flex-col gap-3">
+                <button type="button" className="flex items-start justify-between gap-3 text-left" onClick={() => setExpandedId(isExpanded ? null : plan.id)}>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="truncate font-bold text-gray-900">{plan.name}</p>
+                      <Badge color={STATUS_COLOR[plan.status]}>{STATUS_LABELS[plan.status]}</Badge>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      {plan.destination ? `📍 ${plan.destination}` : "Sin destino"}
+                      {plan.startDate && plan.endDate ? ` · ${plan.startDate} → ${plan.endDate}${calcDays(plan.startDate, plan.endDate) ? ` (${calcDays(plan.startDate, plan.endDate)} días)` : ""}` : ""}
+                      {personCount > 0 ? ` · 👥 ${personCount}` : ""}
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-right text-xs text-gray-500">
+                    {pending > 0 && <p className="font-bold text-gray-900">${formatMXN(pending)}</p>}
+                    {plan.tasks.length > 0 && <p>✅ {tasksDone}/{plan.tasks.length}</p>}
+                    <p>{isExpanded ? "▲" : "▼"}</p>
+                  </div>
+                </button>
 
-              return (
-                <View
-                  key={plan.id}
-                  style={[styles.card, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}
-                >
-                  {/* Card header */}
-                  <TouchableOpacity
-                    style={styles.cardHeader}
-                    onPress={() => setExpandedId(isExpanded ? null : plan.id)}
-                    activeOpacity={0.75}
-                  >
-                    <View style={styles.cardHeaderLeft}>
-                      <View style={styles.cardTitleRow}>
-                        <Text style={[styles.cardTitle, { color: c.text }]} numberOfLines={1}>
-                          {plan.name}
-                        </Text>
-                        <View
-                          style={[
-                            styles.statusBadge,
-                            { backgroundColor: STATUS_COLORS[plan.status] + "22", borderColor: STATUS_COLORS[plan.status] + "55" },
-                          ]}
-                        >
-                          <Text style={[styles.statusBadgeText, { color: STATUS_COLORS[plan.status] }]}>
-                            {STATUS_LABELS[plan.status]}
-                          </Text>
-                        </View>
-                      </View>
-                      <Text style={[styles.cardSub, { color: c.textMuted }]}>
-                        {plan.destination ? `📍 ${plan.destination}` : "Sin destino"}
-                        {plan.startDate && plan.endDate
-                          ? ` · ${plan.startDate} → ${plan.endDate}${days ? ` (${days} días)` : ""}`
-                          : ""}
-                        {personCount > 0 ? ` · 👥 ${personCount}` : ""}
-                      </Text>
-                    </View>
-                    <View style={styles.cardHeaderRight}>
-                      {pendingPaymentTotal > 0 && (
-                        <Text style={[styles.budgetText, { color: c.text }]}>
-                          ${pendingPaymentTotal.toLocaleString("es-MX", { minimumFractionDigits: 0 })}
-                        </Text>
-                      )}
-                      {tasksTotal > 0 && (
-                        <Text style={[styles.progressText, { color: c.textMuted }]}>
-                          ✅ {tasksDone}/{tasksTotal}
-                        </Text>
-                      )}
-                      <Text style={[styles.chevron, { color: c.textMuted }]}>
-                        {isExpanded ? "▲" : "▼"}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-
-                  {/* Expanded body */}
-                  {isExpanded && (
-                    <View style={[styles.cardBody, { borderTopColor: c.border }]}>
-                      {plan.notes ? (
-                        <Text style={[styles.notesText, { color: c.textMuted }]}>{plan.notes}</Text>
-                      ) : null}
-
-                      {/* Persons */}
-                      {personCount > 0 && (
-                        <View>
-                          <Text style={[styles.sectionLabel, { color: c.text, marginBottom: 4 }]}>
-                            👥 Personas ({personCount})
-                          </Text>
-                          <View style={styles.tagRow}>
-                            {plan.persons.map((p) => (
-                              <View key={p} style={[styles.tag, { backgroundColor: c.background, borderColor: c.border }]}>
-                                <Text style={[styles.tagText, { color: c.text }]}>{p}</Text>
-                              </View>
-                            ))}
-                          </View>
-                        </View>
-                      )}
-
-                      {/* Tasks checklist */}
-                      {tasksTotal > 0 && (
-                        <View>
-                          <View style={styles.sectionHeaderRow}>
-                            <Text style={[styles.sectionLabel, { color: c.text }]}>📋 Por hacer</Text>
-                            <Text style={[styles.sectionMeta, { color: c.textMuted }]}>
-                              {tasksDone}/{tasksTotal}
-                            </Text>
-                          </View>
-                          {plan.tasks.map((t) => (
-                            <TouchableOpacity
-                              key={t.id}
-                              style={[styles.checkRow, { borderBottomColor: c.border }]}
-                              onPress={() => {
-                                const updated = plan.tasks.map((x) =>
-                                  x.id === t.id ? { ...x, done: !x.done } : x
-                                );
-                                updateVacation(plan.id, { tasks: updated });
+                {isExpanded && (
+                  <div className="flex flex-col gap-4 border-t border-gray-100 pt-3">
+                    {plan.notes && <p className="text-sm italic text-gray-500">{plan.notes}</p>}
+                    {personCount > 0 && <Tags title={`👥 Personas (${personCount})`} values={plan.persons} />}
+                    {plan.tasks.length > 0 && (
+                      <Section title={`📋 Por hacer ${tasksDone}/${plan.tasks.length}`}>
+                        {plan.tasks.map((task) => (
+                          <CheckRow key={task.id} checked={task.done} label={task.task} onClick={() => updateVacation(plan.id, { tasks: plan.tasks.map((item) => item.id === task.id ? { ...item, done: !item.done } : item) })} />
+                        ))}
+                      </Section>
+                    )}
+                    {plan.payments.length > 0 && (
+                      <Section title={`💳 Por pagar · pagado $${formatMXN(paid)}`}>
+                        {plan.payments.map((payment) => {
+                          const total = payment.amount * (payment.perPerson ? Math.max(personCount, 1) : 1);
+                          return (
+                            <CheckRow
+                              key={payment.id}
+                              checked={payment.done}
+                              label={`${payment.description}${payment.perPerson ? ` · $${formatMXN(payment.amount)} × ${personCount}` : ""}${payment.trackInGastos === false ? " · solo plan" : ""}`}
+                              value={`$${formatMXN(total)}`}
+                              onClick={() => {
+                                const markingDone = !payment.done;
+                                updateVacation(plan.id, { payments: plan.payments.map((item) => item.id === payment.id ? { ...item, done: !item.done } : item) });
+                                if (markingDone && plan.status === "confirmed" && payment.trackInGastos !== false) pushPaymentToGastos(plan, payment, addExpenseFromModal);
                               }}
-                              activeOpacity={0.75}
-                            >
-                              <View style={[styles.checkBox, { borderColor: t.done ? c.primary : c.border, backgroundColor: t.done ? c.primary : "transparent" }]}>
-                                {t.done && <Text style={{ color: c.background, fontSize: 10 }}>✓</Text>}
-                              </View>
-                              <Text style={[styles.checkText, { color: t.done ? c.textMuted : c.text, textDecorationLine: t.done ? "line-through" : "none" }]}>
-                                {t.task}
-                              </Text>
-                            </TouchableOpacity>
-                          ))}
-                        </View>
-                      )}
-
-                      {/* Payments checklist */}
-                      {(plan.payments ?? []).length > 0 && (
-                        <View>
-                          <View style={styles.sectionHeaderRow}>
-                            <Text style={[styles.sectionLabel, { color: c.text }]}>💳 Por pagar</Text>
-                            <Text style={[styles.sectionMeta, { color: c.textMuted }]}>
-                              Pagado: ${donePaymentTotal.toLocaleString("es-MX")}
-                            </Text>
-                          </View>
-                          {plan.payments.map((p) => {
-                            const itemTotal = p.amount * (p.perPerson ? Math.max(personCount, 1) : 1);
-                            return (
-                              <TouchableOpacity
-                                key={p.id}
-                                style={[styles.paymentRow, { borderBottomColor: c.border }, p.done && styles.rowDone]}
-                                onPress={() => {
-                                  const isMarkingDone = !p.done;
-                                  const updated = plan.payments.map((x) =>
-                                    x.id === p.id ? { ...x, done: !x.done } : x
-                                  );
-                                  updateVacation(plan.id, { payments: updated });
-                                  if (isMarkingDone && plan.status === "confirmed" && p.trackInGastos !== false) {
-                                    const startMes = plan.startDate
-                                      ? MESES_LIST[new Date(plan.startDate + "T12:00:00").getMonth()] ?? currentMonthName()
-                                      : currentMonthName();
-                                    const startDay = plan.startDate ? new Date(plan.startDate + "T12:00:00").getDate() : 1;
-                                    const addToGastos = (metodoPago: "efectivo" | "credito") =>
-                                      addExpenseFromModal({
-                                        mes: startMes,
-                                        gastos: p.description,
-                                        monto: itemTotal,
-                                        metodoPago,
-                                        frecuencia: "unico",
-                                        fecha: startDay,
-                                        fechaMaxima: "",
-                                        estado: "pagado",
-                                      });
-                                    Alert.alert(
-                                      "¿Cómo se pagó?",
-                                      p.description,
-                                      [
-                                        { text: "Efectivo", onPress: () => addToGastos("efectivo") },
-                                        { text: "Tarjeta", onPress: () => addToGastos("credito") },
-                                        { text: "Solo marcar", style: "cancel" },
-                                      ],
-                                    );
-                                  }
-                                }}
-                                activeOpacity={0.75}
-                              >
-                                <View style={[styles.checkBox, { borderColor: p.done ? "#16A34A" : c.border, backgroundColor: p.done ? "#16A34A" : "transparent" }]}>
-                                  {p.done && <Text style={{ color: "#fff", fontSize: 10 }}>✓</Text>}
-                                </View>
-                                <View style={{ flex: 1 }}>
-                                  <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                                    <Text style={[styles.checkText, { color: p.done ? c.textMuted : c.text, textDecorationLine: p.done ? "line-through" : "none" }]}>
-                                      {p.description}
-                                    </Text>
-                                    {p.trackInGastos === false && (
-                                      <Text style={{ fontSize: 10, color: c.textMuted }}>📋</Text>
-                                    )}
-                                  </View>
-                                  {p.perPerson && personCount > 0 && (
-                                    <Text style={[styles.paymentSub, { color: c.textMuted }]}>
-                                      ${p.amount.toLocaleString("es-MX")} × {personCount} personas
-                                    </Text>
-                                  )}
-                                </View>
-                                <Text style={[styles.paymentAmount, { color: p.done ? c.textMuted : c.text }]}>
-                                  ${itemTotal.toLocaleString("es-MX")}
-                                </Text>
-                              </TouchableOpacity>
-                            );
-                          })}
-                          <View style={[styles.paymentTotal, { borderTopColor: c.border }]}>
-                            <Text style={[styles.paymentTotalLabel, { color: c.textMuted }]}>Por pagar</Text>
-                            <Text style={[styles.paymentTotalAmount, { color: c.text }]}>
-                              ${pendingPaymentTotal.toLocaleString("es-MX")}
-                            </Text>
-                          </View>
-                        </View>
-                      )}
-
-                      {/* Days */}
-                      <View style={styles.sectionHeaderRow}>
-                        <Text style={[styles.sectionLabel, { color: c.text }]}>
-                          🗓 Actividades del viaje
-                        </Text>
-                        <CustomButton variant="outline" size="sm" onPress={() => openAddDay(plan.id)}>
-                          + Día
-                        </CustomButton>
-                      </View>
-
-                      {plan.days.length === 0 ? (
-                        <Text style={[styles.noDays, { color: c.textPlaceholder }]}>
-                          Sin actividades. Toca "+ Día" para agregar.
-                        </Text>
-                      ) : (
-                        <View style={styles.daysList}>
-                          {plan.days.map((day) => (
-                            <View key={day.id} style={[styles.dayRow, { borderBottomColor: c.border }]}>
-                              <View style={{ flex: 1, gap: 2 }}>
-                                <Text style={[styles.dayActivity, { color: c.text }]}>{day.activity}</Text>
-                                {day.date ? (
-                                  <Text style={[styles.daySub, { color: c.textMuted }]}>{day.date}</Text>
-                                ) : null}
-                              </View>
-                              <View style={styles.dayRight}>
-                                {day.estimatedCost > 0 && (
-                                  <Text style={[styles.dayCost, { color: c.text }]}>
-                                    ${day.estimatedCost.toLocaleString("es-MX", { minimumFractionDigits: 0 })}
-                                  </Text>
-                                )}
-                                <TouchableOpacity
-                                  onPress={() => removeVacationDay(plan.id, day.id)}
-                                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                                >
-                                  <Text style={{ color: c.textPlaceholder, fontSize: 14 }}>✕</Text>
-                                </TouchableOpacity>
-                              </View>
-                            </View>
-                          ))}
-                        </View>
-                      )}
-
-                      {/* Edit button */}
-                      <View style={{ alignItems: "flex-end", marginTop: SPACING.sm }}>
-                        <CustomButton variant="secondary" size="sm" onPress={() => openEditPlan(plan)}>
-                          Editar viaje
-                        </CustomButton>
-                      </View>
-                    </View>
-                  )}
-                </View>
-              );
-            })}
-          </View>
-        </ScrollView>
+                            />
+                          );
+                        })}
+                        <InfoRow label="Pendiente" value={`$${formatMXN(pending)}`} strong />
+                      </Section>
+                    )}
+                    <Section title="🗓 Actividades del viaje">
+                      <Button variant="ghost" size="sm" onClick={() => { setDayTargetVacationId(plan.id); setDayForm(blankDayForm()); setDayModalOpen(true); }}>+ Día</Button>
+                      {plan.days.length === 0 ? <p className="text-sm text-gray-400">Sin actividades.</p> : plan.days.map((day) => (
+                        <div key={day.id} className="grid grid-cols-[1fr_auto_auto] items-center gap-2 border-b border-gray-100 py-2 text-sm">
+                          <div>
+                            <p className="font-medium text-gray-900">{day.activity}</p>
+                            {day.date && <p className="text-xs text-gray-500">{day.date}</p>}
+                          </div>
+                          {day.estimatedCost > 0 && <p className="font-semibold text-gray-900">${formatMXN(day.estimatedCost)}</p>}
+                          <Button variant="ghost" size="sm" onClick={() => removeVacationDay(plan.id, day.id)}>✕</Button>
+                        </div>
+                      ))}
+                    </Section>
+                    <div className="flex justify-end"><Button variant="secondary" size="sm" onClick={() => openEditPlan(plan)}>Editar viaje</Button></div>
+                  </div>
+                )}
+              </div>
+            </Card>
+          );
+        })
       )}
 
-      {/* ── Plan Modal ──────────────────────────────────────────────────────────── */}
-      <CustomModal
+      <Modal
         open={planModalOpen}
-        onOpenChange={setPlanModalOpen}
+        onClose={() => setPlanModalOpen(false)}
         title={editingPlanId ? "Editar viaje" : "Nuevo viaje"}
-        size="md"
         footer={
-          <>
-            <View style={{ flex: 1 }}>
-              {editingPlanId && (
-                <CustomButton variant="outline" size="sm" onPress={handleDeletePlan}>
-                  Eliminar
-                </CustomButton>
-              )}
-            </View>
-            <View style={styles.modalFooterRight}>
-              <CustomButton variant="outline" size="sm" onPress={() => setPlanModalOpen(false)}>
-                Cancelar
-              </CustomButton>
-              <CustomButton variant="primary" size="sm" onPress={handleSavePlan}>
-                {editingPlanId ? "Guardar" : "Agregar"}
-              </CustomButton>
-            </View>
-          </>
+          <div className="flex w-full justify-between gap-3">
+            <div>{editingPlanId && <Button variant="danger" size="sm" onClick={() => { removeVacation(editingPlanId); setPlanModalOpen(false); }}>Eliminar</Button>}</div>
+            <div className="flex gap-2"><Button variant="ghost" size="sm" onClick={() => setPlanModalOpen(false)}>Cancelar</Button><Button size="sm" onClick={handleSavePlan}>{editingPlanId ? "Guardar" : "Agregar"}</Button></div>
+          </div>
         }
       >
-        {/* Basic info */}
-        <FormField label="Nombre del viaje *">
-          <StyledInput
-            value={planForm.name}
-            onChangeText={(v) => setPlanField("name", v)}
-            placeholder="Ej: Cancún 2025"
-          />
-        </FormField>
+        <div className="flex max-h-[65vh] flex-col gap-4 overflow-y-auto pr-1">
+          <TextField label="Nombre del viaje *" value={planForm.name} onChange={(event) => setPlanForm({ ...planForm, name: event.target.value })} placeholder="Ej: Cancún 2025" />
+          <TextField label="Destino" value={planForm.destination} onChange={(event) => setPlanForm({ ...planForm, destination: event.target.value })} placeholder="Ciudad o país" />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <TextField label="Fecha inicio" type="date" value={planForm.startDate} onChange={(event) => setPlanForm({ ...planForm, startDate: event.target.value })} />
+            <TextField label="Fecha fin" type="date" value={planForm.endDate} onChange={(event) => setPlanForm({ ...planForm, endDate: event.target.value })} />
+          </div>
+          <Field label="Estado"><ChipRow options={STATUSES.map((status) => ({ label: STATUS_LABELS[status], value: status }))} value={planForm.status} onChange={(value) => setPlanForm({ ...planForm, status: value as VacationStatus })} /></Field>
+          <FormList title="👥 Personas" value={planForm.newPerson} placeholder="Nombre" onValue={(value) => setPlanForm({ ...planForm, newPerson: value })} onAdd={() => addPerson(planForm, setPlanForm)}>
+            {planForm.persons.map((person) => <Tag key={person} onRemove={() => setPlanForm({ ...planForm, persons: planForm.persons.filter((item) => item !== person) })}>{person}</Tag>)}
+          </FormList>
+          <FormList title="📋 Por hacer" value={planForm.newTask} placeholder="Ej: Reservar hotel" onValue={(value) => setPlanForm({ ...planForm, newTask: value })} onAdd={() => addTask(planForm, setPlanForm)}>
+            {planForm.tasks.map((task) => <EditCheckRow key={task.id} checked={task.done} label={task.task} onToggle={() => setPlanForm({ ...planForm, tasks: planForm.tasks.map((item) => item.id === task.id ? { ...item, done: !item.done } : item) })} onRemove={() => setPlanForm({ ...planForm, tasks: planForm.tasks.filter((item) => item.id !== task.id) })} />)}
+          </FormList>
+          <Field label="💳 Por pagar">
+            <div className="grid gap-2 sm:grid-cols-[2fr_1fr]">
+              <TextField value={planForm.newPaymentDescription} onChange={(event) => setPlanForm({ ...planForm, newPaymentDescription: event.target.value })} placeholder="Ej: Boletos de avión" />
+              <TextField type="number" value={planForm.newPaymentAmount} onChange={(event) => setPlanForm({ ...planForm, newPaymentAmount: event.target.value })} placeholder="$0" />
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Chip selected={planForm.newPaymentPerPerson} onClick={() => setPlanForm({ ...planForm, newPaymentPerPerson: !planForm.newPaymentPerPerson })}>👤 Por persona</Chip>
+              <Chip selected={planForm.newPaymentTrackInGastos} onClick={() => setPlanForm({ ...planForm, newPaymentTrackInGastos: !planForm.newPaymentTrackInGastos })}>{planForm.newPaymentTrackInGastos ? "✓ En gastos" : "Solo planeación"}</Chip>
+              <Button variant="ghost" size="sm" onClick={() => addPayment(planForm, setPlanForm)}>+ Agregar</Button>
+            </div>
+            <div className="mt-2 flex flex-col gap-2">
+              {planForm.payments.map((payment) => <EditCheckRow key={payment.id} checked={payment.done} label={`${payment.description} · $${formatMXN(payment.amount)}`} onToggle={() => setPlanForm({ ...planForm, payments: planForm.payments.map((item) => item.id === payment.id ? { ...item, done: !item.done } : item) })} onRemove={() => setPlanForm({ ...planForm, payments: planForm.payments.filter((item) => item.id !== payment.id) })} />)}
+            </div>
+          </Field>
+          <TextField label="Notas" value={planForm.notes} onChange={(event) => setPlanForm({ ...planForm, notes: event.target.value })} placeholder="Notas, ideas, requisitos..." />
+        </div>
+      </Modal>
 
-        <FormField label="Destino">
-          <StyledInput
-            value={planForm.destination}
-            onChangeText={(v) => setPlanField("destination", v)}
-            placeholder="Ciudad o país"
-          />
-        </FormField>
-
-        <View style={styles.twoCol}>
-          <View style={{ flex: 1 }}>
-            <CalendarPicker
-              label="Fecha inicio"
-              value={planForm.startDate}
-              onChange={(d) => setPlanField("startDate", d)}
-              placeholder="Seleccionar"
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <CalendarPicker
-              label="Fecha fin"
-              value={planForm.endDate}
-              onChange={(d) => setPlanField("endDate", d)}
-              placeholder="Seleccionar"
-              minimumDate={planForm.startDate ?? undefined}
-            />
-          </View>
-        </View>
-
-        <FormField label="Estado">
-          <View style={styles.chipRow}>
-            {STATUSES.map((s) => (
-              <ToggleChip
-                key={s}
-                label={STATUS_LABELS[s]}
-                active={planForm.status === s}
-                color={STATUS_COLORS[s]}
-                onPress={() => setPlanField("status", s)}
-              />
-            ))}
-          </View>
-        </FormField>
-
-        {/* Personas */}
-        <FormField label="👥 Personas">
-          <View style={styles.inlineAddRow}>
-            <StyledInput
-              value={planForm.newPerson}
-              onChangeText={(v) => setPlanField("newPerson", v)}
-              placeholder="Nombre"
-              style={{ flex: 1 }}
-              onSubmitEditing={handleAddPerson}
-              returnKeyType="done"
-            />
-            <CustomButton variant="outline" size="sm" onPress={handleAddPerson}>
-              + Agregar
-            </CustomButton>
-          </View>
-          {planForm.persons.length > 0 && (
-            <View style={styles.tagRow}>
-              {planForm.persons.map((p) => (
-                <View key={p} style={[styles.tag, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
-                  <Text style={[styles.tagText, { color: c.text }]}>{p}</Text>
-                  <TouchableOpacity onPress={() => handleRemovePerson(p)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-                    <Text style={{ color: c.textPlaceholder, fontSize: 12 }}>✕</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </View>
-          )}
-        </FormField>
-
-        {/* Tasks checklist */}
-        <FormField label="📋 Por hacer">
-          <View style={styles.inlineAddRow}>
-            <StyledInput
-              value={planForm.newTask}
-              onChangeText={(v) => setPlanField("newTask", v)}
-              placeholder="Ej: Reservar hotel, Pasaportes..."
-              style={{ flex: 1 }}
-              onSubmitEditing={handleAddTask}
-              returnKeyType="done"
-            />
-            <CustomButton variant="outline" size="sm" onPress={handleAddTask}>
-              + Agregar
-            </CustomButton>
-          </View>
-          {planForm.tasks.length > 0 && (
-            <View style={styles.checkList}>
-              {planForm.tasks.map((t) => (
-                <View key={t.id} style={[styles.checkRow, { borderBottomColor: c.border }]}>
-                  <TouchableOpacity onPress={() => handleToggleTask(t.id)} style={styles.checkRowLeft}>
-                    <View style={[styles.checkBox, { borderColor: t.done ? c.primary : c.border, backgroundColor: t.done ? c.primary : "transparent" }]}>
-                      {t.done && <Text style={{ color: c.background, fontSize: 10 }}>✓</Text>}
-                    </View>
-                    <Text style={[styles.checkText, { color: t.done ? c.textMuted : c.text, textDecorationLine: t.done ? "line-through" : "none" }]}>
-                      {t.task}
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => handleRemoveTask(t.id)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-                    <Text style={{ color: c.textPlaceholder, fontSize: 12 }}>✕</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </View>
-          )}
-        </FormField>
-
-        {/* Payments checklist */}
-        <FormField label="💳 Por pagar">
-          <View style={styles.paymentAddBlock}>
-            <View style={styles.inlineAddRow}>
-              <StyledInput
-                value={planForm.newPaymentDescription}
-                onChangeText={(v) => setPlanField("newPaymentDescription", v)}
-                placeholder="Ej: Boletos de avión"
-                style={{ flex: 2 }}
-              />
-              <StyledInput
-                value={planForm.newPaymentAmount}
-                onChangeText={(v) => setPlanField("newPaymentAmount", v)}
-                placeholder="$0"
-                keyboardType="decimal-pad"
-                style={{ flex: 1 }}
-              />
-            </View>
-            <View style={styles.inlineAddRow}>
-              <TouchableOpacity
-                style={[styles.perPersonChip, { borderColor: planForm.newPaymentPerPerson ? c.primary : c.border, backgroundColor: planForm.newPaymentPerPerson ? c.primary + "22" : "transparent" }]}
-                onPress={() => setPlanField("newPaymentPerPerson", !planForm.newPaymentPerPerson)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.perPersonText, { color: planForm.newPaymentPerPerson ? c.primary : c.textMuted }]}>
-                  👤 Por persona {planForm.newPaymentPerPerson && planForm.persons.length > 0 ? `(×${planForm.persons.length})` : ""}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.perPersonChip, { borderColor: planForm.newPaymentTrackInGastos ? "#16A34A" : c.border, backgroundColor: planForm.newPaymentTrackInGastos ? "#16A34A22" : "transparent" }]}
-                onPress={() => setPlanField("newPaymentTrackInGastos", !planForm.newPaymentTrackInGastos)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.perPersonText, { color: planForm.newPaymentTrackInGastos ? "#16A34A" : c.textMuted }]}>
-                  {planForm.newPaymentTrackInGastos ? "✓ En gastos" : "Solo planeación"}
-                </Text>
-              </TouchableOpacity>
-              <CustomButton variant="outline" size="sm" onPress={handleAddPayment}>
-                + Agregar
-              </CustomButton>
-            </View>
-          </View>
-
-          {planForm.payments.length > 0 && (
-            <View style={styles.checkList}>
-              {planForm.payments.map((p) => {
-                const perCount = planForm.persons.length;
-                const itemTotal = p.amount * (p.perPerson ? Math.max(perCount, 1) : 1);
-                return (
-                  <View key={p.id} style={[styles.paymentRow, { borderBottomColor: c.border }]}>
-                    <TouchableOpacity onPress={() => handleTogglePayment(p.id)} style={styles.checkRowLeft}>
-                      <View style={[styles.checkBox, { borderColor: p.done ? "#16A34A" : c.border, backgroundColor: p.done ? "#16A34A" : "transparent" }]}>
-                        {p.done && <Text style={{ color: "#fff", fontSize: 10 }}>✓</Text>}
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                          <Text style={[styles.checkText, { color: p.done ? c.textMuted : c.text, textDecorationLine: p.done ? "line-through" : "none" }]}>
-                            {p.description}
-                          </Text>
-                          {p.trackInGastos === false && (
-                            <Text style={{ fontSize: 9, color: c.textMuted, fontStyle: "italic" }}>solo plan</Text>
-                          )}
-                        </View>
-                        {p.perPerson && perCount > 0 && (
-                          <Text style={[styles.paymentSub, { color: c.textMuted }]}>
-                            ${p.amount.toLocaleString("es-MX")} × {perCount}
-                          </Text>
-                        )}
-                      </View>
-                    </TouchableOpacity>
-                    <Text style={[styles.paymentAmount, { color: p.done ? c.textMuted : c.text }]}>
-                      ${itemTotal.toLocaleString("es-MX")}
-                    </Text>
-                    <TouchableOpacity onPress={() => handleRemovePayment(p.id)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-                      <Text style={{ color: c.textPlaceholder, fontSize: 12 }}>✕</Text>
-                    </TouchableOpacity>
-                  </View>
-                );
-              })}
-              <View style={[styles.paymentTotal, { borderTopColor: c.border }]}>
-                <Text style={[styles.paymentTotalLabel, { color: c.textMuted }]}>
-                  Pagado: ${formPaymentDoneTotal.toLocaleString("es-MX")} · Pendiente:
-                </Text>
-                <Text style={[styles.paymentTotalAmount, { color: c.text }]}>
-                  ${formPaymentTotal.toLocaleString("es-MX")}
-                </Text>
-              </View>
-            </View>
-          )}
-        </FormField>
-
-        <FormField label="Notas">
-          <StyledInput
-            value={planForm.notes}
-            onChangeText={(v) => setPlanField("notes", v)}
-            placeholder="Notas, ideas, requisitos..."
-            multiline
-          />
-        </FormField>
-      </CustomModal>
-
-      {/* ── Day Modal ───────────────────────────────────────────────────────────── */}
-      <CustomModal
+      <Modal
         open={dayModalOpen}
-        onOpenChange={setDayModalOpen}
+        onClose={() => setDayModalOpen(false)}
         title="Agregar actividad"
-        size="sm"
-        footer={
-          <View style={[styles.modalFooterRight, { justifyContent: "flex-end", flex: 1 }]}>
-            <CustomButton variant="outline" size="sm" onPress={() => setDayModalOpen(false)}>
-              Cancelar
-            </CustomButton>
-            <CustomButton variant="primary" size="sm" onPress={handleSaveDay}>
-              Agregar
-            </CustomButton>
-          </View>
-        }
+        footer={<><Button variant="ghost" size="sm" onClick={() => setDayModalOpen(false)}>Cancelar</Button><Button size="sm" onClick={handleSaveDay}>Agregar</Button></>}
       >
-        <FormField label="Actividad *">
-          <StyledInput
-            value={dayForm.activity}
-            onChangeText={(v) => setDayField("activity", v)}
-            placeholder="Ej: Visita a la playa, Cena en restaurante"
-          />
-        </FormField>
-        <FormField label="Fecha">
-          <StyledInput
-            value={dayForm.date}
-            onChangeText={(v) => setDayField("date", v)}
-            placeholder="YYYY-MM-DD"
-          />
-        </FormField>
-        <FormField label="Costo estimado ($)">
-          <StyledInput
-            value={dayForm.estimatedCost}
-            onChangeText={(v) => setDayField("estimatedCost", v)}
-            placeholder="0"
-            keyboardType="decimal-pad"
-          />
-        </FormField>
-      </CustomModal>
-    </View>
+        <div className="flex flex-col gap-4">
+          <TextField label="Actividad *" value={dayForm.activity} onChange={(event) => setDayForm({ ...dayForm, activity: event.target.value })} />
+          <TextField label="Fecha" type="date" value={dayForm.date} onChange={(event) => setDayForm({ ...dayForm, date: event.target.value })} />
+          <TextField label="Costo estimado ($)" type="number" value={dayForm.estimatedCost} onChange={(event) => setDayForm({ ...dayForm, estimatedCost: event.target.value })} />
+        </div>
+      </Modal>
+    </div>
   );
 }
 
-// ─── Small helpers ────────────────────────────────────────────────────────────
+function pushDonePaymentsToGastos(form: PlanFormState, addExpenseFromModal: ReturnType<typeof useExpensesStore.getState>["addExpenseFromModal"]) {
+  for (const payment of form.payments) {
+    if (payment.done && payment.trackInGastos !== false) pushPaymentToGastos({ startDate: form.startDate, persons: form.persons } as VacationPlan, payment, addExpenseFromModal);
+  }
+}
 
-function FormField({ label, children }: { label: string; children: React.ReactNode }) {
-  const c = useColors();
+function pushPaymentToGastos(plan: VacationPlan, payment: VacationPayment, addExpenseFromModal: ReturnType<typeof useExpensesStore.getState>["addExpenseFromModal"]) {
+  const date = plan.startDate ? new Date(`${plan.startDate}T12:00:00`) : new Date();
+  addExpenseFromModal({
+    mes: MESES_LIST[date.getMonth()] ?? currentMonthName(),
+    gastos: payment.description,
+    monto: payment.amount * (payment.perPerson ? Math.max(plan.persons.length, 1) : 1),
+    metodoPago: "efectivo",
+    frecuencia: "unico",
+    fecha: date.getDate(),
+    fechaMaxima: "",
+    estado: "pagado",
+  });
+}
+
+function addPerson(form: PlanFormState, setForm: (form: PlanFormState) => void) {
+  const person = form.newPerson.trim();
+  if (!person || form.persons.includes(person)) return;
+  setForm({ ...form, persons: [...form.persons, person], newPerson: "" });
+}
+
+function addTask(form: PlanFormState, setForm: (form: PlanFormState) => void) {
+  const task = form.newTask.trim();
+  if (!task) return;
+  setForm({ ...form, tasks: [...form.tasks, { id: randomUUID(), task, done: false }], newTask: "" });
+}
+
+function addPayment(form: PlanFormState, setForm: (form: PlanFormState) => void) {
+  const description = form.newPaymentDescription.trim();
+  if (!description) return;
+  setForm({
+    ...form,
+    payments: [...form.payments, { id: randomUUID(), description, amount: Number(form.newPaymentAmount) || 0, perPerson: form.newPaymentPerPerson, done: false, trackInGastos: form.newPaymentTrackInGastos }],
+    newPaymentDescription: "",
+    newPaymentAmount: "",
+    newPaymentPerPerson: false,
+    newPaymentTrackInGastos: true,
+  });
+}
+
+function calcDays(start: string, end: string) {
+  const diff = Math.round((new Date(end).getTime() - new Date(start).getTime()) / 86400000) + 1;
+  return Number.isFinite(diff) && diff > 0 ? diff : null;
+}
+
+function Summary({ value, label }: { value: string; label: string }) {
+  return <Card className="text-center"><p className="font-bold text-gray-900">{value}</p><p className="text-xs text-gray-500">{label}</p></Card>;
+}
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return <section className="flex flex-col gap-2"><h3 className="text-sm font-semibold text-gray-900">{title}</h3>{children}</section>;
+}
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return <div className="flex flex-col gap-2"><span className="text-sm font-medium text-gray-700">{label}</span>{children}</div>;
+}
+
+function InfoRow({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return <div className="flex justify-between gap-2 text-sm"><span className="text-gray-600">{label}</span><span className={strong ? "font-bold text-gray-900" : "font-medium text-gray-900"}>{value}</span></div>;
+}
+
+function Tags({ title, values }: { title: string; values: string[] }) {
+  return <Section title={title}><div className="flex flex-wrap gap-2">{values.map((value) => <span key={value} className="rounded-full border border-gray-200 px-2 py-1 text-xs text-gray-700">{value}</span>)}</div></Section>;
+}
+
+function CheckRow({ checked, label, value, onClick }: { checked: boolean; label: string; value?: string; onClick: () => void }) {
   return (
-    <View style={{ gap: 4 }}>
-      <Text style={{ fontSize: TYPOGRAPHY.fontSize.sm, color: c.textMuted, fontWeight: "500" }}>
-        {label}
-      </Text>
-      {children}
-    </View>
+    <button type="button" className="grid grid-cols-[auto_1fr_auto] items-center gap-2 border-b border-gray-100 py-2 text-left text-sm" onClick={onClick}>
+      <span className={`flex h-5 w-5 items-center justify-center rounded border ${checked ? "border-primary bg-primary text-white" : "border-gray-300"}`}>{checked ? "✓" : ""}</span>
+      <span className={checked ? "text-gray-400 line-through" : "text-gray-900"}>{label}</span>
+      {value && <span className={checked ? "text-gray-400" : "font-semibold text-gray-900"}>{value}</span>}
+    </button>
   );
 }
 
-function StyledInput(props: React.ComponentProps<typeof TextInput> & { style?: object }) {
-  const c = useColors();
+function EditCheckRow({ checked, label, onToggle, onRemove }: { checked: boolean; label: string; onToggle: () => void; onRemove: () => void }) {
   return (
-    <TextInput
-      style={[
-        styles.input,
-        { color: c.text, borderColor: c.border, backgroundColor: c.backgroundStrong },
-        props.multiline && { minHeight: 72, textAlignVertical: "top" },
-        props.style,
-      ]}
-      placeholderTextColor={c.textPlaceholder}
-      {...props}
-    />
+    <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 text-sm">
+      <button type="button" className={`flex h-5 w-5 items-center justify-center rounded border ${checked ? "border-primary bg-primary text-white" : "border-gray-300"}`} onClick={onToggle}>{checked ? "✓" : ""}</button>
+      <span className={checked ? "text-gray-400 line-through" : "text-gray-900"}>{label}</span>
+      <Button variant="ghost" size="sm" onClick={onRemove}>✕</Button>
+    </div>
   );
 }
 
-function ToggleChip({
-  label, active, onPress, color,
-}: { label: string; active: boolean; onPress: () => void; color?: string }) {
-  const c = useColors();
-  const bg = color ? color + "22" : c.primary;
-  const border = color ? color + "55" : c.primary;
+function FormList({ title, value, placeholder, onValue, onAdd, children }: { title: string; value: string; placeholder: string; onValue: (value: string) => void; onAdd: () => void; children: ReactNode }) {
   return (
-    <TouchableOpacity
-      style={[
-        styles.chip,
-        active
-          ? { borderColor: border, backgroundColor: bg }
-          : { borderColor: c.border, backgroundColor: c.backgroundStrong },
-      ]}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      <Text style={[styles.chipText, { color: active ? (color ?? c.primary) : c.text }]}>
-        {label}
-      </Text>
-    </TouchableOpacity>
+    <Field label={title}>
+      <div className="flex gap-2"><TextField value={value} onChange={(event) => onValue(event.target.value)} placeholder={placeholder} /><Button variant="ghost" size="sm" onClick={onAdd}>+ Agregar</Button></div>
+      <div className="flex flex-col gap-2">{children}</div>
+    </Field>
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+function Tag({ children, onRemove }: { children: ReactNode; onRemove: () => void }) {
+  return <span className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-2 py-1 text-xs text-gray-700">{children}<button type="button" onClick={onRemove}>✕</button></span>;
+}
 
-const styles = StyleSheet.create({
-  root: { flex: 1, padding: SPACING.md, gap: SPACING.md },
+function ChipRow({ options, value, onChange }: { options: { label: string; value: string }[]; value: string; onChange: (value: string) => void }) {
+  return <div className="flex flex-wrap gap-2">{options.map((option) => <Chip key={option.value} selected={value === option.value} onClick={() => onChange(option.value)}>{option.label}</Chip>)}</div>;
+}
 
-  summaryBar: {
-    flexDirection: "row",
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    overflow: "hidden",
-  },
-  summaryItem: { flex: 1, alignItems: "center", paddingVertical: SPACING.sm, gap: 2 },
-  summaryValue: { fontSize: TYPOGRAPHY.fontSize.md, fontWeight: "700" },
-  summaryLabel: { fontSize: TYPOGRAPHY.fontSize.xs, textAlign: "center" },
-  summaryDivider: { width: 1 },
-
-  addViajeRow: { alignItems: "flex-start" },
-
-  empty: { flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 60, gap: 8 },
-  emptyIcon: { fontSize: 40 },
-  emptyText: { fontSize: TYPOGRAPHY.fontSize.md, fontWeight: "600" },
-  emptyHint: { fontSize: TYPOGRAPHY.fontSize.sm, textAlign: "center", maxWidth: 280 },
-
-  list: { gap: SPACING.sm, paddingBottom: SPACING.lg },
-
-  card: { borderRadius: BORDER_RADIUS.md, borderWidth: 1, overflow: "hidden" },
-  cardHeader: { flexDirection: "row", alignItems: "center", padding: SPACING.md, gap: SPACING.sm },
-  cardHeaderLeft: { flex: 1, gap: 4 },
-  cardTitleRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
-  cardTitle: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "700", flex: 1 },
-  cardSub: { fontSize: TYPOGRAPHY.fontSize.xs },
-  cardHeaderRight: { alignItems: "flex-end", gap: 4 },
-  budgetText: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "700" },
-  progressText: { fontSize: TYPOGRAPHY.fontSize.xs },
-  chevron: { fontSize: 10 },
-
-  statusBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: BORDER_RADIUS.lg,
-    borderWidth: 1,
-  },
-  statusBadgeText: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "600" },
-
-  cardBody: { padding: SPACING.md, borderTopWidth: 1, gap: SPACING.sm },
-  notesText: { fontSize: TYPOGRAPHY.fontSize.sm, fontStyle: "italic" },
-
-  sectionHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 4,
-  },
-  sectionLabel: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "600" },
-  sectionMeta: { fontSize: TYPOGRAPHY.fontSize.xs },
-
-  tagRow: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.xs },
-  tag: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 4,
-    borderRadius: BORDER_RADIUS.lg,
-    borderWidth: 1,
-  },
-  tagText: { fontSize: TYPOGRAPHY.fontSize.xs },
-
-  checkList: { gap: 0 },
-  checkRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: SPACING.xs,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    gap: SPACING.sm,
-  },
-  checkRowLeft: { flex: 1, flexDirection: "row", alignItems: "center", gap: SPACING.sm },
-  checkBox: {
-    width: 18,
-    height: 18,
-    borderRadius: 4,
-    borderWidth: 1.5,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checkText: { flex: 1, fontSize: TYPOGRAPHY.fontSize.sm },
-  rowDone: { opacity: 0.6 },
-
-  paymentRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: SPACING.xs,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    gap: SPACING.sm,
-  },
-  paymentSub: { fontSize: TYPOGRAPHY.fontSize.xs },
-  paymentAmount: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "600", minWidth: 60, textAlign: "right" },
-  paymentTotal: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingTop: SPACING.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    marginTop: SPACING.xs,
-  },
-  paymentTotalLabel: { fontSize: TYPOGRAPHY.fontSize.xs },
-  paymentTotalAmount: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "700" },
-
-  noDays: { fontSize: TYPOGRAPHY.fontSize.xs, fontStyle: "italic" },
-  daysList: { gap: 0 },
-  dayRow: { flexDirection: "row", alignItems: "center", paddingVertical: SPACING.xs, borderBottomWidth: 1 },
-  dayActivity: { fontSize: TYPOGRAPHY.fontSize.sm },
-  daySub: { fontSize: TYPOGRAPHY.fontSize.xs },
-  dayRight: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
-  dayCost: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "600" },
-
-  // Form
-  input: {
-    borderWidth: 1,
-    borderRadius: BORDER_RADIUS.sm,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
-    fontSize: TYPOGRAPHY.fontSize.sm,
-  },
-  twoCol: { flexDirection: "row", gap: SPACING.sm },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.xs },
-  chip: {
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 6,
-    borderRadius: BORDER_RADIUS.lg,
-    borderWidth: 1,
-  },
-  chipText: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "500" },
-
-  inlineAddRow: { flexDirection: "row", gap: SPACING.xs, alignItems: "center" },
-  paymentAddBlock: { gap: SPACING.xs },
-  perPersonChip: {
-    flex: 1,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 8,
-    borderRadius: BORDER_RADIUS.lg,
-    borderWidth: 1,
-    alignItems: "center",
-  },
-  perPersonText: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "500" },
-
-  modalFooterRight: { flexDirection: "row", gap: SPACING.sm },
-});
+function Chip({ selected, onClick, children }: { selected: boolean; onClick: () => void; children: ReactNode }) {
+  return <button type="button" className={`rounded-full border px-3 py-1 text-xs ${selected ? "border-primary bg-blue-50 text-primary" : "border-gray-200 text-gray-700"}`} onClick={onClick}>{children}</button>;
+}

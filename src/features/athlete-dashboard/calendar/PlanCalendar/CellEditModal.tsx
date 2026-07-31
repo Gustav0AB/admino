@@ -1,10 +1,5 @@
-import { useState, useEffect } from "react";
-import { View, Text, StyleSheet } from "react-native";
-import { CustomModal } from "@/shared/components/feedback/CustomModal";
-import { CustomButton } from "@/shared/components/inputs/CustomButton";
-import { CustomInput } from "@/shared/components/inputs/CustomInput";
-import { useColors } from "@/shared/hooks/useColors";
-import { SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
+import { useEffect, useState } from "react";
+import { Button, Modal } from "@generic/components";
 
 type CellEditModalProps = {
   open: boolean;
@@ -27,7 +22,6 @@ trote 2x4 40min
 nota: calentar 10 min antes`;
 
 export function CellEditModal({ open, dateLabel, initialValue, onClose, onSave }: CellEditModalProps) {
-  const c = useColors();
   const [value, setValue] = useState(initialValue);
   const [showHint, setShowHint] = useState(false);
 
@@ -35,54 +29,20 @@ export function CellEditModal({ open, dateLabel, initialValue, onClose, onSave }
     if (open) setValue(initialValue);
   }, [open, initialValue]);
 
-  function handleSave() {
-    onSave(value);
-    onClose();
-  }
-
   return (
-    <CustomModal
-      open={open}
-      onOpenChange={onClose}
-      title={dateLabel}
-      size="md"
-      footer={
-        <View style={styles.footer}>
-          <CustomButton variant="ghost" size="sm" onPress={onClose}>Cancelar</CustomButton>
-          <CustomButton variant="primary" size="sm" onPress={handleSave}>Guardar</CustomButton>
-        </View>
-      }
-    >
-      <View style={{ gap: SPACING.sm }}>
-        <CustomInput
+    <Modal open={open} onClose={onClose} title={dateLabel} footer={<><Button variant="ghost" size="sm" onClick={onClose}>Cancelar</Button><Button size="sm" onClick={() => { onSave(value); onClose(); }}>Guardar</Button></>}>
+      <div className="flex flex-col gap-3">
+        <textarea
+          className="min-h-52 rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
           value={value}
-          onChangeText={setValue}
+          onChange={(event) => setValue(event.target.value)}
           placeholder={"Fuerza\npecho banca plana 2 series de 4\ntrote 2x4 40min\nnota: calentar bien"}
-          multiline
-          numberOfLines={10}
-          style={styles.textArea}
-          textAlignVertical="top"
         />
-        <View style={[styles.hintBox, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
-          <Text
-            style={[styles.hintToggle, { color: c.primary }]}
-            onPress={() => setShowHint((v) => !v)}
-          >
-            {showHint ? "▲ Ocultar formato" : "▼ Ver formato del atleta"}
-          </Text>
-          {showHint && (
-            <Text style={[styles.hintText, { color: c.textMuted }]}>{CELL_HINT}</Text>
-          )}
-        </View>
-      </View>
-    </CustomModal>
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+          <button type="button" className="text-xs font-semibold text-primary" onClick={() => setShowHint((current) => !current)}>{showHint ? "▲ Ocultar formato" : "▼ Ver formato del atleta"}</button>
+          {showHint && <pre className="mt-2 whitespace-pre-wrap text-xs leading-5 text-gray-500">{CELL_HINT}</pre>}
+        </div>
+      </div>
+    </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  footer: { flex: 1, flexDirection: "row", justifyContent: "flex-end", gap: SPACING.sm },
-  textArea: { minHeight: 200 },
-  hintBox: { borderRadius: 8, borderWidth: 1, padding: SPACING.sm },
-  hintToggle: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "600" },
-  hintText: { fontSize: TYPOGRAPHY.fontSize.xs, lineHeight: 18, marginTop: SPACING.xs },
-});

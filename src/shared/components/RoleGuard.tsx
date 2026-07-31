@@ -1,5 +1,4 @@
-import { type ReactNode } from "react";
-import { Redirect } from "expo-router";
+import { type ReactNode, useEffect } from "react";
 import { useAuth } from "@/shared/hooks/useAuth";
 import type { UserRole } from "@/shared/types/auth";
 
@@ -18,18 +17,20 @@ export function RoleGuard({
 }: RoleGuardProps) {
   const { user, isAuthenticated, isInitialized } = useAuth();
 
+  useEffect(() => {
+    if (!redirect || !isInitialized) return;
+    if (!isAuthenticated || !user) window.location.hash = "/(auth)/sign-in";
+    else if (!allowedRoles.includes(user.role)) window.location.hash = fallback;
+  }, [allowedRoles, fallback, isAuthenticated, isInitialized, redirect, user]);
+
   if (!isInitialized) return null;
 
   if (!isAuthenticated || !user) {
-    return redirect ? (
-      <Redirect href="/(auth)/sign-in" />
-    ) : null;
+    return null;
   }
 
   if (!allowedRoles.includes(user.role)) {
-    return redirect ? (
-      <Redirect href={fallback as Parameters<typeof Redirect>[0]["href"]} />
-    ) : null;
+    return null;
   }
 
   return <>{children}</>;

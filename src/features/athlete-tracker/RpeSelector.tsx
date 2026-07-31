@@ -1,7 +1,3 @@
-import { View, Text, Pressable, StyleSheet } from "react-native";
-import { useColors } from "@/shared/hooks/useColors";
-import { SPACING, TYPOGRAPHY, BORDER_RADIUS } from "@/shared/theme/tokens";
-
 const RPE_LABELS: Record<number, string> = {
   1: "Muy fácil",
   2: "Fácil",
@@ -15,7 +11,7 @@ const RPE_LABELS: Record<number, string> = {
   10: "Al límite",
 };
 
-function rpeColor(value: number): string {
+function rpeColor(value: number) {
   if (value <= 3) return "#22C55E";
   if (value <= 6) return "#F59E0B";
   return "#EF4444";
@@ -27,41 +23,33 @@ type RpeSelectorProps = {
 };
 
 export function RpeSelector({ value, onChange }: RpeSelectorProps) {
-  const c = useColors();
-
   return (
-    <View style={{ gap: SPACING.sm }}>
-      <Text style={{ color: c.textMuted, fontSize: TYPOGRAPHY.fontSize.sm }}>
+    <div className="flex flex-col gap-3">
+      <p className="text-sm text-gray-500">
         {value !== null ? `${value} — ${RPE_LABELS[value]}` : "¿Qué tan duro se sintió? (1-10)"}
-      </Text>
-      <View style={styles.grid}>
-        {Array.from({ length: 10 }, (_, i) => i + 1).map((v) => {
-          const selected = value === v;
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {Array.from({ length: 10 }, (_, index) => index + 1).map((rpe) => {
+          const selected = value === rpe;
           return (
-            <Pressable
-              key={v}
-              onPress={() => onChange(v)}
-              accessibilityRole="button"
-              accessibilityLabel={`RPE ${v}`}
-              accessibilityState={{ selected }}
-              style={[
-                styles.btn,
-                {
-                  backgroundColor: selected ? rpeColor(v) : c.backgroundStrong,
-                  borderColor: selected ? rpeColor(v) : c.border,
-                },
-              ]}
+            <button
+              key={rpe}
+              type="button"
+              className="flex h-11 w-11 items-center justify-center rounded-lg border-2 font-bold"
+              style={{
+                backgroundColor: selected ? rpeColor(rpe) : "#fff",
+                borderColor: selected ? rpeColor(rpe) : "#E5E7EB",
+                color: selected ? "#fff" : "#111827",
+              }}
+              aria-label={`RPE ${rpe}`}
+              aria-pressed={selected}
+              onClick={() => onChange(rpe)}
             >
-              <Text style={{ color: selected ? "#fff" : c.text, fontWeight: "700" }}>{v}</Text>
-            </Pressable>
+              {rpe}
+            </button>
           );
         })}
-      </View>
-    </View>
+      </div>
+    </div>
   );
 }
-
-const styles = StyleSheet.create({
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm },
-  btn: { width: 44, height: 44, borderRadius: BORDER_RADIUS.md, borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
-});

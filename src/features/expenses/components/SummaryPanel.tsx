@@ -1,13 +1,10 @@
 import { useMemo } from "react";
-import { View, Text, StyleSheet } from "react-native";
-import { useColors } from "@/shared/hooks/useColors";
-import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
+import { Card } from "@generic/components";
 import { useExpensesStore } from "../store";
 import { formatMXN, getFilteredExpenses } from "../helpers";
 import { usePlanningStore } from "@/features/expenses/planning/store";
 
 export function SummaryPanel() {
-  const c = useColors();
   const { expenses, filterMes, filterFrecuencia, filterFecha, filterAño, filterCategoria } = useExpensesStore();
   const { scheduledExpenses, vacations } = usePlanningStore();
 
@@ -16,122 +13,47 @@ export function SummaryPanel() {
     [expenses, filterMes, filterFrecuencia, filterFecha, filterAño, filterCategoria],
   );
 
-  const selected = filtered.filter((e) => e.selected);
+  const selected = filtered.filter((expense) => expense.selected);
 
   const { pagado, sinPagar, credito, totalFiltrado } = useMemo(() => {
-    // Credit charges are reference-only; only cash/card-payment expenses count toward totals
-    const gastos = filtered.filter((e) => e.metodoPago !== "credito");
-    const pag = gastos
-      .filter((e) => e.estado === "pagado")
-      .reduce((s, e) => s + e.monto, 0);
-    const sin = gastos
-      .filter((e) => e.estado === "no pagado" || e.estado === "no guardado")
-      .reduce((s, e) => s + e.monto, 0);
-    const cred = filtered
-      .filter((e) => e.metodoPago === "credito")
-      .reduce((s, e) => s + e.monto, 0);
-    const tot = gastos.reduce((s, e) => s + e.monto, 0);
-    return { pagado: pag, sinPagar: sin, credito: cred, totalFiltrado: tot };
+    const gastos = filtered.filter((expense) => expense.metodoPago !== "credito");
+    const pag = gastos.filter((expense) => expense.estado === "pagado").reduce((sum, expense) => sum + expense.monto, 0);
+    const sin = gastos.filter((expense) => expense.estado === "no pagado" || expense.estado === "no guardado").reduce((sum, expense) => sum + expense.monto, 0);
+    const cred = filtered.filter((expense) => expense.metodoPago === "credito").reduce((sum, expense) => sum + expense.monto, 0);
+    return { pagado: pag, sinPagar: sin, credito: cred, totalFiltrado: gastos.reduce((sum, expense) => sum + expense.monto, 0) };
   }, [filtered]);
 
   const upcomingTotal = useMemo(
-    () =>
-      scheduledExpenses
-        .filter((e) => e.amountKnown && e.status !== "cancelled")
-        .reduce((s, e) => s + e.amount, 0),
+    () => scheduledExpenses.filter((expense) => expense.amountKnown && expense.status !== "cancelled").reduce((sum, expense) => sum + expense.amount, 0),
     [scheduledExpenses],
   );
 
   const vacationsTotal = useMemo(
-    () =>
-      vacations
-        .filter((v) => v.status !== "cancelled" && (v.budget ?? 0) > 0)
-        .reduce((s, v) => s + (v.budget ?? 0), 0),
+    () => vacations.filter((vacation) => vacation.status !== "cancelled" && (vacation.budget ?? 0) > 0).reduce((sum, vacation) => sum + (vacation.budget ?? 0), 0),
     [vacations],
   );
 
   return (
-    <View style={[styles.card, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
-      <Text style={[styles.title, { color: c.text }]}>Resumen</Text>
-      <Row label="Pagados" value={`$${formatMXN(pagado)}`} c={c} />
-      <Row label="Sin pagar" value={`$${formatMXN(sinPagar)}`} c={c} />
-      <Row label="Crédito" value={`$${formatMXN(credito)}`} c={c} color={c.primary} />
-      <View style={[styles.divider, { backgroundColor: c.border }]} />
-      <Row label="Total filtrado" value={`$${formatMXN(totalFiltrado)}`} c={c} bold />
-      <View style={[styles.divider, { backgroundColor: c.border }]} />
-      <Row label="Programados" value={`$${formatMXN(upcomingTotal)}`} c={c} muted />
-      <Row label="Vacaciones" value={`$${formatMXN(vacationsTotal)}`} c={c} muted />
-      <Text style={[styles.hint, { color: c.textMuted }]}>
-        {filtered.length} registros · {selected.length} seleccionados
-      </Text>
-    </View>
+    <Card className="flex flex-col gap-2">
+      <h2 className="mb-1 text-sm font-bold text-gray-900">Resumen</h2>
+      <Row label="Pagados" value={`$${formatMXN(pagado)}`} />
+      <Row label="Sin pagar" value={`$${formatMXN(sinPagar)}`} />
+      <Row label="Crédito" value={`$${formatMXN(credito)}`} valueClassName="text-primary" />
+      <hr className="border-gray-200" />
+      <Row label="Total filtrado" value={`$${formatMXN(totalFiltrado)}`} strong />
+      <hr className="border-gray-200" />
+      <Row label="Programados" value={`$${formatMXN(upcomingTotal)}`} muted />
+      <Row label="Vacaciones" value={`$${formatMXN(vacationsTotal)}`} muted />
+      <p className="mt-1 text-xs text-gray-500">{filtered.length} registros · {selected.length} seleccionados</p>
+    </Card>
   );
 }
 
-function Row({
-  label,
-  value,
-  c,
-  bold,
-  color,
-  muted,
-}: {
-  label: string;
-  value: string;
-  c: ReturnType<typeof useColors>;
-  bold?: boolean;
-  color?: string;
-  muted?: boolean;
-}) {
+function Row({ label, value, strong, muted, valueClassName = "" }: { label: string; value: string; strong?: boolean; muted?: boolean; valueClassName?: string }) {
   return (
-    <View style={styles.row}>
-      <Text
-        style={[
-          styles.label,
-          {
-            color: c.textMuted,
-            fontWeight: bold ? "600" : "400",
-            fontSize: muted ? TYPOGRAPHY.fontSize.xs : TYPOGRAPHY.fontSize.sm,
-          },
-        ]}
-      >
-        {label}
-      </Text>
-      <Text
-        style={[
-          styles.value,
-          {
-            color: color ?? (muted ? c.textMuted : c.text),
-            fontWeight: bold ? "700" : "500",
-            fontSize: muted ? TYPOGRAPHY.fontSize.xs : TYPOGRAPHY.fontSize.sm,
-          },
-        ]}
-      >
-        {value}
-      </Text>
-    </View>
+    <div className={`flex justify-between gap-4 ${muted ? "text-xs" : "text-sm"}`}>
+      <span className={`${strong ? "font-semibold" : ""} text-gray-500`}>{label}</span>
+      <span className={`${strong ? "font-bold" : "font-medium"} ${muted ? "text-gray-500" : "text-gray-900"} ${valueClassName}`}>{value}</span>
+    </div>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    padding: SPACING.md,
-    gap: SPACING.xs,
-  },
-  title: {
-    fontSize: TYPOGRAPHY.fontSize.sm,
-    fontWeight: "700",
-    marginBottom: SPACING.xs,
-  },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 2,
-  },
-  label: { fontSize: TYPOGRAPHY.fontSize.sm },
-  value: { fontSize: TYPOGRAPHY.fontSize.sm },
-  divider: { height: StyleSheet.hairlineWidth, marginVertical: SPACING.xs },
-  hint: { fontSize: TYPOGRAPHY.fontSize.xs, marginTop: SPACING.xs },
-});

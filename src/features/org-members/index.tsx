@@ -1,14 +1,8 @@
 import { useEffect, useState } from "react";
-import {
-  View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert,
-} from "react-native";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Avatar } from "@/shared/components/data-display/Avatar";
-import { StatusBadge } from "@/shared/components/data-display/StatusBadge";
-import { useColors } from "@/shared/hooks/useColors";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Badge, Button, Card } from "@generic/components";
 import { ENV } from "@/shared/config/env";
 import { httpClient } from "@/shared/api/client";
-import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
 import { mockOrgMembers } from "@/shared/api/mocks/member";
 import type { OrgMember, CreateMemberInput, UpdateMemberInput } from "@/shared/types/member";
 import { MemberFormModal } from "@/features/client-settings/MemberFormModal";
@@ -21,16 +15,18 @@ const ROLE_LABEL: Record<string, string> = {
   MEMBER: "Miembro",
 };
 
+function initials(name: string) {
+  return name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+}
+
 export function StaffContent({ onReady }: { onReady: (openCreate: () => void) => void }) {
-  const c = useColors();
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<OrgMember | null>(null);
 
   useEffect(() => {
     onReady(() => { setEditingMember(null); setModalOpen(true); });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [onReady]);
 
   const { data: members = [], isLoading } = useQuery<OrgMember[]>({
     queryKey: ["org-members"],
@@ -50,8 +46,8 @@ export function StaffContent({ onReady }: { onReady: (openCreate: () => void) =>
       const res = await httpClient<{ data: OrgMember }>("/clients/members", { method: "POST", body: data });
       return res.data;
     },
-    onSuccess: (m) => {
-      queryClient.setQueryData<OrgMember[]>(["org-members"], (old = []) => [m, ...old]);
+    onSuccess: (member) => {
+      queryClient.setQueryData<OrgMember[]>(["org-members"], (old = []) => [member, ...old]);
       setModalOpen(false);
     },
   });
@@ -63,7 +59,7 @@ export function StaffContent({ onReady }: { onReady: (openCreate: () => void) =>
       return res.data;
     },
     onSuccess: (_, { id, data }) => {
-      queryClient.setQueryData<OrgMember[]>(["org-members"], (old = []) => (old ?? []).map((m) => (m.id === id ? { ...m, ...data } : m)));
+      queryClient.setQueryData<OrgMember[]>(["org-members"], (old = []) => old.map((member) => (member.id === id ? { ...member, ...data } : member)));
       setModalOpen(false);
       setEditingMember(null);
     },
@@ -76,80 +72,57 @@ export function StaffContent({ onReady }: { onReady: (openCreate: () => void) =>
       return { id, isActive };
     },
     onSuccess: (_, { id, isActive }) => {
-      queryClient.setQueryData<OrgMember[]>(["org-members"], (old = []) => (old ?? []).map((m) => (m.id === id ? { ...m, isActive } : m)));
+      queryClient.setQueryData<OrgMember[]>(["org-members"], (old = []) => old.map((member) => (member.id === id ? { ...member, isActive } : member)));
     },
   });
 
   function confirmToggle(member: OrgMember) {
-    Alert.alert(
-      `¿${member.isActive ? "Desactivar" : "Activar"} usuario?`,
-      `Esto ${member.isActive ? "desactivará" : "activará"} a ${member.name}.`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        { text: member.isActive ? "Desactivar" : "Activar", style: member.isActive ? "destructive" : "default", onPress: () => toggleActive.mutate({ id: member.id, isActive: !member.isActive }) },
-      ]
-    );
+    const ok = window.confirm(`¿${member.isActive ? "Desactivar" : "Activar"} usuario ${member.name}?`);
+    if (ok) toggleActive.mutate({ id: member.id, isActive: !member.isActive });
   }
 
   function handleSubmit(data: CreateMemberInput | UpdateMemberInput) {
-    if (editingMember) {
-      updateMember.mutate({ id: editingMember.id, data: data as UpdateMemberInput });
-    } else {
-      createMember.mutate(data as CreateMemberInput);
-    }
+    if (editingMember) updateMember.mutate({ id: editingMember.id, data: data as UpdateMemberInput });
+    else createMember.mutate(data as CreateMemberInput);
   }
 
   return (
     <>
-      <View style={styles.content}>
+      <div className="p-4">
         {isLoading ? (
-          <View style={styles.center}><ActivityIndicator color={c.primary} /></View>
+          <p className="py-10 text-center text-sm text-gray-500">Cargando…</p>
+        ) : members.length === 0 ? (
+          <p className="py-10 text-center text-sm text-gray-500">Sin usuarios</p>
         ) : (
-          <View style={styles.list}>
-            {members.length === 0 && (
-              <Text style={{ color: c.textMuted, textAlign: "center", paddingVertical: SPACING.xl }}>Sin usuarios</Text>
-            )}
+          <div className="flex flex-col gap-2">
             {members.map((member) => (
-              <View
-                key={member.id}
-                style={[styles.row, { backgroundColor: c.backgroundStrong, borderColor: c.border, opacity: member.isActive ? 1 : 0.6 }]}
-              >
-                <Avatar name={member.name} size="sm" />
-                <View style={styles.info}>
-                  <View style={styles.nameRow}>
-                    <Text style={[styles.name, { color: c.text }]} numberOfLines={1}>{member.name}</Text>
-                    <StatusBadge status={member.isActive ? "active" : "cancelled"} customLabel={member.isActive ? "Activo" : "Inactivo"} size="sm" />
-                  </View>
-                  <Text style={[{ color: c.textMuted, fontSize: TYPOGRAPHY.fontSize.xs }]} numberOfLines={1}>{member.username}</Text>
-                  <Text style={[{ color: c.primary, fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "500" }]}>
-                    {ROLE_LABEL[member.role] ?? member.role}
-                  </Text>
-                </View>
-                <View style={styles.actions}>
+              <Card key={member.id} padding="sm" className={member.isActive ? "" : "opacity-60"}>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">
+                    {initials(member.name)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="truncate text-sm font-semibold text-gray-900">{member.name}</p>
+                      <Badge color={member.isActive ? "green" : "red"}>{member.isActive ? "Activo" : "Inactivo"}</Badge>
+                    </div>
+                    <p className="truncate text-xs text-gray-500">{member.username}</p>
+                    <p className="text-xs font-medium text-primary">{ROLE_LABEL[member.role] ?? member.role}</p>
+                  </div>
                   {member.role !== "OWNER" && (
-                    <>
-                      <TouchableOpacity
-                        style={[styles.actionBtn, { borderColor: c.border, backgroundColor: c.background }]}
-                        onPress={() => { setEditingMember(member); setModalOpen(true); }}
-                      >
-                        <Text style={[styles.actionBtnText, { color: c.text }]}>Editar</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.actionBtn, { borderColor: member.isActive ? c.danger + "60" : c.border, backgroundColor: member.isActive ? c.danger + "10" : c.background }]}
-                        onPress={() => confirmToggle(member)}
-                      >
-                        <Text style={[styles.actionBtnText, { color: member.isActive ? c.danger : c.textMuted }]}>
-                          {member.isActive ? "Desactivar" : "Activar"}
-                        </Text>
-                      </TouchableOpacity>
-                    </>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="ghost" onClick={() => { setEditingMember(member); setModalOpen(true); }}>Editar</Button>
+                      <Button size="sm" variant={member.isActive ? "danger" : "ghost"} onClick={() => confirmToggle(member)}>
+                        {member.isActive ? "Desactivar" : "Activar"}
+                      </Button>
+                    </div>
                   )}
-                </View>
-              </View>
+                </div>
+              </Card>
             ))}
-          </View>
+          </div>
         )}
-      </View>
+      </div>
 
       <MemberFormModal
         open={modalOpen}
@@ -161,16 +134,3 @@ export function StaffContent({ onReady }: { onReady: (openCreate: () => void) =>
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  content: { padding: SPACING.md },
-  list: { gap: SPACING.sm },
-  center: { paddingVertical: SPACING.xl, alignItems: "center" },
-  row: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, padding: SPACING.sm, borderRadius: BORDER_RADIUS.md, borderWidth: 1 },
-  info: { flex: 1, gap: 2, minWidth: 0 },
-  nameRow: { flexDirection: "row", alignItems: "center", gap: SPACING.xs, flexWrap: "wrap" },
-  name: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "600", flexShrink: 1 },
-  actions: { flexDirection: "row", gap: SPACING.xs },
-  actionBtn: { paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs, borderRadius: BORDER_RADIUS.sm, borderWidth: 1 },
-  actionBtnText: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "500" },
-});

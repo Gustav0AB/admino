@@ -1,12 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
-import { CustomModal } from "@/shared/components/feedback/CustomModal";
-import { CustomButton } from "@/shared/components/inputs/CustomButton";
-import { CustomInput } from "@/shared/components/inputs/CustomInput";
-import { CalendarPicker } from "@/shared/components/inputs/CalendarPicker";
-import { useColors } from "@/shared/hooks/useColors";
-import { SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
-import { toIso, isoToLocalDate } from "./calendarUtils";
+import { Button, DatePicker, Modal, TextField } from "@generic/components";
 import { CELL_HINT } from "./CellEditModal";
 
 type RepeatPatternModalProps = {
@@ -19,95 +12,33 @@ type RepeatPatternModalProps = {
 const MIN_TEMPLATES = 2;
 
 export function RepeatPatternModal({ open, defaultStartDate, onClose, onSave }: RepeatPatternModalProps) {
-  const c = useColors();
   const [templates, setTemplates] = useState<string[]>(["", ""]);
   const [startDate, setStartDate] = useState(defaultStartDate);
 
   useEffect(() => {
-    if (open) { setTemplates(["", ""]); setStartDate(defaultStartDate); }
+    if (open) {
+      setTemplates(["", ""]);
+      setStartDate(defaultStartDate);
+    }
   }, [open, defaultStartDate]);
 
-  function updateTemplate(i: number, text: string) {
-    setTemplates((prev) => prev.map((t, idx) => (idx === i ? text : t)));
-  }
-
-  function addTemplate() {
-    setTemplates((prev) => [...prev, ""]);
-  }
-
-  function removeTemplate(i: number) {
-    setTemplates((prev) => (prev.length > MIN_TEMPLATES ? prev.filter((_, idx) => idx !== i) : prev));
-  }
-
-  function handleSave() {
-    onSave(templates, startDate);
-    onClose();
-  }
-
   return (
-    <CustomModal
-      open={open}
-      onOpenChange={onClose}
-      title="Patrón repetitivo"
-      size="md"
-      footer={
-        <View style={styles.footer}>
-          <CustomButton variant="ghost" size="sm" onPress={onClose}>Cancelar</CustomButton>
-          <CustomButton variant="primary" size="sm" onPress={handleSave}>Aplicar al plan</CustomButton>
-        </View>
-      }
-    >
-      <View style={{ gap: SPACING.md }}>
-        <Text style={{ color: c.textMuted, fontSize: TYPOGRAPHY.fontSize.sm, lineHeight: 20 }}>
-          Define un ciclo de días (ej. Pull / Push / Funcional) y se repetirá automáticamente,
-          día por día, desde la fecha de inicio hasta el fin del plan.
-        </Text>
-
-        <CalendarPicker
-          label="Empezar el ciclo desde"
-          value={isoToLocalDate(startDate)}
-          onChange={(d) => setStartDate(toIso(d))}
-        />
-
-        {templates.map((text, i) => (
-          <View key={i} style={[styles.templateRow, { borderColor: c.border }]}>
-            <View style={styles.templateHeader}>
-              <Text style={[styles.templateLabel, { color: c.text }]}>Día {i + 1} del ciclo</Text>
-              {templates.length > MIN_TEMPLATES && (
-                <Text style={[styles.removeBtn, { color: c.danger }]} onPress={() => removeTemplate(i)}>
-                  Quitar
-                </Text>
-              )}
-            </View>
-            <CustomInput
-              value={text}
-              onChangeText={(t) => updateTemplate(i, t)}
-              placeholder={"Pull\njalón al pecho 4x10\nremo 4x10"}
-              multiline
-              numberOfLines={5}
-              style={styles.textArea}
-              textAlignVertical="top"
-            />
-          </View>
+    <Modal open={open} onClose={onClose} title="Patrón repetitivo" footer={<><Button variant="ghost" size="sm" onClick={onClose}>Cancelar</Button><Button size="sm" onClick={() => { onSave(templates, startDate); onClose(); }}>Aplicar al plan</Button></>}>
+      <div className="flex max-h-[65vh] flex-col gap-4 overflow-y-auto pr-1">
+        <p className="text-sm leading-5 text-gray-500">Define un ciclo de días y se repetirá automáticamente desde la fecha de inicio hasta el fin del plan.</p>
+        <DatePicker label="Empezar el ciclo desde" value={startDate} onChange={setStartDate} locale="es-MX" placeholder="Seleccionar fecha" clearText="Limpiar" />
+        {templates.map((text, index) => (
+          <div key={index} className="rounded-lg border border-gray-200 p-3">
+            <div className="mb-2 flex justify-between gap-3">
+              <p className="text-sm font-semibold text-gray-900">Día {index + 1} del ciclo</p>
+              {templates.length > MIN_TEMPLATES && <button type="button" className="text-xs font-semibold text-red-600" onClick={() => setTemplates((current) => current.filter((_, i) => i !== index))}>Quitar</button>}
+            </div>
+            <textarea className="min-h-28 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary" value={text} onChange={(event) => setTemplates((current) => current.map((item, i) => i === index ? event.target.value : item))} placeholder={"Pull\njalón al pecho 4x10\nremo 4x10"} />
+          </div>
         ))}
-
-        <CustomButton variant="outline" size="sm" onPress={addTemplate}>+ Agregar día al ciclo</CustomButton>
-
-        <View style={[styles.hintBox, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
-          <Text style={[styles.hintText, { color: c.textMuted }]}>{CELL_HINT}</Text>
-        </View>
-      </View>
-    </CustomModal>
+        <Button variant="ghost" size="sm" onClick={() => setTemplates((current) => [...current, ""])}>+ Agregar día al ciclo</Button>
+        <pre className="rounded-lg border border-gray-200 bg-gray-50 p-3 whitespace-pre-wrap text-xs leading-5 text-gray-500">{CELL_HINT}</pre>
+      </div>
+    </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  footer: { flex: 1, flexDirection: "row", justifyContent: "flex-end", gap: SPACING.sm },
-  templateRow: { borderWidth: 1, borderRadius: 8, padding: SPACING.sm, gap: SPACING.xs },
-  templateHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  templateLabel: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "600" },
-  removeBtn: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "600" },
-  textArea: { minHeight: 100 },
-  hintBox: { borderRadius: 8, borderWidth: 1, padding: SPACING.sm },
-  hintText: { fontSize: TYPOGRAPHY.fontSize.xs, lineHeight: 18 },
-});

@@ -1,18 +1,5 @@
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  useWindowDimensions,
-} from "react-native";
-import { tableStyles } from "@/shared/components/data-display/tableStyles";
-import { useColors } from "@/shared/hooks/useColors";
-import {
-  BORDER_RADIUS,
-  BREAKPOINTS,
-  SPACING,
-  TYPOGRAPHY,
-} from "@/shared/theme/tokens";
+import { Badge, Button, Card } from "@generic/components";
+import type { ReactNode } from "react";
 import { useExpensesStore } from "../store";
 import { formatMXN } from "../helpers";
 import type { Expense } from "../types";
@@ -26,241 +13,71 @@ type Props = {
 };
 
 export function ExpenseRow({ expense, dense, onEdit, onClone, onDelete }: Props) {
-  const c = useColors();
-  const { width } = useWindowDimensions();
-  const isMobile = width < BREAKPOINTS.tablet;
   const { toggleSelected } = useExpensesStore();
-
   const isCredito = expense.metodoPago === "credito";
   const isPagado = expense.estado === "pagado";
   const isTarjeta = expense.gastos.toLowerCase().trim() === "tarjeta de credito";
-
-  const rowBg = isTarjeta
-    ? `${c.secondary}18`
-    : expense.selected
-      ? `${c.primary}12`
-      : isCredito
-        ? `${c.primary}08`
-        : isPagado
-          ? "#16A34A10"
-          : "transparent";
-
-  const fechaRange = expense.fecha >= 1 && expense.fecha <= 15
-    ? "1-15"
-    : expense.fecha >= 16 && expense.fecha <= 31
-      ? "16-31"
-      : null;
-
-  const estadoColor =
-    expense.estado === "pagado" ? "#16A34A" :
-    expense.estado === "no pagado" ? "#CA8A04" :
-    expense.estado === "guardado" ? "#2563EB" : c.textMuted;
-
-  const metodoBg =
-    expense.metodoPago === "credito" ? `${c.primary}20` : "#16A34A20";
-  const metodoColor =
-    expense.metodoPago === "credito" ? c.primary : "#16A34A";
-  const metodoLabel = expense.metodoPago === "credito" ? "Crédito" : "Efectivo";
-
-  const frecuenciaLabel =
-    expense.frecuencia === "mes" ? "Mensual" :
-    expense.frecuencia === "quincenal" ? "Quincenal" : "Único";
-
-  if (isMobile) {
-    return (
-      <TouchableOpacity
-        activeOpacity={0.85}
-        onPress={onEdit}
-        style={[
-          tableStyles.mobileCard,
-          { backgroundColor: rowBg, borderColor: c.border },
-        ]}
-      >
-        <View style={localStyles.cardHeader}>
-          <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); toggleSelected(expense.id); }}>
-            <View
-              style={[
-                tableStyles.checkbox,
-                {
-                  borderColor: c.border,
-                  backgroundColor: expense.selected ? c.primary : "transparent",
-                },
-              ]}
-            >
-              {expense.selected && (
-                <Text style={[tableStyles.checkMark, { color: c.primaryForeground }]}>✓</Text>
-              )}
-            </View>
-          </TouchableOpacity>
-          <Text style={[localStyles.cardDesc, { color: c.text }]} numberOfLines={1}>
-            {expense.gastos || "—"}
-          </Text>
-          <View style={localStyles.cardActions}>
-            <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); onClone(); }}>
-              <Text style={[tableStyles.actionBtn, { color: c.textMuted }]}>⧉</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); onDelete(); }}>
-              <Text style={[tableStyles.actionBtn, { color: c.danger }]}>✕</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={localStyles.cardFields}>
-          <FieldRow label="Mes" value={expense.mes} c={c} />
-          <FieldRow label="Monto" value={`$${formatMXN(expense.monto)}`} c={c} />
-          <View style={localStyles.fieldRow}>
-            <Text style={[localStyles.fieldLabel, { color: c.textMuted }]}>Método</Text>
-            <Badge label={metodoLabel} bg={metodoBg} color={metodoColor} />
-          </View>
-          <FieldRow label="Frecuencia" value={frecuenciaLabel} c={c} />
-          <View style={localStyles.fieldRow}>
-            <Text style={[localStyles.fieldLabel, { color: c.textMuted }]}>Fecha</Text>
-            <Text style={[localStyles.fieldValue, { color: c.text }]}>
-              {expense.fecha > 0 ? `Día ${expense.fecha}` : "—"}
-              {fechaRange ? ` (${fechaRange})` : ""}
-            </Text>
-          </View>
-          {!!expense.fechaMaxima && <FieldRow label="Nota" value={expense.fechaMaxima} c={c} />}
-          <View style={localStyles.fieldRow}>
-            <Text style={[localStyles.fieldLabel, { color: c.textMuted }]}>Estado</Text>
-            <Badge label={expense.estado} bg={`${estadoColor}20`} color={estadoColor} />
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
-  }
-
-  const rowPaddingVertical = dense ? 2 : undefined;
+  const fechaRange = expense.fecha >= 1 && expense.fecha <= 15 ? "1-15" : expense.fecha >= 16 && expense.fecha <= 31 ? "16-31" : null;
+  const estadoColor = expense.estado === "pagado" ? "green" : expense.estado === "guardado" ? "blue" : "yellow";
+  const metodoLabel = isCredito ? "Crédito" : "Efectivo";
+  const frecuenciaLabel = expense.frecuencia === "mes" ? "Mensual" : expense.frecuencia === "quincenal" ? "Quincenal" : "Único";
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.85}
-      onPress={onEdit}
-      style={[
-        tableStyles.row,
-        { backgroundColor: rowBg, borderBottomColor: c.border, ...(rowPaddingVertical !== undefined ? { paddingVertical: rowPaddingVertical } : {}) },
-      ]}
+    <Card
+      padding={dense ? "sm" : "md"}
+      className={[
+        "cursor-pointer transition",
+        isTarjeta ? "bg-purple-50" : expense.selected ? "bg-blue-50" : isCredito ? "bg-indigo-50" : isPagado ? "bg-green-50" : "",
+      ].join(" ")}
+      onClick={onEdit}
     >
-      <TouchableOpacity
-        onPress={(e) => { e.stopPropagation?.(); toggleSelected(expense.id); }}
-        style={tableStyles.checkboxCell}
-      >
-        <View
-          style={[
-            tableStyles.checkbox,
-            {
-              borderColor: c.border,
-              backgroundColor: expense.selected ? c.primary : "transparent",
-            },
-          ]}
+      <div className="grid gap-3 md:grid-cols-[32px_1fr_2fr_1fr_1fr_1fr_70px_1fr_1fr_72px] md:items-center">
+        <button
+          type="button"
+          className={`h-5 w-5 rounded border text-xs ${expense.selected ? "border-primary bg-primary text-white" : "border-gray-300"}`}
+          onClick={(event) => { event.stopPropagation(); toggleSelected(expense.id); }}
+          aria-label="Seleccionar gasto"
         >
-          {expense.selected && (
-            <Text style={[tableStyles.checkMark, { color: c.primaryForeground }]}>✓</Text>
-          )}
-        </View>
-      </TouchableOpacity>
+          {expense.selected ? "✓" : ""}
+        </button>
 
-      <View style={[tableStyles.cell, { flex: 1 }]}>
-        <Text style={[localStyles.cellText, { color: c.text }]} numberOfLines={1}>{expense.mes}</Text>
-      </View>
+        <Cell label="Mes">{expense.mes}</Cell>
+        <Cell label="Descripción" strong>{expense.gastos || "—"}</Cell>
+        <Cell label="Monto" align="right">${formatMXN(expense.monto)}</Cell>
+        <Cell label="Método"><Badge color={isCredito ? "blue" : "green"}>{metodoLabel}</Badge></Cell>
+        <Cell label="Frecuencia" muted>{frecuenciaLabel}</Cell>
+        <Cell label="Fecha">{expense.fecha > 0 ? expense.fecha : "—"}{fechaRange ? <span className="ml-1 text-[10px] text-gray-400">({fechaRange})</span> : null}</Cell>
+        <Cell label="Nota" muted>{expense.fechaMaxima || "—"}</Cell>
+        <Cell label="Estado"><Badge color={estadoColor}>{expense.estado}</Badge></Cell>
 
-      <View style={[tableStyles.cell, { flex: 2 }]}>
-        <Text style={[localStyles.cellTextBold, { color: c.text }]} numberOfLines={1}>
-          {expense.gastos || "—"}
-        </Text>
-      </View>
-
-      <View style={[tableStyles.cell, { flex: 1 }]}>
-        <Text style={[localStyles.cellText, { color: c.text, textAlign: "right" }]}>
-          ${formatMXN(expense.monto)}
-        </Text>
-      </View>
-
-      <View style={[tableStyles.cell, { flex: 1 }]}>
-        <Badge label={metodoLabel} bg={metodoBg} color={metodoColor} />
-      </View>
-
-      <View style={[tableStyles.cell, { flex: 1 }]}>
-        <Text style={[localStyles.cellText, { color: c.textMuted }]}>{frecuenciaLabel}</Text>
-      </View>
-
-      <View style={[tableStyles.cell, { width: 70 }]}>
-        <Text style={[localStyles.cellText, { color: c.text }]}>
-          {expense.fecha > 0 ? String(expense.fecha) : "—"}
-        </Text>
-        {fechaRange && (
-          <Text style={[localStyles.rangeBadge, { color: c.textMuted }]}>{fechaRange}</Text>
-        )}
-      </View>
-
-      <View style={[tableStyles.cell, { flex: 1 }]}>
-        <Text style={[localStyles.cellText, { color: c.textMuted }]} numberOfLines={1}>
-          {expense.fechaMaxima || "—"}
-        </Text>
-      </View>
-
-      <View style={[tableStyles.cell, { flex: 1 }]}>
-        <Badge label={expense.estado} bg={`${estadoColor}20`} color={estadoColor} />
-      </View>
-
-      <View style={[tableStyles.actionsCell, { width: 56 }]}>
-        <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); onClone(); }}>
-          <Text style={[tableStyles.actionBtn, { color: c.textMuted }]}>⧉</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); onDelete(); }}>
-          <Text style={[tableStyles.actionBtn, { color: c.danger }]}>✕</Text>
-        </TouchableOpacity>
-      </View>
-    </TouchableOpacity>
+        <div className="flex items-center justify-end gap-1">
+          <Button size="sm" variant="ghost" onClick={(event) => { event.stopPropagation(); onClone(); }}>⧉</Button>
+          <Button size="sm" variant="ghost" onClick={(event) => { event.stopPropagation(); onDelete(); }}>✕</Button>
+        </div>
+      </div>
+    </Card>
   );
 }
 
-function FieldRow({ label, value, c }: { label: string; value: string; c: ReturnType<typeof useColors> }) {
+function Cell({
+  label,
+  children,
+  strong,
+  muted,
+  align,
+}: {
+  label: string;
+  children: ReactNode;
+  strong?: boolean;
+  muted?: boolean;
+  align?: "right";
+}) {
   return (
-    <View style={localStyles.fieldRow}>
-      <Text style={[localStyles.fieldLabel, { color: c.textMuted }]}>{label}</Text>
-      <Text style={[localStyles.fieldValue, { color: c.text }]}>{value}</Text>
-    </View>
+    <div className={align === "right" ? "text-left md:text-right" : ""}>
+      <p className="text-[10px] font-semibold uppercase text-gray-400 md:hidden">{label}</p>
+      <div className={`${strong ? "font-semibold" : ""} ${muted ? "text-gray-500" : "text-gray-900"} truncate text-sm`}>
+        {children}
+      </div>
+    </div>
   );
 }
-
-function Badge({ label, bg, color }: { label: string; bg: string; color: string }) {
-  return (
-    <View style={[localStyles.badge, { backgroundColor: bg }]}>
-      <Text style={[localStyles.badgeText, { color }]}>{label}</Text>
-    </View>
-  );
-}
-
-const localStyles = StyleSheet.create({
-  cardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
-    padding: SPACING.sm,
-  },
-  cardDesc: {
-    flex: 1,
-    fontSize: TYPOGRAPHY.fontSize.sm,
-    fontWeight: "600",
-  },
-  cardActions: { flexDirection: "row", gap: SPACING.sm },
-  cardFields: {
-    paddingHorizontal: SPACING.sm,
-    paddingBottom: SPACING.sm,
-    gap: SPACING.xs,
-  },
-  fieldRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
-  fieldLabel: { width: 80, fontSize: TYPOGRAPHY.fontSize.xs },
-  fieldValue: { flex: 1, fontSize: TYPOGRAPHY.fontSize.xs },
-  cellText: { fontSize: TYPOGRAPHY.fontSize.sm },
-  cellTextBold: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "600" },
-  rangeBadge: { fontSize: 10 },
-  badge: {
-    paddingHorizontal: SPACING.xs,
-    paddingVertical: 2,
-    borderRadius: BORDER_RADIUS.sm,
-    alignSelf: "flex-start",
-  },
-  badgeText: { fontSize: TYPOGRAPHY.fontSize.xs, fontWeight: "500" },
-});

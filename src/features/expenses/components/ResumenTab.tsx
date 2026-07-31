@@ -1,443 +1,264 @@
-import { useMemo, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { CustomSelect } from "@/shared/components/inputs/CustomSelect";
-import { useColors } from "@/shared/hooks/useColors";
-import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
-import { useExpensesStore } from "../store";
+import { useMemo, useState, type ReactNode } from "react";
+import { Card, Dropdown } from "@generic/components";
 import { usePlanningStore } from "@/features/expenses/planning/store";
+import { useExpensesStore } from "../store";
 import {
   CATEGORIES,
   currentMonthName,
   currentYear,
   formatMXN,
   getAccountBalance,
-  getAvailableMeses,
   getAvailableAños,
+  getAvailableMeses,
   getCreditHistoryForCard,
   getCurrentCreditBalance,
   MESES_LIST,
 } from "../helpers";
 
 export function ResumenTab() {
-  const c = useColors();
   const { expenses, creditCards, recurringExpenses, incomes, accounts } = useExpensesStore();
   const { scheduledExpenses, vacations, installmentPayments } = usePlanningStore();
-
-  const availableMeses = useMemo(() => getAvailableMeses(expenses), [expenses]);
-  const availableAños = useMemo(() => getAvailableAños(expenses), [expenses]);
   const [selectedMes, setSelectedMes] = useState(currentMonthName());
   const [selectedAño, setSelectedAño] = useState(currentYear());
-
-  const añoOptions = [
-    { label: "Todos los años", value: 0 },
-    ...availableAños.map((y) => ({ label: String(y), value: y })),
-  ];
-
-  const mesOptions = [
-    { label: "Todos los meses", value: "__all__" },
-    ...MESES_LIST.filter((m) => availableMeses.includes(m)).map((m) => ({ label: m, value: m })),
-  ];
+  const availableMeses = useMemo(() => getAvailableMeses(expenses), [expenses]);
+  const availableAños = useMemo(() => getAvailableAños(expenses), [expenses]);
 
   const filtered = useMemo(() => {
-    let result = selectedMes === "__all__" ? expenses : expenses.filter((e) => e.mes === selectedMes);
-    if (selectedAño > 0) result = result.filter((e) => (e.año ?? currentYear()) === selectedAño);
+    let result = selectedMes === "__all__" ? expenses : expenses.filter((expense) => expense.mes === selectedMes);
+    if (selectedAño > 0) result = result.filter((expense) => (expense.año ?? currentYear()) === selectedAño);
     return result;
   }, [expenses, selectedMes, selectedAño]);
 
   const stats = useMemo(() => {
-    const gastos = filtered.filter((e) => e.metodoPago !== "credito");
-    const pagado = gastos.filter((e) => e.estado === "pagado").reduce((s, e) => s + e.monto, 0);
-    const sinPagar = gastos
-      .filter((e) => e.estado === "no pagado" || e.estado === "no guardado")
-      .reduce((s, e) => s + e.monto, 0);
-    const credito = filtered.filter((e) => e.metodoPago === "credito").reduce((s, e) => s + e.monto, 0);
-    const efectivo = gastos.filter((e) => e.metodoPago === "efectivo").reduce((s, e) => s + e.monto, 0);
-    const total = gastos.reduce((s, e) => s + e.monto, 0);
-    return { pagado, sinPagar, credito, efectivo, total };
+    const cash = filtered.filter((expense) => expense.metodoPago !== "credito");
+    const pagado = cash.filter((expense) => expense.estado === "pagado").reduce((sum, expense) => sum + expense.monto, 0);
+    const sinPagar = cash.filter((expense) => expense.estado === "no pagado" || expense.estado === "no guardado").reduce((sum, expense) => sum + expense.monto, 0);
+    return {
+      pagado,
+      sinPagar,
+      credito: filtered.filter((expense) => expense.metodoPago === "credito").reduce((sum, expense) => sum + expense.monto, 0),
+      efectivo: cash.filter((expense) => expense.metodoPago === "efectivo").reduce((sum, expense) => sum + expense.monto, 0),
+      total: cash.reduce((sum, expense) => sum + expense.monto, 0),
+    };
   }, [filtered]);
 
-  // Account balances
-  const accountBalances = useMemo(
-    () => accounts.map((a) => ({ account: a, balance: getAccountBalance(a, expenses, incomes) })),
-    [accounts, expenses, incomes],
-  );
-  const totalAccountBalance = accountBalances.reduce((s, b) => s + b.balance, 0);
-
-  // Income stats
   const incomeStats = useMemo(() => {
-    const filteredIncomes = incomes.filter((i) => {
-      if (selectedMes !== "__all__" && i.mes !== selectedMes) return false;
-      if (selectedAño > 0 && (i.año ?? currentYear()) !== selectedAño) return false;
+    const items = incomes.filter((income) => {
+      if (selectedMes !== "__all__" && income.mes !== selectedMes) return false;
+      if (selectedAño > 0 && (income.año ?? currentYear()) !== selectedAño) return false;
       return true;
     });
-    const recibido = filteredIncomes.filter((i) => i.estado === "recibido").reduce((s, i) => s + i.monto, 0);
-    const pendiente = filteredIncomes.filter((i) => i.estado === "pendiente").reduce((s, i) => s + i.monto, 0);
-    return { recibido, pendiente, total: recibido + pendiente, count: filteredIncomes.length };
+    const recibido = items.filter((income) => income.estado === "recibido").reduce((sum, income) => sum + income.monto, 0);
+    const pendiente = items.filter((income) => income.estado === "pendiente").reduce((sum, income) => sum + income.monto, 0);
+    return { recibido, pendiente, total: recibido + pendiente };
   }, [incomes, selectedMes, selectedAño]);
 
-  // Category breakdown
-  const byCategory = useMemo(() => {
-    return CATEGORIES.map((cat) => {
-      const items = filtered.filter((e) => e.category === cat.value && e.metodoPago !== "credito");
-      if (items.length === 0) return null;
-      return { ...cat, total: items.reduce((s, e) => s + e.monto, 0), count: items.length };
-    }).filter(Boolean) as { value: string; label: string; color: string; total: number; count: number }[];
-  }, [filtered]);
+  const accountBalances = useMemo(() => accounts.map((account) => ({ account, balance: getAccountBalance(account, expenses, incomes) })), [accounts, expenses, incomes]);
+  const cardBalances = useMemo(() => creditCards.map((card) => {
+    const history = getCreditHistoryForCard(expenses, card);
+    const balance = getCurrentCreditBalance(history, card.initialDebt);
+    const monthTotal = expenses.filter((expense) => expense.creditCardId === card.id && (selectedMes === "__all__" || expense.mes === selectedMes)).reduce((sum, expense) => sum + expense.monto, 0);
+    return { card, balance, monthTotal };
+  }), [creditCards, expenses, selectedMes]);
 
-  const uncategorized = useMemo(
-    () => filtered.filter((e) => !e.category && e.metodoPago !== "credito").reduce((s, e) => s + e.monto, 0),
-    [filtered],
-  );
+  const byCategory = useMemo(() => CATEGORIES.map((category) => {
+    const items = filtered.filter((expense) => expense.category === category.value && expense.metodoPago !== "credito");
+    return items.length ? { ...category, total: items.reduce((sum, expense) => sum + expense.monto, 0), count: items.length } : null;
+  }).filter(Boolean) as { value: string; label: string; color: string; total: number; count: number }[], [filtered]);
 
-  // Per-month breakdown for "Todos"
   const byMonth = useMemo(() => {
     if (selectedMes !== "__all__") return [];
     return MESES_LIST.map((mes) => {
-      const items = expenses.filter((e) => e.mes === mes && e.metodoPago !== "credito");
-      if (items.length === 0) return null;
-      const total = items.reduce((s, e) => s + e.monto, 0);
-      const pagado = items.filter((e) => e.estado === "pagado").reduce((s, e) => s + e.monto, 0);
-      const sinPagar = items.filter((e) => e.estado !== "pagado").reduce((s, e) => s + e.monto, 0);
-      return { mes, total, pagado, sinPagar, count: items.length };
-    }).filter(Boolean) as { mes: string; total: number; pagado: number; sinPagar: number; count: number }[];
+      const items = expenses.filter((expense) => expense.mes === mes && expense.metodoPago !== "credito");
+      if (!items.length) return null;
+      return {
+        mes,
+        total: items.reduce((sum, expense) => sum + expense.monto, 0),
+        pagado: items.filter((expense) => expense.estado === "pagado").reduce((sum, expense) => sum + expense.monto, 0),
+        sinPagar: items.filter((expense) => expense.estado !== "pagado").reduce((sum, expense) => sum + expense.monto, 0),
+      };
+    }).filter(Boolean) as { mes: string; total: number; pagado: number; sinPagar: number }[];
   }, [expenses, selectedMes]);
 
-  // Recurring totals for selected month — multiply by number of payment days
-  const recurringTotal = useMemo(() => {
-    const active = recurringExpenses.filter(
-      (r) => selectedMes === "__all__" || !r.cancelledMonths.includes(selectedMes),
-    );
-    return active.reduce((s, r) => s + r.amount * r.days.length, 0);
-  }, [recurringExpenses, selectedMes]);
-
-  // Credit card balances
-  const cardBalances = useMemo(
-    () =>
-      creditCards.map((card) => {
-        const history = getCreditHistoryForCard(expenses, card);
-        const balance = getCurrentCreditBalance(history, card.initialDebt);
-        const monthCharges = expenses.filter(
-          (e) => e.creditCardId === card.id && (selectedMes === "__all__" || e.mes === selectedMes),
-        );
-        return { card, balance, monthTotal: monthCharges.reduce((s, e) => s + e.monto, 0) };
-      }),
-    [creditCards, expenses, selectedMes],
-  );
-
-  // Scheduled upcoming (not cancelled)
-  const scheduledPending = scheduledExpenses.filter((e) => e.status === "pending" && e.amountKnown);
-  const scheduledTotal = scheduledPending.reduce((s, e) => s + e.amount, 0);
-
-  // Próximos 30 días
-  const upcomingItems = useMemo(() => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const limit = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
-
-    function nextOcc(day: number): Date | null {
-      const d = new Date(today.getFullYear(), today.getMonth(), day);
-      if (d >= today) return d;
-      return new Date(today.getFullYear(), today.getMonth() + 1, day);
-    }
-
-    const items: { id: string; title: string; amount: number | null; dueDate: Date; type: string; urgency: string }[] = [];
-
-    for (const r of recurringExpenses) {
-      for (const day of r.days) {
-        const occ = nextOcc(day);
-        if (!occ || occ > limit) continue;
-        const occMes = MESES_LIST[occ.getMonth()] ?? "";
-        if (r.cancelledMonths.includes(occMes)) continue;
-        const diff = Math.round((occ.getTime() - today.getTime()) / 86400000);
-        items.push({ id: `rec-${r.id}-${day}`, title: r.title, amount: r.amount, dueDate: occ, type: "🔄", urgency: diff <= 2 ? "#EF4444" : diff <= 7 ? "#F59E0B" : "#16A34A" });
-      }
-    }
-
-    for (const s of scheduledExpenses) {
-      if (s.status !== "pending") continue;
-      const d = new Date(s.scheduledDate + "T00:00:00");
-      if (d < today || d > limit) continue;
-      const diff = Math.round((d.getTime() - today.getTime()) / 86400000);
-      items.push({ id: `sched-${s.id}`, title: s.title, amount: s.amountKnown ? s.amount : null, dueDate: d, type: "📅", urgency: diff <= 2 ? "#EF4444" : diff <= 7 ? "#F59E0B" : "#16A34A" });
-    }
-
-    for (const card of creditCards) {
-      if (!card.payDay) continue;
-      const occ = nextOcc(card.payDay);
-      if (!occ || occ > limit) continue;
-      const diff = Math.round((occ.getTime() - today.getTime()) / 86400000);
-      items.push({ id: `cc-${card.id}`, title: `Pago ${card.name}`, amount: null, dueDate: occ, type: "💳", urgency: diff <= 2 ? "#EF4444" : diff <= 7 ? "#F59E0B" : "#16A34A" });
-    }
-
-    for (const ip of installmentPayments) {
-      if (ip.status !== "active") continue;
-      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-      const diff = Math.round((endOfMonth.getTime() - today.getTime()) / 86400000);
-      items.push({ id: `msi-${ip.id}`, title: ip.title, amount: ip.monthlyAmount, dueDate: endOfMonth, type: "📦", urgency: diff <= 2 ? "#EF4444" : diff <= 7 ? "#F59E0B" : "#16A34A" });
-    }
-
-    return items.sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
-  }, [recurringExpenses, scheduledExpenses, creditCards, installmentPayments]);
-
-  const upcomingTotal = upcomingItems.reduce((s, i) => s + (i.amount ?? 0), 0);
-
-  // Vacations — budget is deprecated; compute from pending payments when available
-  const vacationsActive = vacations.filter((v) => v.status !== "cancelled");
-  const getVacationBudget = (v: (typeof vacationsActive)[0]) => {
-    if (v.payments?.length) {
-      const pc = v.persons?.length ?? 0;
-      return v.payments.reduce((s, p) => s + p.amount * (p.perPerson ? Math.max(pc, 1) : 1), 0);
-    }
-    return v.budget ?? 0;
-  };
-  const vacationsTotal = vacationsActive.reduce((s, v) => s + getVacationBudget(v), 0);
+  const recurringTotal = recurringExpenses
+    .filter((item) => selectedMes === "__all__" || !item.cancelledMonths.includes(selectedMes))
+    .reduce((sum, item) => sum + item.amount * item.days.length, 0);
+  const scheduledPending = scheduledExpenses.filter((item) => item.status === "pending" && item.amountKnown);
+  const scheduledTotal = scheduledPending.reduce((sum, item) => sum + item.amount, 0);
+  const vacationsActive = vacations.filter((vacation) => vacation.status !== "cancelled");
+  const vacationsTotal = vacationsActive.reduce((sum, vacation) => sum + getVacationBudget(vacation), 0);
+  const upcomingItems = getUpcomingItems({ recurringExpenses, scheduledExpenses, creditCards, installmentPayments });
+  const upcomingTotal = upcomingItems.reduce((sum, item) => sum + (item.amount ?? 0), 0);
+  const totalAccountBalance = accountBalances.reduce((sum, item) => sum + item.balance, 0);
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      {/* Year + Month filter */}
-      <View style={styles.topBar}>
-        <CustomSelect
-          value={selectedAño}
-          options={añoOptions}
-          onChange={(v) => setSelectedAño(Number(v))}
-          style={styles.mesSelect}
-        />
-        <CustomSelect
-          value={selectedMes}
-          options={mesOptions}
-          onChange={(v) => setSelectedMes(String(v))}
-          style={styles.mesSelect}
-        />
-      </View>
+    <div className="flex flex-col gap-4 p-4">
+      <div className="flex flex-wrap gap-3">
+        <Dropdown value={String(selectedAño)} options={[{ label: "Todos los años", value: "0" }, ...availableAños.map((year) => ({ label: String(year), value: String(year) }))]} onChange={(value) => setSelectedAño(Number(value))} />
+        <Dropdown value={selectedMes} options={[{ label: "Todos los meses", value: "__all__" }, ...MESES_LIST.filter((month) => availableMeses.includes(month)).map((month) => ({ label: month, value: month }))]} onChange={setSelectedMes} />
+      </div>
 
-      {/* Próximos 30 días */}
       {upcomingItems.length > 0 && (
-        <Section title={`Próximos 30 días · $${formatMXN(upcomingTotal)}`} c={c}>
-          {upcomingItems.map((item) => (
-            <View key={item.id} style={[styles.upcomingRow, { borderLeftColor: item.urgency }]}>
-              <Text style={styles.upcomingIcon}>{item.type}</Text>
-              <Text style={[styles.rowLabel, { color: c.text, flex: 1 }]} numberOfLines={1}>{item.title}</Text>
-              <Text style={[styles.rowValue, { color: item.urgency, fontWeight: "600" }]}>
-                {item.dueDate.getDate()} {MESES_LIST[item.dueDate.getMonth()]}
-              </Text>
-              <Text style={[styles.rowValue, { color: c.text, marginLeft: SPACING.sm }]}>
-                {item.amount != null ? `$${formatMXN(item.amount)}` : "—"}
-              </Text>
-            </View>
-          ))}
+        <Section title={`Próximos 30 días · $${formatMXN(upcomingTotal)}`}>
+          {upcomingItems.map((item) => <InfoRow key={item.id} label={`${item.type} ${item.title} · ${item.dueDate.getDate()} ${MESES_LIST[item.dueDate.getMonth()]}`} value={item.amount != null ? `$${formatMXN(item.amount)}` : "—"} color={item.urgency} />)}
         </Section>
       )}
 
-      {/* Accounts */}
       {accountBalances.length > 0 && (
-        <Section title="Cuentas" c={c}>
-          <View style={styles.row}>
-            <Text style={[styles.rowLabel, { color: c.text, fontWeight: "700" }]}>Saldo total</Text>
-            <Text style={[styles.rowValue, { color: totalAccountBalance >= 0 ? "#16A34A" : c.danger, fontWeight: "700" }]}>
-              ${formatMXN(totalAccountBalance)}
-            </Text>
-          </View>
-          {accountBalances.map(({ account, balance }) => (
-            <View key={account.id} style={styles.catRow}>
-              <View style={[styles.catDot, { backgroundColor: account.color }]} />
-              <Text style={[styles.rowLabel, { color: c.text, flex: 1 }]}>{account.name}</Text>
-              <Text style={[styles.rowValue, { color: balance >= 0 ? "#16A34A" : c.danger }]}>
-                ${formatMXN(balance)}
-              </Text>
-            </View>
-          ))}
+        <Section title="Cuentas">
+          <InfoRow label="Saldo total" value={`$${formatMXN(totalAccountBalance)}`} strong color={totalAccountBalance >= 0 ? "#16A34A" : "#EF4444"} />
+          {accountBalances.map(({ account, balance }) => <InfoRow key={account.id} label={account.name} value={`$${formatMXN(balance)}`} color={balance >= 0 ? "#16A34A" : "#EF4444"} dot={account.color} />)}
         </Section>
       )}
 
-      {/* Balance */}
       {incomeStats.total > 0 && (
-        <View style={styles.statsGrid}>
-          <StatCard label="Ingresos" value={incomeStats.recibido} color="#16A34A" c={c} big />
-          <StatCard label="Gastos" value={stats.total} color={c.danger} c={c} big />
-          <StatCard
-            label="Balance"
-            value={incomeStats.recibido - stats.total}
-            color={incomeStats.recibido - stats.total >= 0 ? "#16A34A" : c.danger}
-            c={c}
-            big
-          />
-        </View>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <StatCard label="Ingresos" value={incomeStats.recibido} color="#16A34A" />
+          <StatCard label="Gastos" value={stats.total} color="#EF4444" />
+          <StatCard label="Balance" value={incomeStats.recibido - stats.total} color={incomeStats.recibido - stats.total >= 0 ? "#16A34A" : "#EF4444"} />
+        </div>
       )}
 
-      {/* Main stats */}
-      <View style={styles.statsGrid}>
-        <StatCard label="Total" value={stats.total} color={c.primary} c={c} big />
-        <StatCard label="Pagado" value={stats.pagado} color="#16A34A" c={c} />
-        <StatCard label="Sin pagar" value={stats.sinPagar} color={c.danger} c={c} />
-        <StatCard label="Crédito" value={stats.credito} color={c.primary} c={c} />
-        <StatCard label="Efectivo" value={stats.efectivo} color={c.text} c={c} />
-        <StatCard label="Registros" value={filtered.length} isCount color={c.textMuted} c={c} />
-      </View>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <StatCard label="Total" value={stats.total} color="#2563EB" />
+        <StatCard label="Pagado" value={stats.pagado} color="#16A34A" />
+        <StatCard label="Sin pagar" value={stats.sinPagar} color="#EF4444" />
+        <StatCard label="Crédito" value={stats.credito} color="#2563EB" />
+        <StatCard label="Efectivo" value={stats.efectivo} color="#111827" />
+        <StatCard label="Registros" value={filtered.length} isCount color="#6B7280" />
+      </div>
 
-      {/* Recurring fijos */}
       {recurringExpenses.length > 0 && (
-        <Section title="Fijos" c={c}>
-          <Row label={`${recurringExpenses.filter((r) => selectedMes === "__all__" || !r.cancelledMonths.includes(selectedMes)).length} activos`} value={`$${formatMXN(recurringTotal)}`} c={c} />
-          {selectedMes !== "__all__" &&
-            recurringExpenses
-              .filter((r) => !r.cancelledMonths.includes(selectedMes))
-              .map((r) => (
-                <Row
-                  key={r.id}
-                  label={`  ${r.title} · ${r.days.length === 1 ? `día ${r.days[0]}` : `días ${[...r.days].sort((a, b) => a - b).join(", ")}`}`}
-                  value={r.days.length > 1 ? `$${formatMXN(r.amount)} ×${r.days.length} = $${formatMXN(r.amount * r.days.length)}` : `$${formatMXN(r.amount)}`}
-                  c={c}
-                  muted
-                />
-              ))}
+        <Section title="Fijos">
+          <InfoRow label={`${recurringExpenses.filter((item) => selectedMes === "__all__" || !item.cancelledMonths.includes(selectedMes)).length} activos`} value={`$${formatMXN(recurringTotal)}`} strong />
+          {selectedMes !== "__all__" && recurringExpenses.filter((item) => !item.cancelledMonths.includes(selectedMes)).map((item) => (
+            <InfoRow key={item.id} label={`${item.title} · ${item.days.length === 1 ? `día ${item.days[0]}` : `días ${[...item.days].sort((a, b) => a - b).join(", ")}`}`} value={item.days.length > 1 ? `$${formatMXN(item.amount)} ×${item.days.length}` : `$${formatMXN(item.amount)}`} muted />
+          ))}
         </Section>
       )}
 
-      {/* Credit cards */}
       {cardBalances.length > 0 && (
-        <Section title="Tarjetas de crédito" c={c}>
+        <Section title="Tarjetas de crédito">
           {cardBalances.map(({ card, balance, monthTotal }) => (
-            <View key={card.id}>
-              <Row label={card.name} value={`$${formatMXN(balance)}`} c={c} />
-              {monthTotal > 0 && (
-                <Row label={`  Cargos ${selectedMes === "__all__" ? "total" : selectedMes}`} value={`$${formatMXN(monthTotal)}`} c={c} muted />
-              )}
-            </View>
+            <div key={card.id}>
+              <InfoRow label={card.name} value={`$${formatMXN(balance)}`} strong />
+              {monthTotal > 0 && <InfoRow label={`Cargos ${selectedMes === "__all__" ? "total" : selectedMes}`} value={`$${formatMXN(monthTotal)}`} muted />}
+            </div>
           ))}
         </Section>
       )}
 
-      {/* Upcoming / programados */}
       {scheduledPending.length > 0 && (
-        <Section title="Programados pendientes" c={c}>
-          <Row label={`${scheduledPending.length} agendados`} value={`$${formatMXN(scheduledTotal)}`} c={c} />
-          {scheduledPending.slice(0, 5).map((e) => (
-            <Row key={e.id} label={`  ${e.title} · ${e.scheduledDate}`} value={`$${formatMXN(e.amount)}`} c={c} muted />
-          ))}
-          {scheduledPending.length > 5 && (
-            <Text style={[styles.more, { color: c.textPlaceholder }]}>+{scheduledPending.length - 5} más…</Text>
-          )}
+        <Section title="Programados pendientes">
+          <InfoRow label={`${scheduledPending.length} agendados`} value={`$${formatMXN(scheduledTotal)}`} strong />
+          {scheduledPending.slice(0, 5).map((item) => <InfoRow key={item.id} label={`${item.title} · ${item.scheduledDate}`} value={`$${formatMXN(item.amount)}`} muted />)}
         </Section>
       )}
 
-      {/* Vacations */}
       {vacationsActive.length > 0 && (
-        <Section title="Vacaciones" c={c}>
-          <Row label={`${vacationsActive.length} planes`} value={`$${formatMXN(vacationsTotal)}`} c={c} />
-          {vacationsActive.map((v) => (
-            <Row key={v.id} label={`  ${v.name}`} value={`$${formatMXN(getVacationBudget(v))}`} c={c} muted />
-          ))}
+        <Section title="Vacaciones">
+          <InfoRow label={`${vacationsActive.length} planes`} value={`$${formatMXN(vacationsTotal)}`} strong />
+          {vacationsActive.map((vacation) => <InfoRow key={vacation.id} label={vacation.name} value={`$${formatMXN(getVacationBudget(vacation))}`} muted />)}
         </Section>
       )}
 
-      {/* Category breakdown */}
       {byCategory.length > 0 && (
-        <Section title="Por categoría" c={c}>
-          {byCategory.map((cat) => (
-            <View key={cat.value} style={styles.catRow}>
-              <View style={[styles.catDot, { backgroundColor: cat.color }]} />
-              <Text style={[styles.rowLabel, { color: c.text, flex: 1 }]}>{cat.label}</Text>
-              <Text style={[styles.rowValue, { color: c.textMuted, fontSize: TYPOGRAPHY.fontSize.xs, marginRight: SPACING.sm }]}>
-                {cat.count} registro{cat.count !== 1 ? "s" : ""}
-              </Text>
-              <Text style={[styles.rowValue, { color: cat.color, fontWeight: "600" }]}>${formatMXN(cat.total)}</Text>
-            </View>
-          ))}
-          {uncategorized > 0 && (
-            <View style={styles.catRow}>
-              <View style={[styles.catDot, { backgroundColor: c.border }]} />
-              <Text style={[styles.rowLabel, { color: c.textMuted, flex: 1 }]}>Sin categoría</Text>
-              <Text style={[styles.rowValue, { color: c.textMuted }]}>${formatMXN(uncategorized)}</Text>
-            </View>
-          )}
+        <Section title="Por categoría">
+          {byCategory.map((category) => <InfoRow key={category.value} label={`${category.label} · ${category.count}`} value={`$${formatMXN(category.total)}`} color={category.color} dot={category.color} />)}
         </Section>
       )}
 
-      {/* Per-month breakdown */}
       {byMonth.length > 0 && (
-        <Section title="Desglose por mes" c={c}>
-          {byMonth.map((m) => (
-            <View key={m.mes} style={styles.monthRow}>
-              <Text style={[styles.monthName, { color: c.text }]}>{m.mes}</Text>
-              <View style={styles.monthAmts}>
-                <Text style={[styles.monthAmt, { color: "#16A34A" }]}>${formatMXN(m.pagado)}</Text>
-                <Text style={[styles.monthAmt, { color: c.danger }]}>${formatMXN(m.sinPagar)}</Text>
-                <Text style={[styles.monthTotal, { color: c.text }]}>${formatMXN(m.total)}</Text>
-              </View>
-            </View>
-          ))}
-          <View style={[styles.monthRow, styles.totalRow, { borderTopColor: c.border }]}>
-            <Text style={[styles.monthName, { color: c.text, fontWeight: "700" }]}>Total</Text>
-            <Text style={[styles.monthTotal, { color: c.primary, fontWeight: "700" }]}>
-              ${formatMXN(expenses.filter((e) => e.metodoPago !== "credito").reduce((s, e) => s + e.monto, 0))}
-            </Text>
-          </View>
+        <Section title="Desglose por mes">
+          {byMonth.map((month) => <InfoRow key={month.mes} label={month.mes} value={`$${formatMXN(month.total)}`} strong />)}
         </Section>
       )}
-    </ScrollView>
+    </div>
   );
 }
 
-function StatCard({
-  label, value, color, c, big, isCount,
-}: {
-  label: string; value: number; color: string; c: ReturnType<typeof useColors>; big?: boolean; isCount?: boolean;
-}) {
+function StatCard({ label, value, color, isCount }: { label: string; value: number; color: string; isCount?: boolean }) {
   return (
-    <View style={[styles.statCard, { backgroundColor: c.backgroundStrong, borderColor: c.border, flex: big ? 2 : 1 }]}>
-      <Text style={[styles.statValue, { color, fontSize: big ? 22 : 16 }]}>
-        {isCount ? String(value) : `$${formatMXN(value)}`}
-      </Text>
-      <Text style={[styles.statLabel, { color: c.textMuted }]}>{label}</Text>
-    </View>
+    <Card>
+      <p className="text-xl font-bold" style={{ color }}>{isCount ? value : `$${formatMXN(value)}`}</p>
+      <p className="text-xs text-gray-500">{label}</p>
+    </Card>
   );
 }
 
-function Section({ title, children, c }: { title: string; children: React.ReactNode; c: ReturnType<typeof useColors> }) {
+function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <View style={[styles.section, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
-      <Text style={[styles.sectionTitle, { color: c.text }]}>{title}</Text>
-      {children}
-    </View>
+    <Card>
+      <div className="flex flex-col gap-2">
+        <h3 className="text-sm font-bold text-gray-900">{title}</h3>
+        {children}
+      </div>
+    </Card>
   );
 }
 
-function Row({ label, value, c, muted }: { label: string; value: string; c: ReturnType<typeof useColors>; muted?: boolean }) {
+function InfoRow({ label, value, color, strong, muted, dot }: { label: string; value: string; color?: string; strong?: boolean; muted?: boolean; dot?: string }) {
   return (
-    <View style={styles.row}>
-      <Text style={[styles.rowLabel, { color: muted ? c.textMuted : c.text, fontSize: muted ? TYPOGRAPHY.fontSize.xs : TYPOGRAPHY.fontSize.sm }]} numberOfLines={1}>
+    <div className="flex items-center justify-between gap-3 py-0.5 text-sm">
+      <span className={`${strong ? "font-semibold" : ""} ${muted ? "text-gray-500" : "text-gray-900"} min-w-0 truncate`}>
+        {dot && <span className="mr-2 inline-block h-2 w-2 rounded-full" style={{ backgroundColor: dot }} />}
         {label}
-      </Text>
-      <Text style={[styles.rowValue, { color: muted ? c.textMuted : c.text, fontSize: muted ? TYPOGRAPHY.fontSize.xs : TYPOGRAPHY.fontSize.sm }]}>
-        {value}
-      </Text>
-    </View>
+      </span>
+      <span className={`${strong ? "font-bold" : "font-medium"} shrink-0`} style={{ color }}>{value}</span>
+    </div>
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1 },
-  content: { padding: SPACING.md, gap: SPACING.md, paddingBottom: SPACING.xl },
-  topBar: { flexDirection: "row", gap: SPACING.sm, flexWrap: "wrap" },
-  mesSelect: { minWidth: 160 },
-  statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm },
-  statCard: { borderRadius: BORDER_RADIUS.md, borderWidth: StyleSheet.hairlineWidth, padding: SPACING.md, gap: 4, minWidth: 100 },
-  statValue: { fontWeight: "700" },
-  statLabel: { fontSize: TYPOGRAPHY.fontSize.xs },
-  section: { borderRadius: BORDER_RADIUS.md, borderWidth: StyleSheet.hairlineWidth, padding: SPACING.md, gap: SPACING.xs },
-  sectionTitle: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "700", marginBottom: SPACING.xs },
-  row: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 },
-  rowLabel: { flex: 1 },
-  rowValue: { fontWeight: "500" },
-  monthRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 4 },
-  totalRow: { borderTopWidth: StyleSheet.hairlineWidth, marginTop: SPACING.xs, paddingTop: SPACING.xs },
-  monthName: { fontSize: TYPOGRAPHY.fontSize.sm, flex: 1 },
-  monthAmts: { flexDirection: "row", gap: SPACING.md },
-  monthAmt: { fontSize: TYPOGRAPHY.fontSize.xs, width: 70, textAlign: "right" },
-  monthTotal: { fontSize: TYPOGRAPHY.fontSize.sm, fontWeight: "600", width: 80, textAlign: "right" },
-  more: { fontSize: TYPOGRAPHY.fontSize.xs, textAlign: "center", paddingTop: SPACING.xs },
-  catRow: { flexDirection: "row", alignItems: "center", paddingVertical: 3, gap: SPACING.xs },
-  catDot: { width: 8, height: 8, borderRadius: 4 },
-  upcomingRow: { flexDirection: "row", alignItems: "center", gap: SPACING.xs, paddingVertical: 3, paddingLeft: SPACING.xs, borderLeftWidth: 3 },
-  upcomingIcon: { fontSize: 14, width: 20, textAlign: "center" },
-});
+function getVacationBudget(vacation: { budget?: number; payments?: { amount: number; perPerson: boolean }[]; persons?: string[] }) {
+  if (!vacation.payments?.length) return vacation.budget ?? 0;
+  const people = Math.max(vacation.persons?.length ?? 0, 1);
+  return vacation.payments.reduce((sum, payment) => sum + payment.amount * (payment.perPerson ? people : 1), 0);
+}
+
+function getUpcomingItems({
+  recurringExpenses,
+  scheduledExpenses,
+  creditCards,
+  installmentPayments,
+}: {
+  recurringExpenses: ReturnType<typeof useExpensesStore.getState>["recurringExpenses"];
+  scheduledExpenses: ReturnType<typeof usePlanningStore.getState>["scheduledExpenses"];
+  creditCards: ReturnType<typeof useExpensesStore.getState>["creditCards"];
+  installmentPayments: ReturnType<typeof usePlanningStore.getState>["installmentPayments"];
+}) {
+  const today = new Date();
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const limit = new Date(start.getTime() + 30 * 86400000);
+  const nextOcc = (day: number) => {
+    const date = new Date(start.getFullYear(), start.getMonth(), day);
+    return date >= start ? date : new Date(start.getFullYear(), start.getMonth() + 1, day);
+  };
+  const urgency = (date: Date) => {
+    const diff = Math.round((date.getTime() - start.getTime()) / 86400000);
+    return diff <= 2 ? "#EF4444" : diff <= 7 ? "#F59E0B" : "#16A34A";
+  };
+  const items: { id: string; title: string; amount: number | null; dueDate: Date; type: string; urgency: string }[] = [];
+
+  for (const item of recurringExpenses) for (const day of item.days) {
+    const dueDate = nextOcc(day);
+    if (dueDate > limit || item.cancelledMonths.includes(MESES_LIST[dueDate.getMonth()] ?? "")) continue;
+    items.push({ id: `rec-${item.id}-${day}`, title: item.title, amount: item.amount, dueDate, type: "🔄", urgency: urgency(dueDate) });
+  }
+  for (const item of scheduledExpenses) {
+    if (item.status !== "pending") continue;
+    const dueDate = new Date(`${item.scheduledDate}T00:00:00`);
+    if (dueDate < start || dueDate > limit) continue;
+    items.push({ id: `sched-${item.id}`, title: item.title, amount: item.amountKnown ? item.amount : null, dueDate, type: "📅", urgency: urgency(dueDate) });
+  }
+  for (const card of creditCards) {
+    if (!card.payDay) continue;
+    const dueDate = nextOcc(card.payDay);
+    if (dueDate <= limit) items.push({ id: `cc-${card.id}`, title: `Pago ${card.name}`, amount: null, dueDate, type: "💳", urgency: urgency(dueDate) });
+  }
+  for (const item of installmentPayments) {
+    if (item.status !== "active") continue;
+    const dueDate = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+    items.push({ id: `msi-${item.id}`, title: item.title, amount: item.monthlyAmount, dueDate, type: "📦", urgency: urgency(dueDate) });
+  }
+  return items.sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
+}

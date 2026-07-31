@@ -1,19 +1,17 @@
-import { View, StyleSheet } from "react-native";
-import { useColors } from "@/shared/hooks/useColors";
 import { CalendarScreen } from "./calendar";
 
 export function AthleteDashboardScreen() {
-  const c = useColors();
-
   return (
-    <View style={[styles.container, { backgroundColor: c.background }]}>
-      <CalendarScreen />
-    </View>
+    <div className="page feature-page">
+      <header className="feature-header">
+        <div>
+          <p className="eyebrow">Planes</p>
+          <h1 className="page-title">Calendario</h1>
+        </div>
+      </header>
+      <div className="calendar-panel">
+        <CalendarScreen />
+      </div>
+    </div>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});

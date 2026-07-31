@@ -1,22 +1,12 @@
 import { useState } from "react";
-import { View, Text, StyleSheet, Platform } from "react-native";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useColors } from "@/shared/hooks/useColors";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Badge, Button, Table, type Column } from "@generic/components";
 import { useAuthStore } from "@/shared/store/authStore";
 import { useToast } from "@/shared/components/feedback/Toast";
-import { MainLayout } from "@/shared/components/MainLayout";
 import { RoleGuard } from "@/shared/components/RoleGuard";
-import { DataTable, type Column } from "@/shared/components/data-display/DataTable";
-import { StatusBadge } from "@/shared/components/data-display/StatusBadge";
-import { CustomButton } from "@/shared/components/inputs/CustomButton";
-import { CustomTabs } from "@/shared/components/inputs/CustomTabs";
 import { ENV } from "@/shared/config/env";
 import { httpClient } from "@/shared/api/client";
-import {
-  mockAdminOrgs,
-  mockAdminOrgDetail,
-  mockAuditLogs,
-} from "@/shared/api/mocks/admin";
+import { mockAdminOrgDetail, mockAdminOrgs, mockAuditLogs } from "@/shared/api/mocks/admin";
 import { ClientFormModal } from "./ClientFormModal";
 import { ClientMembersModal } from "./ClientMembersModal";
 import type {
@@ -29,12 +19,9 @@ import type {
   ImpersonateInput,
   ImpersonateResult,
 } from "@/shared/types/admin";
-import { SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
 import { ChangePasswordSection } from "@/shared/components/inputs/ChangePasswordSection";
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("es-MX", {
@@ -63,52 +50,18 @@ function actionLabel(action: string) {
   return map[action] ?? action;
 }
 
-// ─── OrganizationsTab ─────────────────────────────────────────────────────────
-
-type OrgRow = Omit<AdminOrg, "_count"> & {
-  memberCount: number;
-  clientCount: number;
-  _original: AdminOrg;
-} & Record<string, unknown>;
-
-function toOrgRow(org: AdminOrg): OrgRow {
-  const { _count, ...rest } = org;
-  return { ...rest, memberCount: _count?.clientMembers ?? 0, clientCount: _count?.members ?? 0, _original: org };
-}
-
-const ORG_COLUMNS: Column<OrgRow>[] = [
-  { key: "name", header: "Cliente", flex: 2, sortable: true },
-  { key: "tipo", header: "Tipo", flex: 1, sortable: true },
-  { key: "memberCount", header: "Usuarios", width: 90, align: "center", sortable: true },
-  { key: "clientCount", header: "Miembros", width: 90, align: "center", sortable: true },
-  {
-    key: "isActive",
-    header: "Estado",
-    width: 90,
-    align: "center",
-    render: (v) => (
-      <StatusBadge
-        status={v ? "active" : "cancelled"}
-        customLabel={v ? "Activo" : "Inactivo"}
-        size="sm"
-      />
-    ),
-  },
-];
+type OrgRow = AdminOrg & Record<string, unknown>;
+type LogRow = AuditLog & Record<string, unknown>;
 
 function OrganizationsTab() {
-  const c = useColors();
   const toast = useToast();
   const queryClient = useQueryClient();
-
   const [formOpen, setFormOpen] = useState(false);
   const [editingOrg, setEditingOrg] = useState<AdminOrg | null>(null);
   const [membersOpen, setMembersOpen] = useState(false);
   const [selectedOrgDetail, setSelectedOrgDetail] = useState<AdminOrgDetail | null>(null);
 
-  // ── Queries ────────────────────────────────────────────────────────────────
-
-  const { data: rawOrgs = [], isLoading } = useQuery<AdminOrg[]>({
+  const { data: orgs = [], isLoading } = useQuery<AdminOrg[]>({
     queryKey: ["admin-orgs"],
     queryFn: async () => {
       if (ENV.USE_MOCK) {
@@ -120,15 +73,11 @@ function OrganizationsTab() {
     },
   });
 
-  const orgs = rawOrgs.map(toOrgRow);
-
-  // ── Mutations ──────────────────────────────────────────────────────────────
-
   const createOrg = useMutation({
     mutationFn: async (input: CreateOrgInput) => {
       if (ENV.USE_MOCK) {
         await delay(600);
-        const newOrg: AdminOrg = {
+        return {
           id: `org-${Date.now()}`,
           name: input.name,
           slug: input.accountName,
@@ -140,8 +89,7 @@ function OrganizationsTab() {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           _count: { clientMembers: 1, members: 0 },
-        };
-        return newOrg;
+        } satisfies AdminOrg;
       }
       const res = await httpClient<{ data: AdminOrg }>("/admin/clients", {
         method: "POST",
@@ -171,16 +119,11 @@ function OrganizationsTab() {
         await delay(500);
         return null;
       }
-      const res = await httpClient<{ data: AdminOrg }>(`/admin/clients/${id}`, {
-        method: "PATCH",
-        body: data,
-      });
+      const res = await httpClient<{ data: AdminOrg }>(`/admin/clients/${id}`, { method: "PATCH", body: data });
       return res.data;
     },
     onSuccess: (_result, { id, data }) => {
-      queryClient.setQueryData<AdminOrg[]>(["admin-orgs"], (old = []) =>
-        old.map((o) => (o.id === id ? { ...o, ...data } : o))
-      );
+      queryClient.setQueryData<AdminOrg[]>(["admin-orgs"], (old = []) => old.map((org) => (org.id === id ? { ...org, ...data } : org)));
       setFormOpen(false);
       setEditingOrg(null);
       toast.success("Cliente actualizado");
@@ -194,19 +137,11 @@ function OrganizationsTab() {
         await delay(500);
         return;
       }
-      if (activate) {
-        await httpClient(`/admin/clients/${id}`, {
-          method: "PATCH",
-          body: { isActive: true },
-        });
-      } else {
-        await httpClient(`/admin/clients/${id}`, { method: "DELETE" });
-      }
+      if (activate) await httpClient(`/admin/clients/${id}`, { method: "PATCH", body: { isActive: true } });
+      else await httpClient(`/admin/clients/${id}`, { method: "DELETE" });
     },
     onSuccess: (_result, { id, activate }) => {
-      queryClient.setQueryData<AdminOrg[]>(["admin-orgs"], (old = []) =>
-        old.map((o) => (o.id === id ? { ...o, isActive: activate } : o))
-      );
+      queryClient.setQueryData<AdminOrg[]>(["admin-orgs"], (old = []) => old.map((org) => (org.id === id ? { ...org, isActive: activate } : org)));
       toast.success(activate ? "Cliente activado" : "Cliente desactivado");
     },
     onError: () => toast.error("Error al cambiar el estado"),
@@ -218,19 +153,10 @@ function OrganizationsTab() {
         await delay(700);
         return {
           token: "mock-impersonation-token",
-          user: {
-            sub: input.targetId,
-            username: "mock_impersonated",
-            role: "OWNER",
-            orgId: "org-1",
-            impersonatedBy: "mock-admin-1",
-          },
+          user: { sub: input.targetId, username: "mock_impersonated", role: "OWNER", orgId: "org-1", impersonatedBy: "mock-admin-1" },
         } as ImpersonateResult;
       }
-      const res = await httpClient<{ data: ImpersonateResult }>("/admin/impersonate", {
-        method: "POST",
-        body: input,
-      });
+      const res = await httpClient<{ data: ImpersonateResult }>("/admin/impersonate", { method: "POST", body: input });
       return res.data;
     },
     onSuccess: (result) => {
@@ -251,47 +177,23 @@ function OrganizationsTab() {
     onError: () => toast.error("Error al impersonar el usuario"),
   });
 
-  // ── Export ─────────────────────────────────────────────────────────────────
-
   async function handleExport(org: AdminOrg) {
     try {
-      let exportData: unknown;
-      if (ENV.USE_MOCK) {
-        await delay(400);
-        exportData = { ...mockAdminOrgDetail, id: org.id, name: org.name, slug: org.slug };
-      } else {
-        const res = await httpClient<{ data: unknown }>(
-          `/admin/clients/${org.id}/export`
-        );
-        exportData = res.data;
-      }
-
-      const json = JSON.stringify(exportData, null, 2);
-
-      if (Platform.OS === "web") {
-        const blob = new Blob([json], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `${org.slug}-export.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-      } else {
-        const Sharing = await import("expo-sharing");
-        const FileSystem = await import("expo-file-system");
-        const dir = (FileSystem as Record<string, unknown>).documentDirectory as string ?? "";
-        const path = `${dir}${org.slug}-export.json`;
-        await (FileSystem as { writeAsStringAsync: (p: string, c: string) => Promise<void> }).writeAsStringAsync(path, json);
-        await Sharing.default.shareAsync(path, { mimeType: "application/json" });
-      }
-
+      const exportData = ENV.USE_MOCK
+        ? { ...mockAdminOrgDetail, id: org.id, name: org.name, slug: org.slug }
+        : (await httpClient<{ data: unknown }>(`/admin/clients/${org.id}/export`)).data;
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `${org.slug}-export.json`;
+      anchor.click();
+      URL.revokeObjectURL(url);
       toast.success("Exportación lista");
     } catch {
       toast.error("Error al exportar");
     }
   }
-
-  // ── Members modal ──────────────────────────────────────────────────────────
 
   async function handleOpenMembers(org: AdminOrg) {
     setMembersOpen(true);
@@ -300,172 +202,60 @@ function OrganizationsTab() {
       setSelectedOrgDetail({ ...mockAdminOrgDetail, id: org.id, name: org.name, slug: org.slug });
       return;
     }
-    const res = await httpClient<{ data: AdminOrgDetail }>(
-      `/admin/clients/${org.id}`
-    );
+    const res = await httpClient<{ data: AdminOrgDetail }>(`/admin/clients/${org.id}`);
     setSelectedOrgDetail(res.data);
   }
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  const columns: Column<OrgRow>[] = [
+    { key: "name", header: "Cliente" },
+    { key: "tipo", header: "Tipo" },
+    { key: "users", header: "Usuarios", render: (row) => row._count.clientMembers },
+    { key: "members", header: "Miembros", render: (row) => row._count.members },
+    { key: "state", header: "Estado", render: (row) => <Badge color={row.isActive ? "green" : "red"}>{row.isActive ? "Activo" : "Inactivo"}</Badge> },
+    {
+      key: "actions",
+      header: "Acciones",
+      render: (row) => (
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="ghost" onClick={() => handleOpenMembers(row)}>Miembros</Button>
+          <Button size="sm" variant="ghost" onClick={() => { setEditingOrg(row); setFormOpen(true); }}>Editar</Button>
+          <Button size="sm" variant="ghost" onClick={() => handleExport(row)}>Exportar</Button>
+          <Button size="sm" variant={row.isActive ? "danger" : "ghost"} onClick={() => toggleOrgActive.mutate({ id: row.id, activate: !row.isActive })} disabled={toggleOrgActive.isPending}>
+            {row.isActive ? "Desactivar" : "Activar"}
+          </Button>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <>
-      <View style={styles.topBar}>
-        <Text style={[styles.sectionTitle, { color: c.text }]}>
-          {orgs.length} {orgs.length === 1 ? "cliente" : "clientes"}
-        </Text>
-        <CustomButton
-          size="sm"
-          onPress={() => {
-            setEditingOrg(null);
-            setFormOpen(true);
-          }}
-        >
-          + Nuevo cliente
-        </CustomButton>
-      </View>
-
-      <DataTable<OrgRow>
-        data={orgs as OrgRow[]}
-        columns={ORG_COLUMNS}
-        keyExtractor={(r) => r.id}
-        isLoading={isLoading}
-        searchable
-        emptyText="No hay clientes"
-        renderActions={(row) => (
-          <View style={styles.actions}>
-            <CustomButton
-              size="sm"
-              variant="outline"
-              onPress={() => handleOpenMembers(row._original)}
-            >
-              Miembros
-            </CustomButton>
-            <CustomButton
-              size="sm"
-              variant="outline"
-              onPress={() => {
-                setEditingOrg(row._original);
-                setFormOpen(true);
-              }}
-            >
-              Editar
-            </CustomButton>
-            <CustomButton
-              size="sm"
-              variant="ghost"
-              onPress={() => handleExport(row._original)}
-            >
-              Exportar
-            </CustomButton>
-            <CustomButton
-              size="sm"
-              variant="ghost"
-              onPress={() =>
-                toggleOrgActive.mutate({ id: row.id as string, activate: !row.isActive })
-              }
-              disabled={toggleOrgActive.isPending}
-            >
-              {row.isActive ? "Desactivar" : "Activar"}
-            </CustomButton>
-          </View>
-        )}
-        actionsLabel="Acciones"
-        actionsWidth={280}
-      />
-
+      <div className="mb-4 flex items-center justify-between gap-4">
+        <p className="text-sm font-medium text-gray-700">{orgs.length} {orgs.length === 1 ? "cliente" : "clientes"}</p>
+        <Button size="sm" onClick={() => { setEditingOrg(null); setFormOpen(true); }}>+ Nuevo cliente</Button>
+      </div>
+      <Table columns={columns} rows={orgs as OrgRow[]} keyExtractor={(row) => row.id} loading={isLoading} emptyText="No hay clientes" />
       <ClientFormModal
         open={formOpen}
-        onClose={() => {
-          setFormOpen(false);
-          setEditingOrg(null);
-        }}
+        onClose={() => { setFormOpen(false); setEditingOrg(null); }}
         org={editingOrg}
         isLoading={createOrg.isPending || updateOrg.isPending}
         onSubmit={(data) => {
-          if (editingOrg) {
-            updateOrg.mutate({ id: editingOrg.id, data: data as UpdateOrgInput });
-          } else {
-            createOrg.mutate(data as CreateOrgInput);
-          }
+          if (editingOrg) updateOrg.mutate({ id: editingOrg.id, data: data as UpdateOrgInput });
+          else createOrg.mutate(data as CreateOrgInput);
         }}
       />
-
       <ClientMembersModal
         open={membersOpen}
-        onClose={() => {
-          setMembersOpen(false);
-          setSelectedOrgDetail(null);
-        }}
+        onClose={() => { setMembersOpen(false); setSelectedOrgDetail(null); }}
         orgDetail={selectedOrgDetail}
         isLoading={!selectedOrgDetail && membersOpen}
         isImpersonating={impersonateMember.isPending}
-        onImpersonate={(member: AdminOrgMember) => {
-          impersonateMember.mutate({
-            targetId: member.id,
-            targetType: "ORG_MEMBER",
-          });
-        }}
+        onImpersonate={(member: AdminOrgMember) => impersonateMember.mutate({ targetId: member.id, targetType: "ORG_MEMBER" })}
       />
     </>
   );
 }
-
-// ─── AuditLogsTab ─────────────────────────────────────────────────────────────
-
-type LogRow = AuditLog & Record<string, unknown>;
-
-const LOG_COLUMNS: Column<LogRow>[] = [
-  {
-    key: "createdAt",
-    header: "Fecha",
-    width: 150,
-    render: (v) => (
-      <Text style={{ fontSize: TYPOGRAPHY.fontSize.xs }}>{formatDate(v as string)}</Text>
-    ),
-  },
-  {
-    key: "actorType",
-    header: "Tipo actor",
-    width: 110,
-    render: (v) => {
-      const labels: Record<string, string> = {
-        SYSTEM_ADMIN: "Super Admin",
-        ORG_MEMBER: "Miembro",
-        CLIENT: "Cliente",
-      };
-      return (
-        <Text style={{ fontSize: TYPOGRAPHY.fontSize.xs }}>{labels[v as string] ?? (v as string)}</Text>
-      );
-    },
-  },
-  {
-    key: "action",
-    header: "Acción",
-    flex: 1.5,
-    render: (v) => (
-      <Text style={{ fontSize: TYPOGRAPHY.fontSize.sm }}>{actionLabel(v as string)}</Text>
-    ),
-  },
-  {
-    key: "targetType",
-    header: "Objetivo",
-    flex: 1,
-    render: (v) => (
-      <Text style={{ fontSize: TYPOGRAPHY.fontSize.xs, color: "#6B7280" }}>{(v as string) ?? "—"}</Text>
-    ),
-  },
-  {
-    key: "orgId",
-    header: "Org ID",
-    flex: 1,
-    render: (v) => (
-      <Text style={{ fontSize: TYPOGRAPHY.fontSize.xs, color: "#9CA3AF" }} numberOfLines={1}>
-        {(v as string) ?? "Sistema"}
-      </Text>
-    ),
-  },
-];
 
 function AuditLogsTab() {
   const { data: logs = [], isLoading } = useQuery<AuditLog[]>({
@@ -480,90 +270,39 @@ function AuditLogsTab() {
     },
   });
 
-  return (
-    <DataTable<LogRow>
-      data={logs as LogRow[]}
-      columns={LOG_COLUMNS}
-      keyExtractor={(r) => r.id}
-      isLoading={isLoading}
-      searchable
-      emptyText="Sin registros de actividad"
-      rowDivider="borders"
-    />
-  );
+  const columns: Column<LogRow>[] = [
+    { key: "createdAt", header: "Fecha", render: (row) => formatDate(row.createdAt) },
+    { key: "actorType", header: "Tipo actor" },
+    { key: "action", header: "Acción", render: (row) => actionLabel(row.action) },
+    { key: "targetType", header: "Objetivo", render: (row) => row.targetType ?? "—" },
+    { key: "orgId", header: "Org ID", render: (row) => row.orgId ?? "Sistema" },
+  ];
+
+  return <Table columns={columns} rows={logs as LogRow[]} keyExtractor={(row) => row.id} loading={isLoading} emptyText="Sin registros de actividad" />;
 }
 
-// ─── AdminScreen ──────────────────────────────────────────────────────────────
-
-const TABS = [
+export const ADMIN_TABS = [
   { key: "orgs", label: "Organizaciones" },
   { key: "logs", label: "Audit Logs" },
   { key: "security", label: "Security" },
-];
+] as const;
 
-export function AdminScreen() {
-  const c = useColors();
-  const [activeTab, setActiveTab] = useState("orgs");
+export type AdminTab = (typeof ADMIN_TABS)[number]["key"];
 
+export function AdminScreen({ activeTab = "orgs" }: { activeTab?: AdminTab }) {
   return (
     <RoleGuard allowedRoles={["SYSTEM_ADMIN"]}>
-      <MainLayout scrollable={false}>
-        <View style={[styles.container, { backgroundColor: c.background }]}>
-          <View style={styles.header}>
-            <Text style={[styles.pageTitle, { color: c.text }]}>Panel de administración</Text>
-            <Text style={[styles.pageSubtitle, { color: c.textMuted }]}>
-              Gestión global del sistema
-            </Text>
-          </View>
-
-          <CustomTabs
-            tabs={TABS}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            variant="underline"
-          />
-
-          <View style={styles.tabContent}>
-            {activeTab === "orgs" ? <OrganizationsTab /> : activeTab === "logs" ? <AuditLogsTab /> : <ChangePasswordSection />}
-          </View>
-        </View>
-      </MainLayout>
+      <div className="page feature-page">
+        <header className="feature-header">
+          <div>
+            <p className="eyebrow">Panel de administración</p>
+            <h1 className="page-title">{ADMIN_TABS.find((tab) => tab.key === activeTab)?.label}</h1>
+          </div>
+        </header>
+        <section className="feature-content">
+          {activeTab === "orgs" ? <OrganizationsTab /> : activeTab === "logs" ? <AuditLogsTab /> : <ChangePasswordSection />}
+        </section>
+      </div>
     </RoleGuard>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: SPACING.lg,
-    gap: SPACING.lg,
-  },
-  header: {
-    gap: SPACING.xs,
-  },
-  pageTitle: {
-    fontSize: TYPOGRAPHY.fontSize.xxl,
-    fontWeight: TYPOGRAPHY.fontWeight.bold,
-  },
-  pageSubtitle: {
-    fontSize: TYPOGRAPHY.fontSize.sm,
-  },
-  tabContent: {
-    flex: 1,
-    gap: SPACING.md,
-  },
-  topBar: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  sectionTitle: {
-    fontSize: TYPOGRAPHY.fontSize.sm,
-    fontWeight: TYPOGRAPHY.fontWeight.medium,
-  },
-  actions: {
-    flexDirection: "row",
-    gap: SPACING.xs,
-    flexWrap: "wrap",
-  },
-});

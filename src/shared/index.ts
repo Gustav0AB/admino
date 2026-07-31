@@ -3,11 +3,9 @@ export * from "./components";
 export { useAppLifecycle } from "./hooks/useAppLifecycle";
 export { useAuth } from "./hooks/useAuth";
 export { useColors } from "./hooks/useColors";
-export { useUrlState } from "./hooks/useUrlState";
 
 export { useAuthStore, MOCK_USERS } from "./store/authStore";
 export { useClientStore } from "./store/clientStore";
-export { useSidebarStore } from "./store/sidebarStore";
 export { useThemeStore } from "./store/themeStore";
 
 export { DynamicThemeProvider } from "./theme/DynamicThemeProvider";
