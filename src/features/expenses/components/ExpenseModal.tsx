@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Button, Dropdown, Modal, TextField } from "@generic/components";
+import { Button, Dropdown, Modal, TextField } from "@/shared/ui";
 import { useExpensesStore } from "../store";
 import { CATEGORIES, currentMonthName, MESES_LIST } from "../helpers";
 import type { Estado, Expense, ExpenseCategory, Frecuencia, MetodoPago } from "../types";

@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Card } from "@generic/components";
+import { Card } from "@/shared/ui";
 
 export default function PlanningScreen() {
   const { t } = useTranslation();

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Badge, Button, Card, Dropdown, TextField } from "@generic/components";
+import { Badge, Button, Card, Dropdown, TextField } from "@/shared/ui";
 import { usePlanningStore } from "../planning/store";
 import { useExpensesStore } from "../store";
 import {
@@ -79,7 +79,7 @@ export function CreditCardsTab() {
           <Dropdown label="Año" value={String(selectedAño)} options={añoOptions} onChange={(value) => setSelectedAño(Number(value))} />
           <Dropdown label="Mes" value={selectedMes} options={MES_OPTIONS} onChange={setSelectedMes} />
         </div>
-        <Button variant="ghost" size="sm" onClick={() => { setShowAddForm(true); setAddForm(blankAddForm()); }}>+ Nueva tarjeta</Button>
+        <Button size="sm" onClick={() => { setShowAddForm(true); setAddForm(blankAddForm()); }}>+ Nueva tarjeta</Button>
       </div>
 
       {showAddForm && (

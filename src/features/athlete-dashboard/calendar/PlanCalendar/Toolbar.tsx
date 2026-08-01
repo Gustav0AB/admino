@@ -1,4 +1,4 @@
-import { Button, DatePicker, Dropdown, TextField } from "@generic/components";
+import { Button, DatePicker, Dropdown, TextField } from "@/shared/ui";
 import type { CalendarPlan } from "./types";
 
 export type EditMode = "view" | "new" | "edit";

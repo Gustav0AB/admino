@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Button, Card, TextField } from "@generic/components";
+import { Button, Card, TextField } from "@/shared/ui";
 import { useExpensesStore } from "../store";
 import { ACCOUNT_TYPES, formatMXN, getAccountBalance } from "../helpers";
 import type { Account, AccountType } from "../types";
@@ -85,7 +85,7 @@ export function AccountsTab() {
         <h2 className="text-sm font-bold text-gray-900">
           {accounts.length === 0 ? "Agrega tus cuentas" : `${accounts.length} cuenta${accounts.length !== 1 ? "s" : ""}`}
         </h2>
-        <Button variant="ghost" size="sm" onClick={openAdd}>+ Cuenta</Button>
+        <Button size="sm" onClick={openAdd}>+ Cuenta</Button>
       </div>
 
       {showForm && (

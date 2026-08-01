@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { Badge, Button, Card, Modal, TextField } from "@generic/components";
+import { Badge, Button, Card, Modal, TextField } from "@/shared/ui";
 import { randomUUID } from "@/web/crypto";
 import { useExpensesStore } from "@/features/expenses/store";
 import { currentMonthName, formatMXN, MESES_LIST } from "@/features/expenses/helpers";

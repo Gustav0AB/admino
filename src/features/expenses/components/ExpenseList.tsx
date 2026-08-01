@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Button, Card, ConfirmModal, Dropdown } from "@generic/components";
+import { Button, Card, ConfirmModal, Dropdown } from "@/shared/ui";
 import { useExpensesStore } from "../store";
 import { formatMXN, getFilteredExpenses, MESES_LIST } from "../helpers";
 import { ExpenseModal } from "./ExpenseModal";

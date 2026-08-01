@@ -1,4 +1,4 @@
-import { Modal } from "@generic/components";
+import { Modal } from "@/shared/ui";
 import { useWorkoutLog } from "../hooks/useHeatmap";
 import { formatDisplayDate, totalVolumeFormatted } from "../utils/heatmapUtils";
 

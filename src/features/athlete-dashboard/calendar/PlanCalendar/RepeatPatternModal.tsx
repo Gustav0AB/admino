@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, DatePicker, Modal, TextField } from "@generic/components";
+import { Button, DatePicker, Modal, TextField } from "@/shared/ui";
 import { CELL_HINT } from "./CellEditModal";
 
 type RepeatPatternModalProps = {

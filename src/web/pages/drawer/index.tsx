@@ -1,4 +1,4 @@
-import { Card } from "@generic/components";
+import { Card } from "@/shared/ui";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { useClientStore } from "@/shared/store/clientStore";
 import { navigate } from "@/web/navigation";

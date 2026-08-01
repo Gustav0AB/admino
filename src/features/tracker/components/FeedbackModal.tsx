@@ -1,4 +1,4 @@
-import { Button, Modal } from "@generic/components";
+import { Button, Modal } from "@/shared/ui";
 import { useTrackerStore } from "@/shared/store/trackerStore";
 
 type Props = {

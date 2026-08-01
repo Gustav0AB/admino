@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Button, Card, TextField } from "@generic/components";
+import { Button, Card, TextField } from "@/shared/ui";
 import { useClientStore } from "@/shared/store/clientStore";
 import { ChangePasswordSection } from "@/shared/components/inputs/ChangePasswordSection";
 

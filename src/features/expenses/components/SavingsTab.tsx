@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { Button, Card, TextField } from "@generic/components";
+import { Button, Card, TextField } from "@/shared/ui";
 import { useExpensesStore } from "../store";
 import { formatMXN } from "../helpers";
 import type { SavingsGoal } from "../types";
@@ -53,7 +53,7 @@ export function SavingsTab() {
         )}
       </Card>
 
-      {!showForm && <Button variant="ghost" size="sm" onClick={() => { setShowForm(true); setForm(blankForm()); }}>+ Nueva meta</Button>}
+      {!showForm && <Button variant="ghost" size="sm" className="add-tile" onClick={() => { setShowForm(true); setForm(blankForm()); }}>+ Nueva meta</Button>}
 
       {showForm && (
         <Card className="border-primary">

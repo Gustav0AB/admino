@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Badge, Button, Card, Dropdown, TextField } from "@generic/components";
+import { Badge, Button, Card, Dropdown, TextField } from "@/shared/ui";
 import { httpClient } from "@/shared/api/client";
 import { ENV } from "@/shared/config/env";
 import type { AthleteCategory, EndUserMember, TrainingPlan, UpdateEndUserMemberInput } from "@/shared/types/member";

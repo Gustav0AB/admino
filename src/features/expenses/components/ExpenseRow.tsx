@@ -1,4 +1,4 @@
-import { Badge, Button, Card } from "@generic/components";
+import { Badge, Button, Card } from "@/shared/ui";
 import type { ReactNode } from "react";
 import { useExpensesStore } from "../store";
 import { formatMXN } from "../helpers";

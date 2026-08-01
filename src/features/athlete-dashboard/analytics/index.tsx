@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Card } from "@generic/components";
+import { Card } from "@/shared/ui";
 import { useHeatmapData } from "./hooks/useHeatmap";
 import { DayDetailModal } from "./components/DayDetailModal";
 import { Heatmap } from "./components/Heatmap";

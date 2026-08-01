@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Card, Dropdown, TextField } from "@generic/components";
+import { Button, Card, Dropdown, TextField } from "@/shared/ui";
 import { usePlanningStore } from "@/features/expenses/planning/store";
 import { useExpensesStore } from "../store";
 import { currentMonthName, currentYear, formatMXN, MESES_LIST } from "../helpers";
@@ -179,7 +179,7 @@ function RecurringList({ category, selectedMes }: { category: RecurringCategory;
 
   return (
     <div className="flex flex-col gap-3">
-      {!showForm && <Button variant="ghost" size="sm" onClick={() => { setEditId(null); setForm(blankRecurring()); setShowForm(true); }}>+ Agregar</Button>}
+      {!showForm && <Button variant="ghost" size="sm" className="add-tile" onClick={() => { setEditId(null); setForm(blankRecurring()); setShowForm(true); }}>+ Agregar</Button>}
       {showForm && (
         <Card className="border-primary">
           <div className="flex flex-col gap-3">
@@ -380,7 +380,7 @@ function SimpleList({ showForm, setShowForm, form, empty, children }: { showForm
   const hasChildren = Array.isArray(children) ? children.some(Boolean) : Boolean(children);
   return (
     <div className="flex flex-col gap-3">
-      {showForm ? <Card className="border-primary"><div className="flex flex-col gap-3">{form}</div></Card> : <Button variant="ghost" size="sm" onClick={() => setShowForm(true)}>+ Agregar</Button>}
+      {showForm ? <Card className="border-primary"><div className="flex flex-col gap-3">{form}</div></Card> : <Button variant="ghost" size="sm" className="add-tile" onClick={() => setShowForm(true)}>+ Agregar</Button>}
       {!hasChildren && !showForm ? <Card className="text-center text-sm text-gray-500">{empty}</Card> : children}
     </div>
   );

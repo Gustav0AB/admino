@@ -1,4 +1,4 @@
-import { Card } from "@generic/components";
+import { Card } from "@/shared/ui";
 
 type Props = {
   featureName: string;

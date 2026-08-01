@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Badge, Button, Table, type Column } from "@generic/components";
+import { Badge, Button, Table, type Column } from "@/shared/ui";
 import { useAuthStore } from "@/shared/store/authStore";
 import { useToast } from "@/shared/components/feedback/Toast";
 import { RoleGuard } from "@/shared/components/RoleGuard";

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Modal } from "@generic/components";
+import { Button, Modal } from "@/shared/ui";
 
 type CellEditModalProps = {
   open: boolean;

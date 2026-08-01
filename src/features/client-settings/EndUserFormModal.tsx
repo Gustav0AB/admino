@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, DatePicker, Modal, TextField } from "@generic/components";
+import { Button, DatePicker, Modal, TextField } from "@/shared/ui";
 import { useClientStore } from "@/shared/store/clientStore";
 import type {
   EndUserMember,

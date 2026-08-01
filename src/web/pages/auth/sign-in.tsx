@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Button, Card, TextField } from "@generic/components";
+import { Button, Card, TextField } from "@/shared/ui";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { navigate } from "@/web/navigation";
 

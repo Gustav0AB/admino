@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Card } from "@generic/components";
+import { Card } from "@/shared/ui";
 import { useExpensesStore } from "../store";
 import { formatMXN, getFilteredExpenses } from "../helpers";
 import { usePlanningStore } from "@/features/expenses/planning/store";

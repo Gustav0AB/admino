@@ -1,4 +1,4 @@
-import { Button, Modal } from "@generic/components";
+import { Button, Modal } from "@/shared/ui";
 import { useSessionGuard } from "@/shared/hooks/useSessionGuard";
 
 function formatSeconds(seconds: number): string {

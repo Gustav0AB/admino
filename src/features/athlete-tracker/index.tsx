@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, Card, TextField } from "@generic/components";
+import { Button, Card, TextField } from "@/shared/ui";
 import { httpClient } from "@/shared/api/client";
 import { ENV } from "@/shared/config/env";
 import { useAuthStore } from "@/shared/store/authStore";

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Card, TextField } from "@generic/components";
+import { Button, Card, TextField } from "@/shared/ui";
 import { useExpensesStore } from "../store";
 import { formatMXN } from "../helpers";
 import type { Loan } from "../types";
@@ -52,7 +52,7 @@ export function LoansTab() {
         <SummaryCard label="Me deben" value={totalLent} count={lent.filter((loan) => loan.status === "active").length} color="green" />
       </div>
 
-      {!showForm && <Button variant="ghost" size="sm" onClick={() => { setShowForm(true); setForm(blankForm()); }}>+ Nuevo préstamo</Button>}
+      {!showForm && <Button variant="ghost" size="sm" className="add-tile" onClick={() => { setShowForm(true); setForm(blankForm()); }}>+ Nuevo préstamo</Button>}
 
       {showForm && (
         <Card className="border-primary">

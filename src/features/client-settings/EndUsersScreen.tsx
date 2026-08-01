@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Badge, Button, Card } from "@generic/components";
+import { Badge, Button, Card } from "@/shared/ui";
 import { ENV } from "@/shared/config/env";
 import { httpClient } from "@/shared/api/client";
 import { EndUserFormModal } from "./EndUserFormModal";

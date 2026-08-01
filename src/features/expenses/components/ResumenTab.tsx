@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { Card, Dropdown } from "@generic/components";
+import { Card, Dropdown } from "@/shared/ui";
 import { usePlanningStore } from "@/features/expenses/planning/store";
 import { useExpensesStore } from "../store";
 import {

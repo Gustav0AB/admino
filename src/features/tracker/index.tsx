@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Card } from "@generic/components";
+import { Button, Card } from "@/shared/ui";
 import { useTrackerStore } from "@/shared/store/trackerStore";
 import { useWorkoutSocket } from "@/shared/hooks/useWorkoutSocket";
 import { StreakBadge } from "./components/StreakBadge";

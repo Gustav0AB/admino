@@ -12,10 +12,17 @@ type WeeklyGridProps = {
   planStartDate?: string;
   planEndDate?: string;
   onCellOpenModal?: (dateIso: string) => void;
+  onDayHeaderClick?: (weekdayJs: number, dayLabel: string) => void;
 };
 
-export function WeeklyGrid({ weeks, cells, events, editable, planStartDate, planEndDate, onCellOpenModal }: WeeklyGridProps) {
+export function WeeklyGrid({ weeks, cells, events, editable, planStartDate, planEndDate, onCellOpenModal, onDayHeaderClick }: WeeklyGridProps) {
   const [selectedDayIdx, setSelectedDayIdx] = useState<number | null>(null);
+  const canPatternDays = editable && onDayHeaderClick;
+  function handleHeaderClick(index: number) {
+    setSelectedDayIdx(selectedDayIdx === index ? null : index);
+    // Header index 0=Lun … 6=Dom → JS getDay() 1=Mon … 0=Sun
+    if (canPatternDays) onDayHeaderClick((index + 1) % 7, DAY_HEADERS[index]!);
+  }
   const eventsByDate = events.reduce<Record<string, CalendarEvent[]>>((acc, event) => {
     (acc[event.date] ??= []).push(event);
     return acc;
@@ -30,7 +37,16 @@ export function WeeklyGrid({ weeks, cells, events, editable, planStartDate, plan
       <div className="calendar-grid">
         <div className="calendar-week-row calendar-week-header">
           <HeaderCell>Sem.</HeaderCell>
-          {DAY_HEADERS.map((day, index) => <HeaderCell key={day} active={selectedDayIdx === index}>{day}</HeaderCell>)}
+          {DAY_HEADERS.map((day, index) => (
+            <HeaderCell
+              key={day}
+              active={selectedDayIdx === index}
+              onClick={canPatternDays ? () => handleHeaderClick(index) : undefined}
+              title={canPatternDays ? `Aplicar a todos los ${day}` : undefined}
+            >
+              {day}
+            </HeaderCell>
+          ))}
         </div>
         {weeks.map((week) => (
           <div key={week.weekNum} className="calendar-week-row">
@@ -62,6 +78,8 @@ export function WeeklyGrid({ weeks, cells, events, editable, planStartDate, plan
   );
 }
 
-function HeaderCell({ children, active }: { children: React.ReactNode; active?: boolean }) {
-  return <div className={`calendar-header-cell ${active ? "calendar-header-active" : ""}`}>{children}</div>;
+function HeaderCell({ children, active, onClick, title }: { children: React.ReactNode; active?: boolean; onClick?: () => void; title?: string }) {
+  const className = `calendar-header-cell ${active ? "calendar-header-active" : ""} ${onClick ? "calendar-header-clickable" : ""}`;
+  if (onClick) return <button type="button" className={className} onClick={onClick} title={title}>{children}</button>;
+  return <div className={className}>{children}</div>;
 }

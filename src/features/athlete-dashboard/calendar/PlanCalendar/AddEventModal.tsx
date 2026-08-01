@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, DatePicker, Dropdown, Modal, TextField } from "@generic/components";
+import { Button, DatePicker, Dropdown, Modal, TextField } from "@/shared/ui";
 import type { CalendarEvent, EventType } from "./types";
 
 const EVENT_TYPE_OPTIONS: { label: string; value: EventType }[] = [

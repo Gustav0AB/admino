@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Modal, TextField } from "@generic/components";
+import { Button, Modal, TextField } from "@/shared/ui";
 import { useClientStore } from "@/shared/store/clientStore";
 import type { OrgMember, CreateMemberInput, UpdateMemberInput } from "@/shared/types/member";
 

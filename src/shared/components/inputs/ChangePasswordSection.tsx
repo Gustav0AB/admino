@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { Button, Card, TextField } from "@generic/components";
+import { Button, Card, TextField } from "@/shared/ui";
 import { useToast } from "@/shared/components/feedback/Toast";
 import { ENV } from "@/shared/config/env";
 import { httpClient } from "@/shared/api/client";

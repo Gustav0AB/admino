@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Button, Card, Dropdown, TextField } from "@generic/components";
+import { Button, Card, Dropdown, TextField } from "@/shared/ui";
 import { useExpensesStore } from "../store";
 import { currentMonthName, currentYear, formatMXN, INCOME_CATEGORIES, MESES_LIST } from "../helpers";
 import type { Income, IncomeCategory, IncomeEstado, IncomeFrecuencia } from "../types";
@@ -79,7 +79,7 @@ export function IncomesTab() {
     <div className="flex flex-col gap-4 p-4">
       <div className="flex items-center justify-between gap-3">
         <Dropdown value={selectedMes} options={MES_OPTIONS} onChange={setSelectedMes} />
-        <Button variant="ghost" size="sm" onClick={openAdd}>+ Ingreso</Button>
+        <Button size="sm" onClick={openAdd}>+ Ingreso</Button>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">

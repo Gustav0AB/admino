@@ -93,7 +93,9 @@ export function PlanCalendar() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [addEventOpen, setAddEventOpen] = useState(false);
   const [repeatPatternOpen, setRepeatPatternOpen] = useState(false);
-  const [cellModalDateIso, setCellModalDateIso] = useState<string | null>(null);
+  const [calModal, setCalModal] = useState<
+    { kind: "cell"; dateIso: string } | { kind: "weekday"; weekdayJs: number } | null
+  >(null);
   const [page, setPage] = useState(0);
 
   const selectedPlan = plans.find((p) => p.id === selectedPlanId) ?? null;
@@ -163,28 +165,24 @@ export function PlanCalendar() {
     }
   }
 
-  function handleCellOpenModal(dateIso: string) { setCellModalDateIso(dateIso); }
+  function handleCellOpenModal(dateIso: string) { setCalModal({ kind: "cell", dateIso }); }
+  function handleDayHeaderClick(weekdayJs: number) { setCalModal({ kind: "weekday", weekdayJs }); }
 
-  function handleCellModalSave(text: string) {
-    if (!cellModalDateIso) return;
-    const dateIso = cellModalDateIso;
-    applyCellText(dateIso, text);
+  function datesForWeekday(weekdayJs: number): string[] {
+    if (!activePlan?.startDate || !activePlan?.endDate) return [];
+    const start = activePlan.startDate, end = activePlan.endDate;
+    return allWeeks.flatMap((w) => w.days).filter((d) => d >= start && d <= end && isoToLocalDate(d).getDay() === weekdayJs);
+  }
 
-    if (activePlan?.startDate && activePlan?.endDate) {
-      const weekday = isoToLocalDate(dateIso).getDay();
-      const sameWeekdayDates = allWeeks
-        .flatMap((w) => w.days)
-        .filter((d) => d !== dateIso && d >= activePlan.startDate! && d <= activePlan.endDate! && isoToLocalDate(d).getDay() === weekday);
-
-      if (sameWeekdayDates.length > 0) {
-        const dayName = JS_DAY_NAMES_ES[weekday];
-        if (window.confirm(`¿Quieres agregar este entrenamiento para todos los ${dayName} del plan?`)) {
-          const batch: Record<string, string> = {};
-          sameWeekdayDates.forEach((d) => { batch[d] = text; });
-          applyCellsBatch(batch);
-        }
-      }
+  function handleModalSave(text: string) {
+    if (!calModal) return;
+    if (calModal.kind === "cell") {
+      applyCellText(calModal.dateIso, text);
+      return;
     }
+    const batch: Record<string, string> = {};
+    datesForWeekday(calModal.weekdayJs).forEach((d) => { batch[d] = text; });
+    if (Object.keys(batch).length > 0) applyCellsBatch(batch);
   }
 
   function handleApplyPattern(templates: string[], startDateIso: string) {
@@ -251,7 +249,7 @@ export function PlanCalendar() {
       <WeeklyGrid
         weeks={visibleWeeks} cells={cells} events={events} editable={editable}
         planStartDate={activePlan?.startDate} planEndDate={activePlan?.endDate}
-        onCellOpenModal={handleCellOpenModal}
+        onCellOpenModal={handleCellOpenModal} onDayHeaderClick={handleDayHeaderClick}
       />
 
       {totalPages > 1 && (
@@ -296,11 +294,17 @@ export function PlanCalendar() {
       />
 
       <CellEditModal
-        open={cellModalDateIso !== null}
-        dateLabel={cellModalDateIso ? formatCellLabel(cellModalDateIso) : ""}
-        initialValue={cellModalDateIso ? (cells[cellModalDateIso] ?? "") : ""}
-        onClose={() => setCellModalDateIso(null)}
-        onSave={handleCellModalSave}
+        open={calModal !== null}
+        dateLabel={
+          calModal?.kind === "cell"
+            ? formatCellLabel(calModal.dateIso)
+            : calModal?.kind === "weekday"
+              ? `Todos los ${JS_DAY_NAMES_ES[calModal.weekdayJs]} · ${datesForWeekday(calModal.weekdayJs).length} días`
+              : ""
+        }
+        initialValue={calModal?.kind === "cell" ? (cells[calModal.dateIso] ?? "") : ""}
+        onClose={() => setCalModal(null)}
+        onSave={handleModalSave}
       />
     </div>
   );

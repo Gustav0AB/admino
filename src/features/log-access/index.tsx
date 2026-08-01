@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Button, Card, TextField } from "@generic/components";
+import { Button, Card, TextField } from "@/shared/ui";
 import * as Print from "@/web/print";
 import QRCode from "@/web/qrCode";
 import { useApiMutation, useApiQuery } from "@/shared/api/useApiQuery";

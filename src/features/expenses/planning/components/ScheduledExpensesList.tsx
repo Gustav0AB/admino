@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { Badge, Button, Card, Modal, TextField } from "@generic/components";
+import { Badge, Button, Card, Modal, TextField } from "@/shared/ui";
 import { formatMXN } from "../../helpers";
 import { usePlanningStore } from "../store";
 import type { ScheduledExpense, ScheduledExpenseCategory, ScheduledExpenseStatus } from "../types";

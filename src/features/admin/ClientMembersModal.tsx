@@ -1,4 +1,4 @@
-import { Badge, Button, Card, Modal } from "@generic/components";
+import { Badge, Button, Card, Modal } from "@/shared/ui";
 import type { AdminOrgDetail, AdminOrgMember } from "@/shared/types/admin";
 
 type Props = {

@@ -1,4 +1,4 @@
-import { Badge, Card } from "@generic/components";
+import { Badge, Card } from "@/shared/ui";
 import type { WorkoutOfDay, WorkoutStatus } from "@/shared/store/trackerStore";
 
 type Props = {

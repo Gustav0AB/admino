@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Dropdown, Modal, TextField } from "@generic/components";
+import { Button, Dropdown, Modal, TextField } from "@/shared/ui";
 import { SECTION_PERMISSIONS } from "@/shared/types/member";
 import type { AdminOrg, ClientType, CreateOrgInput, UpdateOrgInput } from "@/shared/types/admin";
 

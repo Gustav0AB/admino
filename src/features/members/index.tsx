@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Button } from "@generic/components";
+import { Button } from "@/shared/ui";
 import { StaffContent } from "@/features/org-members";
 import { AtletasContent } from "@/features/client-settings/EndUsersScreen";
 
