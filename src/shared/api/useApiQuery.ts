@@ -12,7 +12,8 @@ export function useApiQuery<T>(
   queryKey: QueryKey,
   endpoint: string,
   mockData: T,
-  options?: Omit<UseQueryOptions<T>, "queryKey" | "queryFn">
+  options?: Omit<UseQueryOptions<T>, "queryKey" | "queryFn">,
+  _legacyOptions?: unknown
 ) {
   return useQuery<T>({
     queryKey,

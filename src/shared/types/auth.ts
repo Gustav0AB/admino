@@ -16,4 +16,5 @@ export type LoginCredentials = {
 export type AuthSession = {
   user: User;
   token: string;
+  expiresAt: number | null; // Unix timestamp (seconds)
 };

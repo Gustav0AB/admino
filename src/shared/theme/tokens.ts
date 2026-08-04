@@ -1,6 +1,4 @@
-import { Dimensions, Platform } from "react-native";
-
-// Font families — loaded via @expo-google-fonts
+// Font families
 export const FONTS = {
   heading: {
     regular: "InstrumentSans_400Regular",
@@ -16,8 +14,8 @@ export const FONTS = {
 } as const;
 
 // Screen dimensions
-export const SCREEN_WIDTH = Dimensions.get("window").width;
-export const SCREEN_HEIGHT = Dimensions.get("window").height;
+export const SCREEN_WIDTH = typeof window === "undefined" ? 1024 : window.innerWidth;
+export const SCREEN_HEIGHT = typeof window === "undefined" ? 768 : window.innerHeight;
 
 // Breakpoints for responsive design
 export const BREAKPOINTS = {
@@ -75,45 +73,11 @@ export const TYPOGRAPHY = {
   },
 } as const;
 
-// Shadow styles (cross-platform)
 export const SHADOWS = {
   none: {},
-  sm: Platform.select({
-    ios: {
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.1,
-      shadowRadius: 2,
-    },
-    android: {
-      elevation: 2,
-    },
-    default: {},
-  }),
-  md: Platform.select({
-    ios: {
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.15,
-      shadowRadius: 4,
-    },
-    android: {
-      elevation: 4,
-    },
-    default: {},
-  }),
-  lg: Platform.select({
-    ios: {
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.2,
-      shadowRadius: 8,
-    },
-    android: {
-      elevation: 8,
-    },
-    default: {},
-  }),
+  sm: { boxShadow: "0 1px 2px rgba(0,0,0,0.10)" },
+  md: { boxShadow: "0 2px 4px rgba(0,0,0,0.15)" },
+  lg: { boxShadow: "0 4px 8px rgba(0,0,0,0.20)" },
 } as const;
 
 // Animation durations

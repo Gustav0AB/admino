@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import NetInfo, { type NetInfoState } from "@react-native-community/netinfo";
 
 type NetworkStatus = {
   isConnected: boolean;
@@ -13,14 +12,20 @@ export function useNetworkStatus(): NetworkStatus {
   });
 
   useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener((state: NetInfoState) => {
+    const update = () => {
       setStatus({
-        isConnected: state.isConnected ?? true,
-        isInternetReachable: state.isInternetReachable,
+        isConnected: navigator.onLine,
+        isInternetReachable: navigator.onLine,
       });
-    });
+    };
 
-    return unsubscribe;
+    update();
+    window.addEventListener("online", update);
+    window.addEventListener("offline", update);
+    return () => {
+      window.removeEventListener("online", update);
+      window.removeEventListener("offline", update);
+    };
   }, []);
 
   return status;

@@ -3,13 +3,19 @@ export type ClientBranding = {
   secondaryColor: string;
   backgroundColor: string;
   orgName: string;
+  slug: string;
   logoUrl: string | null;
 };
 
 export type ClientFeature =
+  | "athlete_dashboard"
+  | "athlete_tracker"
+  | "finanzas"
+  | "events"
+  | "analytics"
+  | "injuries"
+  // not yet ready — kept for future
   | "payments"
-  | "training_planning"
-  | "tracker"
   | "patients"
   | "log_access"
   | "nutritionist_planning";

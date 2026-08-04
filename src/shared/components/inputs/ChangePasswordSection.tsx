@@ -1,18 +1,13 @@
-import { useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { useState, type FormEvent } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { CustomInput } from "@/shared/components/inputs/CustomInput";
-import { CustomButton } from "@/shared/components/inputs/CustomButton";
+import { Button, Card, TextField } from "@/shared/ui";
 import { useToast } from "@/shared/components/feedback/Toast";
-import { useColors } from "@/shared/hooks/useColors";
 import { ENV } from "@/shared/config/env";
 import { httpClient } from "@/shared/api/client";
-import { BORDER_RADIUS, SPACING, TYPOGRAPHY } from "@/shared/theme/tokens";
 
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 export function ChangePasswordSection() {
-  const c = useColors();
   const toast = useToast();
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
@@ -51,60 +46,44 @@ export function ChangePasswordSection() {
     },
   });
 
-  function handleSubmit() {
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault();
     if (!validate()) return;
     mutation.mutate();
   }
 
   return (
-    <View style={[styles.card, { backgroundColor: c.backgroundStrong, borderColor: c.border }]}>
-      <Text style={[styles.title, { color: c.text }]}>Change Password</Text>
-      <View style={styles.fields}>
-        <CustomInput
+    <Card className="max-w-xl">
+      <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+        <h2 className="text-base font-semibold text-gray-900">Change Password</h2>
+        <TextField
           label="Current password"
+          type="password"
           value={current}
-          onChangeText={setCurrent}
-          secureTextEntry
+          onChange={(event) => setCurrent(event.target.value)}
           placeholder="••••••••"
-          {...(errors.current ? { error: errors.current } : {})}
+          error={errors.current}
         />
-        <CustomInput
+        <TextField
           label="New password"
+          type="password"
           value={next}
-          onChangeText={setNext}
-          secureTextEntry
+          onChange={(event) => setNext(event.target.value)}
           placeholder="Min. 8 characters"
-          {...(errors.next ? { error: errors.next } : {})}
+          error={errors.next}
         />
-        <CustomInput
+        <TextField
           label="Confirm new password"
+          type="password"
           value={confirm}
-          onChangeText={setConfirm}
-          secureTextEntry
+          onChange={(event) => setConfirm(event.target.value)}
           placeholder="••••••••"
-          {...(errors.confirm ? { error: errors.confirm } : {})}
+          error={errors.confirm}
         />
-        <CustomButton onPress={handleSubmit} loading={mutation.isPending} disabled={mutation.isPending}>
+        <Button type="submit" loading={mutation.isPending} disabled={mutation.isPending}>
           Update password
-        </CustomButton>
-      </View>
-    </View>
+        </Button>
+      </form>
+    </Card>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    borderRadius: BORDER_RADIUS.lg,
-    borderWidth: 1,
-    padding: SPACING.md,
-    gap: SPACING.sm,
-  },
-  title: {
-    fontSize: TYPOGRAPHY.fontSize.md,
-    fontWeight: "600",
-  },
-  fields: {
-    gap: SPACING.md,
-    marginTop: SPACING.sm,
-  },
-});

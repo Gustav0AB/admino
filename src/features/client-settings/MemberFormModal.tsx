@@ -1,9 +1,6 @@
-import { useState, useEffect } from "react";
-import { View } from "react-native";
-import { CustomModal } from "@/shared/components/feedback/CustomModal";
-import { CustomInput } from "@/shared/components/inputs/CustomInput";
-import { CustomButton } from "@/shared/components/inputs/CustomButton";
-import { SPACING } from "@/shared/theme/tokens";
+import { useEffect, useState } from "react";
+import { Button, Modal, TextField } from "@/shared/ui";
+import { useClientStore } from "@/shared/store/clientStore";
 import type { OrgMember, CreateMemberInput, UpdateMemberInput } from "@/shared/types/member";
 
 type Props = {
@@ -15,28 +12,27 @@ type Props = {
 };
 
 export function MemberFormModal({ open, onClose, member, onSubmit, isLoading }: Props) {
+  const slug = useClientStore((s) => s.branding.slug);
   const isEditing = !!member;
-
   const [name, setName] = useState("");
-  const [username, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (open) {
-      setName(member?.name ?? "");
-      setEmail(member?.username ?? "");
-      setPassword("");
-      setErrors({});
-    }
+    if (!open) return;
+    setName(member?.name ?? "");
+    setUsername(member?.username ?? "");
+    setEmail(member?.email ?? "");
+    setPassword("");
+    setErrors({});
   }, [open, member]);
-
-  const fe = (key: string) =>
-    errors[key] ? ({ error: errors[key] } as { error: string }) : {};
 
   function validate(): boolean {
     const errs: Record<string, string> = {};
     if (!name.trim()) errs.name = "El nombre es obligatorio";
+    if (email.trim() && !/^\S+@\S+\.\S+$/.test(email.trim())) errs.email = "Email inválido";
     if (!isEditing) {
       if (!/^[a-zA-Z0-9_.-]+$/.test(username.trim())) errs.username = "Solo letras, números, puntos, guiones y _";
       if (password.length < 8) errs.password = "Mínimo 8 caracteres";
@@ -48,60 +44,48 @@ export function MemberFormModal({ open, onClose, member, onSubmit, isLoading }: 
   function handleSubmit() {
     if (!validate()) return;
     if (isEditing) {
-      onSubmit({ name: name.trim() } as UpdateMemberInput);
-    } else {
-      onSubmit({ name: name.trim(), username: username.trim(), password, role: "MEMBER", permissions: [] } as CreateMemberInput);
+      onSubmit({ name: name.trim(), email: email.trim() || null } as UpdateMemberInput);
+      return;
     }
+    onSubmit({
+      name: name.trim(),
+      username: username.trim(),
+      email: email.trim() || undefined,
+      password,
+      role: "MEMBER",
+      permissions: [],
+    } as CreateMemberInput);
   }
 
   return (
-    <CustomModal
+    <Modal
       open={open}
-      onOpenChange={(v) => !v && onClose()}
+      onClose={onClose}
       title={isEditing ? "Editar miembro" : "Nuevo miembro"}
-      size="sm"
       footer={
         <>
-          <CustomButton variant="outline" onPress={onClose} disabled={!!isLoading}>
-            Cancelar
-          </CustomButton>
-          <CustomButton onPress={handleSubmit} loading={!!isLoading} disabled={!!isLoading}>
+          <Button variant="ghost" onClick={onClose} disabled={!!isLoading}>Cancelar</Button>
+          <Button onClick={handleSubmit} loading={!!isLoading} disabled={!!isLoading}>
             {isEditing ? "Guardar" : "Agregar"}
-          </CustomButton>
+          </Button>
         </>
       }
     >
-      <View style={{ gap: SPACING.md }}>
-        <CustomInput
-          label="Nombre"
-          value={name}
-          onChangeText={setName}
-          placeholder="Nombre completo"
-          autoCapitalize="words"
-          {...fe("name")}
-        />
-
+      <div className="flex flex-col gap-4">
+        <TextField label="Nombre" value={name} onChange={(event) => setName(event.target.value)} placeholder="Nombre completo" error={errors.name} />
         {!isEditing && (
-          <>
-            <CustomInput
-              label="Account name"
-              value={username}
-              onChangeText={setEmail}
-              placeholder="ej. john_doe"
-              autoCapitalize="none"
-              {...fe("username")}
-            />
-            <CustomInput
-              label="Contraseña"
-              value={password}
-              onChangeText={setPassword}
-              placeholder="Mínimo 8 caracteres"
-              secureTextEntry
-              {...fe("password")}
-            />
-          </>
+          <div>
+            <TextField label="Nombre de usuario" value={username} onChange={(event) => setUsername(event.target.value)} placeholder="ej. john_doe" error={errors.username} />
+            {slug && username.trim() && (
+              <p className="mt-1 text-xs text-gray-500">Iniciará sesión como: {slug}-{username.trim()}</p>
+            )}
+          </div>
         )}
-      </View>
-    </CustomModal>
+        <TextField label="Email (opcional, para restablecer contraseña)" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="correo@ejemplo.com" error={errors.email} />
+        {!isEditing && (
+          <TextField label="Contraseña" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Mínimo 8 caracteres" error={errors.password} />
+        )}
+      </div>
+    </Modal>
   );
 }

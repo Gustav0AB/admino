@@ -1,48 +1,20 @@
-import { View, Text, StyleSheet } from "react-native";
-import { useColors } from "@/shared/hooks/useColors";
+import { Card } from "@/shared/ui";
 
 type Props = {
   featureName: string;
 };
 
 export function ComingSoon({ featureName }: Props) {
-  const c = useColors();
   return (
-    <View style={styles.container}>
-      <Text style={[styles.emoji]}>🚧</Text>
-      <Text style={[styles.title, { color: c.text }]}>{featureName}</Text>
-      <Text style={[styles.subtitle, { color: c.textMuted }]}>Coming soon</Text>
-      <Text style={[styles.description, { color: c.textPlaceholder }]}>
-        This feature is under development and will be available in a future update.
-      </Text>
-    </View>
+    <div className="flex min-h-0 flex-1 items-center justify-center bg-gray-50 p-6">
+      <Card className="max-w-sm text-center">
+        <div className="mb-3 text-5xl">🚧</div>
+        <h1 className="text-xl font-bold text-gray-900">{featureName}</h1>
+        <p className="mt-2 text-sm font-medium text-gray-500">Coming soon</p>
+        <p className="mt-2 text-sm text-gray-400">
+          This feature is under development and will be available in a future update.
+        </p>
+      </Card>
+    </div>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 32,
-    gap: 8,
-  },
-  emoji: {
-    fontSize: 48,
-    marginBottom: 8,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: "700",
-  },
-  subtitle: {
-    fontSize: 16,
-    fontWeight: "500",
-  },
-  description: {
-    fontSize: 14,
-    textAlign: "center",
-    marginTop: 4,
-    maxWidth: 320,
-  },
-});
