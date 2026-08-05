@@ -1,0 +1,92 @@
+export type OrgMember = {
+  id: string;
+  name: string;
+  username: string;
+  email: string | null;
+  role: "OWNER" | "ADMIN" | "MEMBER";
+  isActive: boolean;
+  permissions: string[];
+  createdAt: string;
+};
+
+export type AthleteCategory = "principiante" | "intermedio" | "avanzado" | "semi-profesional" | "profesional";
+
+export type EndUserMember = {
+  id: string;
+  name: string;
+  lastname: string;
+  birthdate: string | null;
+  username: string | null;
+  email: string;
+  peso: number | null;
+  altura: number | null;
+  categoria: AthleteCategory | null;
+  grado: string | null;
+  isActive: boolean;
+  joinedAt: string;
+  trainingPlanId?: string | null;
+};
+
+export type TrainingPlan = {
+  id: string;
+  name: string;
+  clientId: string;
+  startDate: string | null;
+  endDate: string | null;
+  cells: Record<string, string>;
+  createdAt: string;
+  updatedAt: string;
+  events?: TrainingEvent[];
+  _count?: { assignments: number };
+};
+
+export type TrainingEvent = {
+  id: string;
+  name: string;
+  date: string;
+  type: "competition" | "seminar" | "vacation";
+  clientId: string;
+  planId: string | null;
+};
+
+export type CreateEndUserMemberInput = {
+  name: string;
+  lastname: string;
+  birthdate: string;
+  username?: string;
+  password?: string;
+};
+
+export type UpdateEndUserMemberInput = {
+  name?: string;
+  lastname?: string;
+  birthdate?: string;
+  isActive?: boolean;
+  peso?: number | null;
+  altura?: number | null;
+  categoria?: AthleteCategory | null;
+  grado?: string | null;
+};
+
+export type CreateMemberInput = {
+  name: string;
+  username: string;
+  email?: string;
+  password: string;
+  role: "ADMIN" | "MEMBER";
+  permissions: string[];
+};
+
+export type UpdateMemberInput = {
+  name?: string;
+  email?: string | null;
+  role?: "ADMIN" | "MEMBER";
+  isActive?: boolean;
+  permissions?: string[];
+};
+
+export const SECTION_PERMISSIONS = [
+  { key: "finanzas", label: "Finanzas" },
+  { key: "athlete_dashboard", label: "Athlete Dashboard (admins)" },
+  { key: "athlete_tracker", label: "Athlete Tracker (miembros)" },
+] as const;

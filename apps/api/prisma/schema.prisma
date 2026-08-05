@@ -1,0 +1,353 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum ClientMemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum PlanStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+}
+
+enum ActorType {
+  SYSTEM_ADMIN
+  ORG_MEMBER
+  MEMBER
+}
+
+enum NotificationRecipientType {
+  ORG_MEMBER
+  MEMBER
+}
+
+enum PasswordResetUserType {
+  SYSTEM_ADMIN
+  CLIENT_MEMBER
+  MEMBER
+}
+
+// ─── Tier 1 — System Admins ───────────────────────────────────────────────────
+
+model SystemAdmin {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("system_admins")
+}
+
+// ─── Tier 2 — Clients (Tenants) ──────────────────────────────────────────────
+
+model Client {
+  id                String  @id @default(cuid())
+  name              String
+  slug              String  @unique
+  tipo              String  @default("gym")
+  branding          Json    @default("{\"primaryColor\":\"#2563EB\",\"secondaryColor\":\"#1E40AF\",\"logoUrl\":null}")
+  clientPermissions Json    @default("[]")
+  memberPermissions Json    @default("[]")
+  isActive          Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  clientMembers   ClientMember[]
+  members         Member[]
+  plans           Plan[]
+  invitations     Invitation[]
+  notifications   Notification[]
+  memberRoles     MemberRole[]
+  trainingPlans   TrainingPlan[]
+  trainingEvents  TrainingEvent[]
+
+  @@map("organizations")
+}
+
+model ClientMember {
+  id       String           @id @default(cuid())
+  username String
+  email    String?
+  password String
+  name     String
+  role     ClientMemberRole @default(MEMBER)
+  permissions Json          @default("[]")
+  isActive    Boolean       @default(true)
+  clientId    String
+  client      Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([username, clientId])
+  @@index([clientId])
+  @@map("org_members")
+}
+
+// ─── Tier 3 — Members (End-users of a Client) ────────────────────────────────
+
+model Member {
+  id        String    @id @default(cuid())
+  email     String
+  password  String
+  name      String
+  lastname  String    @default("")
+  birthdate DateTime?
+  username  String?
+  peso      Float?
+  altura    Float?
+  categoria String?
+  grado     String?
+  isActive  Boolean   @default(true)
+  clientId  String
+  client    Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  joinedAt  DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  planAssignments          PlanAssignment[]
+  memberRoleMembers        MemberRoleAssignment[]
+  trainingPlanAssignments  TrainingPlanAssignment[]
+  workoutChecks            WorkoutCheck[]
+  workoutFeedback          WorkoutFeedback[]
+
+  @@unique([email, clientId])
+  @@unique([username, clientId])
+  @@index([clientId])
+  @@map("clients")
+}
+
+// ─── Plans ────────────────────────────────────────────────────────────────────
+
+model Plan {
+  id          String     @id @default(cuid())
+  name        String
+  description String?
+  status      PlanStatus @default(DRAFT)
+  maxUsers    Int?
+  features    Json       @default("{}")
+  clientId    String
+  client      Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  assignments PlanAssignment[]
+
+  @@index([clientId])
+  @@index([status])
+  @@map("plans")
+}
+
+model PlanAssignment {
+  id         String   @id @default(cuid())
+  memberId   String
+  planId     String
+  assignedAt DateTime @default(now())
+  member     Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  plan       Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, planId])
+  @@index([planId])
+  @@map("plan_assignments")
+}
+
+// ─── Member Roles (roles assigned to members within a client) ────────────────
+
+model MemberRole {
+  id          String   @id @default(cuid())
+  name        String
+  permissions Json     @default("[]")
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  assignments MemberRoleAssignment[]
+
+  @@unique([name, clientId])
+  @@index([clientId])
+  @@map("client_roles")
+}
+
+model MemberRoleAssignment {
+  id         String     @id @default(cuid())
+  memberId   String
+  roleId     String
+  member     Member     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  role       MemberRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  assignedAt DateTime   @default(now())
+
+  @@unique([memberId, roleId])
+  @@index([roleId])
+  @@map("client_role_members")
+}
+
+// ─── Audit Logs ───────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id         String    @id @default(cuid())
+  actorId    String
+  actorType  ActorType
+  action     String
+  targetId   String?
+  targetType String?
+  metadata   Json      @default("{}")
+  orgId      String?
+  createdAt  DateTime  @default(now())
+
+  @@index([orgId])
+  @@index([actorId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+model Notification {
+  id            String                    @id @default(cuid())
+  title         String
+  body          String
+  recipientId   String
+  recipientType NotificationRecipientType
+  isRead        Boolean                   @default(false)
+  clientId      String
+  client        Client                    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdAt     DateTime                  @default(now())
+
+  @@index([recipientId])
+  @@index([clientId])
+  @@map("notifications")
+}
+
+// ─── User Expenses (per-user JSON blob) ──────────────────────────────────────
+
+model UserExpenses {
+  id      String   @id @default(cuid())
+  userId  String   @unique
+  data    Json     @default("{}")
+  savedAt DateTime @default(now()) @updatedAt
+
+  @@map("user_expenses")
+}
+
+// ─── Training Plans ───────────────────────────────────────────────────────────
+
+model TrainingPlan {
+  id        String    @id @default(cuid())
+  name      String
+  clientId  String
+  client    Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  startDate DateTime?
+  endDate   DateTime?
+  cells     Json      @default("{}")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  assignments TrainingPlanAssignment[]
+  events      TrainingEvent[]
+
+  @@index([clientId])
+  @@map("training_plans")
+}
+
+model TrainingPlanAssignment {
+  id         String       @id @default(cuid())
+  memberId   String
+  planId     String
+  assignedAt DateTime     @default(now())
+  member     Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  plan       TrainingPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, planId])
+  @@index([planId])
+  @@map("training_plan_assignments")
+}
+
+model WorkoutCheck {
+  id        String  @id @default(cuid())
+  memberId  String
+  date      String
+  itemIndex Int
+  completed Boolean @default(true)
+  member    Member  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, date, itemIndex])
+  @@map("workout_checks")
+}
+
+model WorkoutFeedback {
+  id       String  @id @default(cuid())
+  memberId String
+  date     String
+  rpe      Int?
+  notes    String?
+  member   Member  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, date])
+  @@map("workout_feedback")
+}
+
+model TrainingEvent {
+  id       String       @id @default(cuid())
+  name     String
+  date     DateTime
+  type     String
+  clientId String
+  client   Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  planId   String?
+  plan     TrainingPlan? @relation(fields: [planId], references: [id], onDelete: SetNull)
+
+  @@index([clientId])
+  @@map("training_events")
+}
+
+// ─── Password reset ───────────────────────────────────────────────────────────
+
+model PasswordResetToken {
+  id        String                @id @default(cuid())
+  token     String                @unique
+  userId    String
+  userType  PasswordResetUserType
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime              @default(now())
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+// ─── Invitations ─────────────────────────────────────────────────────────────
+
+model Invitation {
+  id         String           @id @default(cuid())
+  email      String
+  role       ClientMemberRole @default(MEMBER)
+  status     InvitationStatus @default(PENDING)
+  token      String           @unique @default(cuid())
+  clientId   String
+  client     Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  createdAt  DateTime         @default(now())
+
+  @@index([clientId])
+  @@index([token])
+  @@map("invitations")
+}
