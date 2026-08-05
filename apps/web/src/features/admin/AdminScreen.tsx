@@ -1,9 +1,7 @@
 import { useState } from "react";
-import { Navigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge, Button, Table, type Column } from "@/shared/ui";
 import { useAuthStore } from "@/shared/store/authStore";
-import { useAuth } from "@/shared/hooks/useAuth";
 import { useToast } from "@/shared/components/feedback/Toast";
 import { ENV } from "@/shared/config/env";
 import { httpClient } from "@/shared/api/client";
@@ -22,6 +20,19 @@ import type {
 } from "@/shared/types/admin";
 
 const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+const CLIENT_TYPE_LABELS = {
+  gym: "Gimnasio",
+  organization: "Organización",
+} as const;
+const ACTOR_TYPE_LABELS: Record<string, string> = {
+  SYSTEM_ADMIN: "Administrador del sistema",
+  ORG_MEMBER: "Miembro de organización",
+};
+const TARGET_TYPE_LABELS: Record<string, string> = {
+  Organization: "Organización",
+  OrgMember: "Miembro de organización",
+  ORG_MEMBER: "Miembro de organización",
+};
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("es-MX", {
@@ -39,6 +50,10 @@ function actionLabel(action: string) {
     "org.update": "Org actualizada",
     "org.deactivate": "Org desactivada",
     "org.export": "Org exportada",
+    "client.create": "Cliente creado",
+    "client.update": "Cliente actualizado",
+    "client.deactivate": "Cliente desactivado",
+    "client.export": "Cliente exportado",
     "member.create": "Miembro creado",
     "member.update": "Miembro actualizado",
     "member.deactivate": "Miembro desactivado",
@@ -208,7 +223,7 @@ function OrganizationsTab() {
 
   const columns: Column<OrgRow>[] = [
     { key: "name", header: "Cliente" },
-    { key: "tipo", header: "Tipo" },
+    { key: "tipo", header: "Tipo", render: (row) => CLIENT_TYPE_LABELS[row.tipo] ?? row.tipo },
     { key: "users", header: "Usuarios", render: (row) => row._count.clientMembers },
     { key: "members", header: "Miembros", render: (row) => row._count.members },
     { key: "state", header: "Estado", render: (row) => <Badge color={row.isActive ? "green" : "red"}>{row.isActive ? "Activo" : "Inactivo"}</Badge> },
@@ -232,7 +247,7 @@ function OrganizationsTab() {
     <>
       <div className="mb-4 flex items-center justify-between gap-4">
         <p className="text-sm font-medium text-gray-700">{orgs.length} {orgs.length === 1 ? "cliente" : "clientes"}</p>
-        <Button size="sm" onClick={() => { setEditingOrg(null); setFormOpen(true); }}>+ Nuevo cliente</Button>
+        <Button size="sm" onClick={() => { setEditingOrg(null); setFormOpen(true); }}>Nuevo cliente</Button>
       </div>
       <Table columns={columns} rows={orgs as OrgRow[]} keyExtractor={(row) => row.id} loading={isLoading} emptyText="No hay clientes" />
       <ClientFormModal
@@ -272,9 +287,9 @@ function AuditLogsTab() {
 
   const columns: Column<LogRow>[] = [
     { key: "createdAt", header: "Fecha", render: (row) => formatDate(row.createdAt) },
-    { key: "actorType", header: "Tipo actor" },
+    { key: "actorType", header: "Tipo actor", render: (row) => ACTOR_TYPE_LABELS[row.actorType] ?? row.actorType },
     { key: "action", header: "Acción", render: (row) => actionLabel(row.action) },
-    { key: "targetType", header: "Objetivo", render: (row) => row.targetType ?? "—" },
+    { key: "targetType", header: "Objetivo", render: (row) => row.targetType ? TARGET_TYPE_LABELS[row.targetType] ?? row.targetType : "—" },
     { key: "orgId", header: "Org ID", render: (row) => row.orgId ?? "Sistema" },
   ];
 
@@ -283,18 +298,12 @@ function AuditLogsTab() {
 
 const ADMIN_TABS = [
   { key: "orgs", label: "Organizaciones" },
-  { key: "logs", label: "Audit Logs" },
+  { key: "logs", label: "Auditoría" },
 ] as const;
 
 type AdminTab = (typeof ADMIN_TABS)[number]["key"];
 
 export function AdminScreen({ activeTab = "orgs" }: { activeTab?: AdminTab }) {
-  const { isAuthenticated, isInitialized, user } = useAuth();
-
-  if (!isInitialized) return null;
-  if (!isAuthenticated || !user) return <Navigate to="/login" replace />;
-  if (user.role !== "SYSTEM_ADMIN") return <Navigate to="/dashboard" replace />;
-
   return (
     <div className="page feature-page">
       <header className="feature-header">

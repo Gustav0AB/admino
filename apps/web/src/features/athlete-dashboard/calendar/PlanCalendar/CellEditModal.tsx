@@ -39,7 +39,7 @@ export function CellEditModal({ open, dateLabel, initialValue, onClose, onSave }
           placeholder={"Fuerza\npecho banca plana 2 series de 4\ntrote 2x4 40min\nnota: calentar bien"}
         />
         <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-          <button type="button" className="text-xs font-semibold text-primary" onClick={() => setShowHint((current) => !current)}>{showHint ? "▲ Ocultar formato" : "▼ Ver formato del atleta"}</button>
+          <button type="button" className="text-xs font-semibold text-primary" onClick={() => setShowHint((current) => !current)}>{showHint ? "Ocultar formato" : "Ver formato del atleta"}</button>
           {showHint && <pre className="mt-2 whitespace-pre-wrap text-xs leading-5 text-gray-500">{CELL_HINT}</pre>}
         </div>
       </div>

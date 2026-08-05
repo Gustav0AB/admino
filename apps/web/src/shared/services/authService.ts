@@ -13,7 +13,7 @@ async function mockLogin(credentials: LoginCredentials): Promise<AuthSession> {
   await new Promise((r) => setTimeout(r, 500));
   const role = MOCK_CREDENTIALS[credentials.username];
   if (!role) {
-    throw new Error("Invalid credentials");
+    throw new Error("Credenciales inválidas");
   }
   return {
     user: MOCK_USERS[role],
@@ -30,7 +30,7 @@ async function realLogin(credentials: LoginCredentials): Promise<AuthSession> {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error((body as { message?: string }).message ?? "Login failed");
+    throw new Error((body as { message?: string }).message ?? "No se pudo iniciar sesión");
   }
   const envelope = await res.json() as {
     data: {
@@ -60,7 +60,7 @@ async function realForgotPassword(username: string): Promise<{ message: string }
     body: JSON.stringify({ username }),
   });
   const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error((body as { message?: string }).message ?? "Request failed");
+  if (!res.ok) throw new Error((body as { message?: string }).message ?? "No se pudo enviar la solicitud");
   return (body as { data: { message: string } }).data;
 }
 
@@ -71,7 +71,7 @@ async function realResetPassword(token: string, newPassword: string): Promise<{ 
     body: JSON.stringify({ token, newPassword }),
   });
   const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error((body as { message?: string }).message ?? "Reset failed");
+  if (!res.ok) throw new Error((body as { message?: string }).message ?? "No se pudo restablecer la contraseña");
   return (body as { data: { message: string } }).data;
 }
 
@@ -83,7 +83,7 @@ async function realRefresh(token: string): Promise<{ token: string; expiresAt: n
       Authorization: `Bearer ${token}`,
     },
   });
-  if (!res.ok) throw new Error("Refresh failed");
+  if (!res.ok) throw new Error("No se pudo renovar la sesión");
   const envelope = await res.json() as { data: { token: string; expiresAt: number } };
   return envelope.data;
 }
@@ -101,6 +101,6 @@ export const authService = {
       : realForgotPassword(username),
   resetPassword: (token: string, newPassword: string): Promise<{ message: string }> =>
     ENV.USE_MOCK
-      ? Promise.resolve({ message: "Password updated successfully" })
+      ? Promise.resolve({ message: "Contraseña actualizada" })
       : realResetPassword(token, newPassword),
 };

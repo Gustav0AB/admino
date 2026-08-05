@@ -52,7 +52,7 @@ export function LoansTab() {
         <SummaryCard label="Me deben" value={totalLent} count={lent.filter((loan) => loan.status === "active").length} color="green" />
       </div>
 
-      {!showForm && <Button variant="ghost" size="sm" className="add-tile" onClick={() => { setShowForm(true); setForm(blankForm()); }}>+ Nuevo préstamo</Button>}
+      {!showForm && <Button variant="ghost" size="sm" className="add-tile" onClick={() => { setShowForm(true); setForm(blankForm()); }}>Nuevo préstamo</Button>}
 
       {showForm && (
         <Card className="border-primary">
@@ -129,14 +129,14 @@ function LoanCard({ loan, color }: { loan: Loan; color: "red" | "green" }) {
             <p className="text-xs text-gray-500">{loan.person}</p>
           </div>
           <div className="flex items-center gap-2">
-            {loan.status === "paid" ? <span className={mainColor}>✓ Liquidado</span> : <span className={`font-extrabold ${mainColor}`}>${formatMXN(rem)}</span>}
+            {loan.status === "paid" ? <span className={mainColor}>Liquidado</span> : <span className={`font-extrabold ${mainColor}`}>${formatMXN(rem)}</span>}
             {confirmRemove ? (
               <div className="flex gap-2 text-sm">
                 <button type="button" className="font-semibold text-red-600" onClick={() => removeLoan(loan.id)}>Sí</button>
                 <button type="button" className="text-gray-500" onClick={() => setConfirmRemove(false)}>No</button>
               </div>
             ) : (
-              <Button variant="ghost" size="sm" onClick={() => setConfirmRemove(true)}>✕</Button>
+              <Button variant="ghost" size="sm" onClick={() => setConfirmRemove(true)}>Eliminar</Button>
             )}
           </div>
         </div>
@@ -169,7 +169,7 @@ function LoanCard({ loan, color }: { loan: Loan; color: "red" | "green" }) {
                 </div>
               </div>
             ) : (
-              <Button variant="ghost" size="sm" onClick={() => { setShowPayForm(true); setPayAmount(String(rem)); }}>+ Registrar abono</Button>
+              <Button variant="ghost" size="sm" onClick={() => { setShowPayForm(true); setPayAmount(String(rem)); }}>Registrar abono</Button>
             )}
           </div>
         )}
@@ -177,7 +177,7 @@ function LoanCard({ loan, color }: { loan: Loan; color: "red" | "green" }) {
         {loan.payments.length > 0 && (
           <>
             <button type="button" className="self-start text-xs font-semibold text-primary" onClick={() => setShowHistory((value) => !value)}>
-              {showHistory ? "▲ Ocultar abonos" : `▼ ${loan.payments.length} abono${loan.payments.length !== 1 ? "s" : ""}`}
+              {showHistory ? "Ocultar abonos" : `${loan.payments.length} abono${loan.payments.length !== 1 ? "s" : ""}`}
             </button>
             {showHistory && (
               <div className="flex flex-col gap-2">
@@ -188,7 +188,7 @@ function LoanCard({ loan, color }: { loan: Loan; color: "red" | "green" }) {
                       {payment.notes && <p className="text-xs text-gray-500">{payment.notes}</p>}
                     </div>
                     <p className={`font-bold ${mainColor}`}>${formatMXN(payment.amount)}</p>
-                    <Button variant="ghost" size="sm" onClick={() => removeLoanPayment(loan.id, payment.id)}>✕</Button>
+                    <Button variant="ghost" size="sm" onClick={() => removeLoanPayment(loan.id, payment.id)}>Eliminar</Button>
                   </div>
                 ))}
               </div>

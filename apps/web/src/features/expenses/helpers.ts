@@ -110,7 +110,7 @@ export function getCreditHistory(
   const debtMesIdx = MESES_LIST.indexOf(creditDebtMes);
   const debtAño = creditDebtAño ?? currentYear();
 
-  // Include all expenses from debtMes/debtAño onwards, sorted chronologically
+  // Incluye movimientos desde la deuda inicial para calcular el saldo real.
   const relevant = expenses
     .filter((e) => {
       if (cardId) {
@@ -191,8 +191,7 @@ export function getCreditCycleInfo(
 
   const frozenDebt = initialCreditDebt;
 
-  // Payments: count from debtMes/debtAño onwards so a payment made in the statement
-  // month (not necessarily this calendar month) is correctly subtracted
+  // Cuenta pagos desde el mes de deuda, aunque no sea el mes calendario actual.
   const debtMesIdx = creditDebtMes ? MESES_LIST.indexOf(creditDebtMes) : -1;
   const debtAño = creditDebtAño ?? currentYear();
 
@@ -215,7 +214,7 @@ export function getCreditCycleInfo(
 
   const remainingDebt = Math.max(0, frozenDebt - totalPayments);
 
-  // newCharges: only post-cut charges in the current month (open cycle, not part of frozen statement)
+  // Cargos posteriores al corte: ciclo abierto, fuera de la deuda congelada.
   const newCharges = expenses
     .filter((e) => {
       if (e.mes !== currentMonth) return false;
@@ -293,10 +292,6 @@ export function getIntervalDaysInMonth(
   return days;
 }
 
-/**
- * Returns the day-of-month the expense fires if the given month matches the
- * interval-by-months schedule (startDate + N * intervalMonths), or null if it doesn't.
- */
 export function getIntervalMonthDay(
   startDate: string,
   intervalMonths: number,

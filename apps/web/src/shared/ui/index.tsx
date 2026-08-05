@@ -29,22 +29,22 @@ export function Badge({ children, color = "gray", className = "" }: {
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 type ButtonSize = "sm" | "md" | "lg";
 const buttonVariants: Record<ButtonVariant, string> = {
-  primary: "bg-primary text-white hover:bg-primary-hover focus:ring-primary",
-  secondary: "bg-secondary text-white hover:bg-secondary-hover focus:ring-secondary",
-  ghost: "bg-transparent text-gray-600 hover:bg-gray-100 focus:ring-gray-400",
-  danger: "bg-danger text-white hover:bg-danger-hover focus:ring-danger",
+  primary: "ui-button-primary",
+  secondary: "ui-button-secondary",
+  ghost: "ui-button-ghost",
+  danger: "ui-button-danger",
 };
 const buttonSizes: Record<ButtonSize, string> = {
-  sm: "px-2.5 py-1.5 text-xs", md: "px-4 py-2 text-sm", lg: "px-5 py-2.5 text-base",
+  sm: "ui-button-sm", md: "ui-button-md", lg: "ui-button-lg",
 };
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: ButtonVariant; size?: ButtonSize; loading?: boolean; loadingText?: string;
 };
-export function Button({ variant = "primary", size = "md", loading = false, loadingText = "Loading…", disabled, children, className = "", ...props }: ButtonProps) {
+export function Button({ variant = "primary", size = "md", loading = false, loadingText = "Cargando...", disabled, children, className = "", ...props }: ButtonProps) {
   return (
     <button disabled={disabled || loading} className={classes(
-      "inline-flex items-center justify-center rounded-md font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-colors duration-150",
+      "ui-button",
       buttonVariants[variant], buttonSizes[size], className
     )} {...props}>
       {loading ? <><Spinner />{loadingText}</> : children}
@@ -75,8 +75,7 @@ export function Dropdown<T extends string = string>({ label, options, value, onC
   return <div className="flex flex-col gap-1">
     {label && <label htmlFor={selectId} className="text-sm font-medium text-gray-700">{label}</label>}
     <select id={selectId} value={value ?? ""} onChange={(event) => onChange?.(event.target.value as T)}
-      className={classes("h-9 rounded-md border bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400",
-        error ? "border-danger focus:border-danger focus:ring-danger" : "border-gray-300 focus:border-primary focus:ring-primary", className)} {...props}>
+      className={classes("ui-input ui-select", error && "ui-input-error", className)} {...props}>
       {placeholder && <option value="" disabled>{placeholder}</option>}
       {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
     </select>
@@ -124,8 +123,8 @@ export function TextField({ label, error, helperText, id, className = "", ...pro
   return <div className="flex flex-col gap-1">
     {label && <label htmlFor={inputId} className="text-sm font-medium text-gray-700">{label}</label>}
     <input id={inputId} className={classes(
-      "rounded-md border px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400",
-      error ? "border-danger focus:border-danger focus:ring-danger" : "border-gray-300 focus:border-primary focus:ring-primary", className
+      "ui-input",
+      error && "ui-input-error", className
     )} {...props} />
     {error ? <p className="text-xs text-danger">{error}</p> : helperText && <p className="text-xs text-gray-500">{helperText}</p>}
   </div>;
@@ -135,7 +134,7 @@ type ModalProps = {
   open: boolean; onClose: () => void; title: string; children: ReactNode;
   footer?: ReactNode; closeLabel?: string;
 };
-export function Modal({ open, onClose, title, children, footer, closeLabel = "Close" }: ModalProps) {
+export function Modal({ open, onClose, title, children, footer, closeLabel = "Cerrar" }: ModalProps) {
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => event.key === "Escape" && onClose();
@@ -164,7 +163,7 @@ type ConfirmModalProps = {
   open: boolean; title: string; message: string; onClose: () => void; onConfirm: () => Promise<void>;
   cancelText?: string; confirmText?: string; loadingText?: string; genericError?: string; closeLabel?: string;
 };
-export function ConfirmModal({ open, title, message, onClose, onConfirm, cancelText = "Cancel", confirmText = "Delete", loadingText, genericError = "Something went wrong.", closeLabel }: ConfirmModalProps) {
+export function ConfirmModal({ open, title, message, onClose, onConfirm, cancelText = "Cancelar", confirmText = "Eliminar", loadingText, genericError = "Algo salió mal.", closeLabel }: ConfirmModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   async function handleConfirm() {
@@ -193,7 +192,7 @@ type TableProps<T> = {
 const alignment = { left: "text-left", center: "text-center", right: "text-right" } as const;
 const pageSizes = [10, 25, 50, 100];
 export function Table<T extends Record<string, unknown>>({ columns, rows, keyExtractor, loading = false, emptyText, pageSize: initialSize, labels }: TableProps<T>) {
-  const text = { loading: "Loading…", noData: "No data.", rowsPerPage: "Rows per page", of: "of", prevPage: "Previous page", nextPage: "Next page", ...labels };
+  const text = { loading: "Cargando...", noData: "Sin datos.", rowsPerPage: "Filas por página", of: "de", prevPage: "Página anterior", nextPage: "Página siguiente", ...labels };
   const paginated = initialSize !== undefined;
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(initialSize ?? 25);
@@ -248,7 +247,7 @@ export function DatePicker({ label, value, onChange }: DatePickerProps) {
         type="date"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="min-w-0 flex-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+        className="ui-input min-w-0 flex-1"
       />
       {value && <Button type="button" variant="ghost" size="sm" onClick={() => onChange("")}>Limpiar</Button>}
     </div>

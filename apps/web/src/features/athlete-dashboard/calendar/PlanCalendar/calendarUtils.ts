@@ -12,13 +12,13 @@ export function toIso(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-/** Parse an ISO date string as local midnight (avoids UTC off-by-one on UTC+ zones). */
+/** Convierte fecha ISO a medianoche local para evitar desfases por zona horaria. */
 export function isoToLocalDate(iso: string): Date {
   const [y, m, d] = iso.split("-").map(Number);
   return new Date(y!, m! - 1, d!);
 }
 
-/** Returns the Monday of the week containing `date`. */
+/** Regresa el lunes de la semana de `date`. */
 function getMonday(date: Date): Date {
   const d = new Date(date.getTime());
   d.setHours(0, 0, 0, 0);

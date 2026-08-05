@@ -12,10 +12,10 @@ export function SessionGuardModal() {
   if (!type) return null;
 
   const isOffline = type === "offline";
-  const title = isOffline ? "No internet connection" : "Session expiring";
+  const title = isOffline ? "Sin conexión a internet" : "Sesión por expirar";
   const body = isOffline
-    ? `You're offline. You'll be logged out automatically in ${secondsLeft}s unless the connection is restored.`
-    : `Your session expires in ${formatSeconds(secondsLeft)}. Would you like to stay logged in?`;
+    ? `No hay conexión. La sesión se cerrará automáticamente en ${secondsLeft}s si no se restablece.`
+    : `Tu sesión expira en ${formatSeconds(secondsLeft)}. ¿Quieres mantenerla activa?`;
 
   return (
     <Modal
@@ -24,8 +24,8 @@ export function SessionGuardModal() {
       title={title}
       footer={
         <>
-          {!isOffline && <Button onClick={onStayLoggedIn}>Stay logged in</Button>}
-          <Button variant="ghost" onClick={onLogout}>{isOffline ? "Logout now" : "Logout"}</Button>
+          {!isOffline && <Button onClick={onStayLoggedIn}>Mantener sesión</Button>}
+          <Button variant="ghost" onClick={onLogout}>{isOffline ? "Salir ahora" : "Cerrar sesión"}</Button>
         </>
       }
     >

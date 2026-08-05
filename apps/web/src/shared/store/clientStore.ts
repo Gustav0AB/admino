@@ -27,7 +27,6 @@ export const useClientStore = create<ClientState>()((set, get) => ({
     const token = useAuthStore.getState().token;
     const user = useAuthStore.getState().user;
 
-    // SYSTEM_ADMIN sees everything — no org config needed
     if (!token || !user || user.role === "SYSTEM_ADMIN") {
       set({ branding: DEFAULT_BRANDING, features: [] });
       return;
@@ -37,7 +36,7 @@ export const useClientStore = create<ClientState>()((set, get) => ({
       const res = await fetch(`${ENV.API_URL}/clients/config`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error("Failed to load config");
+      if (!res.ok) throw new Error("No se pudo cargar la configuración");
       const envelope = await res.json() as {
         data: {
           orgName: string;

@@ -28,9 +28,9 @@ const STATUS_COLOR: Record<BillingCycleStatus, "red" | "green" | "gray"> = {
   no_en_curso: "gray",
 };
 const STATUS_LABEL: Record<BillingCycleStatus, string> = {
-  cerrado: "🔒 Cerrado",
-  en_curso: "🟢 En curso",
-  no_en_curso: "📅 No en curso",
+  cerrado: "Cerrado",
+  en_curso: "En curso",
+  no_en_curso: "No en curso",
 };
 
 type AddCardForm = {
@@ -79,7 +79,7 @@ export function CreditCardsTab() {
           <Dropdown label="Año" value={String(selectedAño)} options={añoOptions} onChange={(value) => setSelectedAño(Number(value))} />
           <Dropdown label="Mes" value={selectedMes} options={MES_OPTIONS} onChange={setSelectedMes} />
         </div>
-        <Button size="sm" onClick={() => { setShowAddForm(true); setAddForm(blankAddForm()); }}>+ Nueva tarjeta</Button>
+        <Button size="sm" onClick={() => { setShowAddForm(true); setAddForm(blankAddForm()); }}>Nueva tarjeta</Button>
       </div>
 
       {showAddForm && (
@@ -171,7 +171,7 @@ function CardItem({
               <button type="button" className="text-gray-500" onClick={() => setConfirmRemove(false)}>No</button>
             </div>
           ) : (
-            <Button variant="ghost" size="sm" onClick={() => setConfirmRemove(true)}>✕</Button>
+            <Button variant="ghost" size="sm" onClick={() => setConfirmRemove(true)}>Eliminar</Button>
           )}
         </div>
 
@@ -179,7 +179,7 @@ function CardItem({
           {card.cutDay > 0 && <span>Corte: día {card.cutDay}</span>}
           {card.payDay > 0 && <span>Pago: día {card.payDay}</span>}
           <Badge color={STATUS_COLOR[cycleStatus]}>{STATUS_LABEL[cycleStatus]}</Badge>
-          {isActiveStatement && cycle.isPayDayPassed && cycleStatus === "cerrado" && <span className="text-red-600">⚠️ Pago vencido</span>}
+          {isActiveStatement && cycle.isPayDayPassed && cycleStatus === "cerrado" && <span className="text-red-600">Pago vencido</span>}
         </div>
 
         {isActiveStatement && (
@@ -208,7 +208,7 @@ function CardItem({
             </div>
           </section>
         ) : (
-          <button type="button" className="self-start text-xs font-semibold text-primary" onClick={() => { setShowReconcile(true); setReconcileAmount(String(currentBalance)); }}>⚖ Ajustar deuda real</button>
+          <button type="button" className="self-start text-xs font-semibold text-primary" onClick={() => { setShowReconcile(true); setReconcileAmount(String(currentBalance)); }}>Ajustar deuda real</button>
         )}
 
         {msi.count > 0 && (
@@ -240,7 +240,7 @@ function CardItem({
               </div>
             ) : (
               <div className="flex flex-wrap gap-2">
-                <Button size="sm" onClick={() => onPayment(cycle.remainingDebt || cycle.frozenDebt)}>💳 Pagar total ${formatMXN(cycle.remainingDebt || cycle.frozenDebt)}</Button>
+                <Button size="sm" onClick={() => onPayment(cycle.remainingDebt || cycle.frozenDebt)}>Pagar total ${formatMXN(cycle.remainingDebt || cycle.frozenDebt)}</Button>
                 <Button variant="ghost" size="sm" onClick={() => setShowPayForm(true)}>Pagar parcial</Button>
               </div>
             )}
@@ -253,7 +253,7 @@ function CardItem({
               <div className="flex flex-col gap-3">
                 <div className="rounded-lg border border-gray-100 bg-red-50 p-3">
                   <DebtRow label="Deuda restante" value={cycle.remainingDebt} />
-                  <DebtRow label="+ Cargos del mes" value={cycle.newCharges} />
+                  <DebtRow label="Cargos del mes" value={cycle.newCharges} />
                   <DebtRow label={`= Deuda en ${nextMonthName()}`} value={cycle.remainingDebt + cycle.newCharges} color="text-red-600" strong />
                 </div>
                 <div className="flex justify-end gap-2">
@@ -266,7 +266,7 @@ function CardItem({
                 </div>
               </div>
             ) : (
-              <button type="button" className="text-xs font-semibold text-gray-500" onClick={() => setShowCloseCycle(true)}>📅 Cerrar ciclo y arrastrar deuda al siguiente mes</button>
+              <button type="button" className="text-xs font-semibold text-gray-500" onClick={() => setShowCloseCycle(true)}>Cerrar ciclo y arrastrar deuda al siguiente mes</button>
             )}
           </section>
         )}
@@ -292,19 +292,19 @@ function CardItem({
         </section>
 
         <button type="button" className="self-start text-xs font-semibold text-primary" onClick={() => setShowHistory((value) => !value)}>
-          {showHistory ? "▲ Ocultar historial" : "▼ Ver historial"}
+          {showHistory ? "Ocultar historial" : "Ver historial"}
         </button>
         {showHistory && (
           <section className="flex flex-col gap-2">
             {history.length === 0 ? <p className="text-sm text-gray-500">Sin movimientos</p> : history.map((entry) => (
               <div key={entry.id} className="grid gap-2 border-b border-gray-100 py-2 text-sm sm:grid-cols-[80px_1fr_auto]">
-                <Badge color={entry.type === "cargo" ? "red" : "green"}>{entry.type === "cargo" ? "▲ cargo" : "▼ pago"}</Badge>
+                <Badge color={entry.type === "cargo" ? "red" : "green"}>{entry.type === "cargo" ? "Cargo" : "Pago"}</Badge>
                 <div>
                   <p className="font-medium text-gray-900">{entry.description}</p>
                   <p className="text-xs text-gray-500">{entry.mes}</p>
                 </div>
                 <div className="text-right">
-                  <p className={entry.type === "cargo" ? "font-semibold text-red-600" : "font-semibold text-green-600"}>{entry.type === "cargo" ? "+" : "-"}${formatMXN(entry.amount)}</p>
+                  <p className={entry.type === "cargo" ? "font-semibold text-red-600" : "font-semibold text-green-600"}>{entry.type === "cargo" ? "" : "-"}${formatMXN(entry.amount)}</p>
                   <p className="text-xs text-gray-500">${formatMXN(entry.balance)}</p>
                 </div>
               </div>

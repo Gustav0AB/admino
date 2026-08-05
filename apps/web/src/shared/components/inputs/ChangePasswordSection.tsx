@@ -16,9 +16,9 @@ export function ChangePasswordSection() {
 
   function validate(): boolean {
     const errs: Record<string, string> = {};
-    if (!current) errs.current = "Required";
-    if (next.length < 8) errs.next = "At least 8 characters";
-    if (next !== confirm) errs.confirm = "Passwords do not match";
+    if (!current) errs.current = "Requerido";
+    if (next.length < 8) errs.next = "Mínimo 8 caracteres";
+    if (next !== confirm) errs.confirm = "Las contraseñas no coinciden";
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -35,14 +35,14 @@ export function ChangePasswordSection() {
       });
     },
     onSuccess: () => {
-      toast.success("Password updated");
+      toast.success("Contraseña actualizada");
       setCurrent("");
       setNext("");
       setConfirm("");
       setErrors({});
     },
     onError: (e: Error) => {
-      toast.error(e.message ?? "Failed to update password");
+      toast.error(e.message ?? "No se pudo actualizar la contraseña");
     },
   });
 
@@ -55,9 +55,9 @@ export function ChangePasswordSection() {
   return (
     <Card className="max-w-xl">
       <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-        <h2 className="text-base font-semibold text-gray-900">Change Password</h2>
+        <h2 className="text-base font-semibold text-gray-900">Cambiar contraseña</h2>
         <TextField
-          label="Current password"
+          label="Contraseña actual"
           type="password"
           value={current}
           onChange={(event) => setCurrent(event.target.value)}
@@ -65,15 +65,15 @@ export function ChangePasswordSection() {
           error={errors.current}
         />
         <TextField
-          label="New password"
+          label="Nueva contraseña"
           type="password"
           value={next}
           onChange={(event) => setNext(event.target.value)}
-          placeholder="Min. 8 characters"
+          placeholder="Mínimo 8 caracteres"
           error={errors.next}
         />
         <TextField
-          label="Confirm new password"
+          label="Confirmar nueva contraseña"
           type="password"
           value={confirm}
           onChange={(event) => setConfirm(event.target.value)}
@@ -81,7 +81,7 @@ export function ChangePasswordSection() {
           error={errors.confirm}
         />
         <Button type="submit" loading={mutation.isPending} disabled={mutation.isPending}>
-          Update password
+          Actualizar contraseña
         </Button>
       </form>
     </Card>

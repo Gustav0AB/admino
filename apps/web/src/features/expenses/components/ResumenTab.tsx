@@ -242,23 +242,23 @@ function getUpcomingItems({
   for (const item of recurringExpenses) for (const day of item.days) {
     const dueDate = nextOcc(day);
     if (dueDate > limit || item.cancelledMonths.includes(MESES_LIST[dueDate.getMonth()] ?? "")) continue;
-    items.push({ id: `rec-${item.id}-${day}`, title: item.title, amount: item.amount, dueDate, type: "🔄", urgency: urgency(dueDate) });
+    items.push({ id: `rec-${item.id}-${day}`, title: item.title, amount: item.amount, dueDate, type: "Fijo", urgency: urgency(dueDate) });
   }
   for (const item of scheduledExpenses) {
     if (item.status !== "pending") continue;
     const dueDate = new Date(`${item.scheduledDate}T00:00:00`);
     if (dueDate < start || dueDate > limit) continue;
-    items.push({ id: `sched-${item.id}`, title: item.title, amount: item.amountKnown ? item.amount : null, dueDate, type: "📅", urgency: urgency(dueDate) });
+    items.push({ id: `sched-${item.id}`, title: item.title, amount: item.amountKnown ? item.amount : null, dueDate, type: "Programado", urgency: urgency(dueDate) });
   }
   for (const card of creditCards) {
     if (!card.payDay) continue;
     const dueDate = nextOcc(card.payDay);
-    if (dueDate <= limit) items.push({ id: `cc-${card.id}`, title: `Pago ${card.name}`, amount: null, dueDate, type: "💳", urgency: urgency(dueDate) });
+    if (dueDate <= limit) items.push({ id: `cc-${card.id}`, title: `Pago ${card.name}`, amount: null, dueDate, type: "Tarjeta", urgency: urgency(dueDate) });
   }
   for (const item of installmentPayments) {
     if (item.status !== "active") continue;
     const dueDate = new Date(start.getFullYear(), start.getMonth() + 1, 0);
-    items.push({ id: `msi-${item.id}`, title: item.title, amount: item.monthlyAmount, dueDate, type: "📦", urgency: urgency(dueDate) });
+    items.push({ id: `msi-${item.id}`, title: item.title, amount: item.monthlyAmount, dueDate, type: "MSI", urgency: urgency(dueDate) });
   }
   return items.sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
 }

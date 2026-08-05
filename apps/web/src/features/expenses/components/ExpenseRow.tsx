@@ -51,8 +51,8 @@ export function ExpenseRow({ expense, dense, onEdit, onClone, onDelete }: Props)
         <Cell label="Estado"><Badge color={estadoColor}>{expense.estado}</Badge></Cell>
 
         <div className="flex items-center justify-end gap-1">
-          <Button size="sm" variant="ghost" onClick={(event) => { event.stopPropagation(); onClone(); }}>⧉</Button>
-          <Button size="sm" variant="ghost" onClick={(event) => { event.stopPropagation(); onDelete(); }}>✕</Button>
+          <Button size="sm" variant="ghost" onClick={(event) => { event.stopPropagation(); onClone(); }}>Duplicar</Button>
+          <Button size="sm" variant="ghost" onClick={(event) => { event.stopPropagation(); onDelete(); }}>Eliminar</Button>
         </div>
       </div>
     </Card>

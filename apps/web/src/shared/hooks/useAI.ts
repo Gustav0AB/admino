@@ -35,18 +35,18 @@ export function useAI() {
       });
 
       if (!response.ok) {
-        throw new Error(`API error: ${response.statusText}`);
+        throw new Error(`Error de API: ${response.statusText}`);
       }
 
       const data: APIResponse<AnalysisResult> = await response.json();
 
       if (!data.success) {
-        throw new Error(data.error || "Failed to analyze notes");
+        throw new Error(data.error || "No se pudieron analizar las notas");
       }
 
       return data.data || null;
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Unknown error";
+      const message = err instanceof Error ? err.message : "Error desconocido";
       setError(message);
       return null;
     } finally {

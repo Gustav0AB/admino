@@ -1,8 +1,14 @@
 import { httpClient } from "@/shared/api/client";
+import { ENV } from "@/shared/config/env";
 import type { AppData } from "./types";
 
 export const expensesApi = {
-  get: () => httpClient<{ data: AppData | Record<string, never> }>("/expenses"),
+  get: () =>
+    ENV.USE_MOCK
+      ? Promise.resolve({ data: {} })
+      : httpClient<{ data: AppData | Record<string, never> }>("/expenses"),
   put: (data: AppData) =>
-    httpClient<{ data: AppData }>("/expenses", { method: "PUT", body: data }),
+    ENV.USE_MOCK
+      ? Promise.resolve({ data })
+      : httpClient<{ data: AppData }>("/expenses", { method: "PUT", body: data }),
 };

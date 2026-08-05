@@ -10,7 +10,6 @@ type FeatureCard = {
   label: string;
   description: string;
   href: string;
-  icon: string;
   roles: string[];
 };
 
@@ -20,15 +19,13 @@ const FEATURE_CARDS: FeatureCard[] = [
     label: "Finanzas",
     description: "Gestiona ingresos, egresos y balances.",
     href: routes.expenses,
-    icon: "$",
     roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN"],
   },
   {
     feature: "athlete_dashboard",
-    label: "Athlete Dashboard",
+    label: "Planes de atletas",
     description: "Atletas, planes de entrenamiento y calendario.",
     href: routes.athleteDashboard,
-    icon: "🏋️",
     roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN"],
   },
   {
@@ -36,7 +33,6 @@ const FEATURE_CARDS: FeatureCard[] = [
     label: "Mi Entrenamiento",
     description: "Seguimiento de tu plan y entrenamientos del día.",
     href: routes.athleteTracker,
-    icon: "🏃",
     roles: ["MEMBER"],
   },
   {
@@ -44,7 +40,6 @@ const FEATURE_CARDS: FeatureCard[] = [
     label: "Configuración",
     description: "Miembros, branding y ajustes del cliente.",
     href: routes.clientSettings,
-    icon: "⚙",
     roles: ["OWNER", "ADMIN"],
   },
 ];
@@ -81,9 +76,6 @@ export default function DashboardPage() {
         {visibleCards.map((card) => (
           <Link key={card.href} className="feature-card-button" to={card.href}>
             <Card>
-              <div className="feature-icon">
-                {card.icon}
-              </div>
               <h2 className="feature-title">{card.label}</h2>
               <p className="feature-description">{card.description}</p>
             </Card>

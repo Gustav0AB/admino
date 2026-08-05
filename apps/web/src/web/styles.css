@@ -50,7 +50,7 @@ button {
   font: inherit;
 }
 
-button:not([class*="focus:ring"]):not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-danger"]):not(.app-nav-item):not(.tab):not(.feature-card-button):not(.calendar-day-button):not(.calendar-header-cell):not(.pager-dot) {
+button:not([class*="focus:ring"]):not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-danger"]):not(.app-sidebar-toggle):not(.app-nav-item):not(.tab):not(.feature-card-button):not(.calendar-day-button):not(.calendar-header-cell):not(.pager-dot) {
   cursor: pointer;
   border: 1px solid var(--border);
   border-radius: 0.6rem;
@@ -61,7 +61,128 @@ button:not([class*="focus:ring"]):not([class*="bg-primary"]):not([class*="bg-sec
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-button:not([class*="focus:ring"]):not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-danger"]):not(.app-nav-item):not(.tab):not(.feature-card-button):not(.calendar-day-button):not(.calendar-header-cell):not(.pager-dot):hover {
+button.ui-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  background: white;
+  color: #334155;
+  font-weight: 700;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.ui-button-sm {
+  padding: 0.45rem 0.65rem;
+  font-size: 0.8rem;
+}
+
+.ui-button-md {
+  padding: 0.6rem 0.9rem;
+  font-size: 0.9rem;
+}
+
+.ui-button-lg {
+  padding: 0.7rem 1rem;
+  font-size: 1rem;
+}
+
+.ui-button-primary {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: white;
+}
+
+.ui-button-primary:hover {
+  border-color: var(--color-primary-hover);
+  background: var(--color-primary-hover);
+}
+
+.ui-button-secondary {
+  border-color: var(--color-secondary);
+  background: var(--color-secondary);
+  color: white;
+}
+
+.ui-button-secondary:hover {
+  border-color: var(--color-secondary-hover);
+  background: var(--color-secondary-hover);
+}
+
+.ui-button-ghost {
+  background: transparent;
+  color: #475569;
+}
+
+.ui-button-ghost:hover {
+  background: #f1f5f9;
+  color: var(--color-primary);
+}
+
+.ui-button-danger {
+  border-color: var(--color-danger);
+  background: var(--color-danger);
+  color: white;
+}
+
+.ui-button-danger:hover {
+  border-color: var(--color-danger-hover);
+  background: var(--color-danger-hover);
+}
+
+.ui-button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.ui-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.ui-input {
+  min-height: 2.4rem;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  background: white;
+  padding: 0.55rem 0.75rem;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.ui-input::placeholder {
+  color: #94a3b8;
+}
+
+.ui-input:focus {
+  border-color: var(--color-primary);
+  outline: 2px solid rgba(43, 101, 121, 0.18);
+  outline-offset: 0;
+}
+
+.ui-input:disabled {
+  cursor: not-allowed;
+  background: #f8fafc;
+  color: var(--muted);
+}
+
+.ui-input-error {
+  border-color: var(--color-danger);
+}
+
+.ui-input-error:focus {
+  border-color: var(--color-danger);
+  outline-color: rgba(220, 38, 38, 0.18);
+}
+
+.ui-select {
+  height: 2.4rem;
+}
+
+button:not([class*="focus:ring"]):not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-danger"]):not(.app-sidebar-toggle):not(.app-nav-item):not(.tab):not(.feature-card-button):not(.calendar-day-button):not(.calendar-header-cell):not(.pager-dot):hover {
   border-color: rgba(43, 101, 121, 0.35);
   background: var(--color-primary-muted);
   color: var(--color-primary);
@@ -126,8 +247,33 @@ input[type="date"] {
   transition: opacity 0.3s ease;
 }
 
-.app-sidebar.collapsed .app-brand span {
+.app-sidebar.collapsed .app-brand-mark,
+.app-sidebar.collapsed .app-brand-name {
   display: none;
+}
+
+.app-sidebar-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+  color: var(--color-primary);
+  padding: 0.25rem;
+}
+
+.app-sidebar-toggle svg,
+.app-nav-icon svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .app-brand-mark {
@@ -196,6 +342,7 @@ input[type="date"] {
   color: #334155;
   transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
   position: relative;
+  text-decoration: none;
 }
 
 .app-nav-icon {
@@ -211,6 +358,19 @@ input[type="date"] {
 
 .app-nav-group-button .app-nav-label {
   flex: 1;
+}
+
+.app-nav-caret {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 0.15s ease;
+}
+
+.app-nav-caret.open {
+  transform: rotate(225deg);
 }
 
 .app-sidebar.collapsed .app-nav-label,
@@ -382,7 +542,6 @@ input[type="date"] {
   }
 }
 
-/* Styled "+ Agregar" affordance so add buttons don't render as bare transparent text */
 button.add-tile {
   width: 100%;
   border: 1.5px dashed rgba(43, 101, 121, 0.4);
@@ -446,19 +605,8 @@ button.add-tile:hover {
   transform: translateY(-1px);
 }
 
-.feature-icon {
-  display: grid;
-  height: 3rem;
-  width: 3rem;
-  place-items: center;
-  border-radius: 0.9rem;
-  background: var(--color-primary-muted);
-  color: var(--color-primary);
-  font-size: 1.25rem;
-}
-
 .feature-title {
-  margin: 1rem 0 0.25rem;
+  margin: 0 0 0.25rem;
   font-weight: 800;
 }
 
@@ -565,8 +713,10 @@ button.add-tile:hover {
   display: flex;
   gap: 0.35rem;
   overflow-x: auto;
-  border-bottom: 1px solid var(--border);
   background: var(--surface);
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  border-radius: 0.75rem 0.75rem 0 0;
   padding: 0.35rem 0.35rem 0;
 }
 
@@ -589,6 +739,16 @@ button.add-tile:hover {
 .tab-active {
   border-bottom-color: var(--color-primary);
   color: var(--color-primary);
+  background: var(--color-primary-muted);
+}
+
+.tab-content {
+  min-height: 0;
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0 0 0.75rem 0.75rem;
+  padding: 1rem;
 }
 
 .plan-calendar {
@@ -596,9 +756,6 @@ button.add-tile:hover {
   min-height: 0;
   width: 100%;
   flex: 1;
-}
-
-.plan-calendar {
   flex-direction: column;
 }
 

@@ -2,13 +2,13 @@ import { usePlanningStore } from "@/features/expenses/planning/store";
 import type { ScheduledExpenseCategory } from "@/features/expenses/planning/types";
 import { formatMXN } from "../helpers";
 
-const CATEGORY_ICON: Record<ScheduledExpenseCategory, string> = {
-  mechanic: "🔧",
-  insurance: "🛡",
-  medical: "🏥",
-  utilities: "💡",
-  subscription: "📅",
-  other: "📌",
+const CATEGORY_LABEL: Record<ScheduledExpenseCategory, string> = {
+  mechanic: "Auto",
+  insurance: "Seguro",
+  medical: "Salud",
+  utilities: "Servicio",
+  subscription: "Suscripción",
+  other: "Otro",
 };
 
 export function UpcomingSection() {
@@ -28,7 +28,7 @@ export function UpcomingSection() {
       <div className="divide-y divide-gray-100 px-4 pb-3">
         {activeScheduled.map((expense) => (
           <div key={expense.id} className="flex items-center gap-3 py-2">
-            <span className="w-6 text-center">{CATEGORY_ICON[expense.category]}</span>
+            <span className="w-24 text-xs font-medium text-gray-500">{CATEGORY_LABEL[expense.category]}</span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm text-gray-900">{expense.title}</p>
               {(expense.scheduledDate || expense.time) && <p className="text-xs text-gray-500">{expense.scheduledDate}{expense.time ? ` ${expense.time}` : ""}</p>}
@@ -38,7 +38,7 @@ export function UpcomingSection() {
         ))}
         {activeVacations.map((vacation) => (
           <div key={vacation.id} className="flex items-center gap-3 py-2">
-            <span className="w-6 text-center">✈️</span>
+            <span className="w-24 text-xs font-medium text-gray-500">Viaje</span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm text-gray-900">{vacation.name}</p>
               {(vacation.startDate || vacation.endDate) && <p className="text-xs text-gray-500">{vacation.startDate}{vacation.endDate ? ` – ${vacation.endDate}` : ""}</p>}

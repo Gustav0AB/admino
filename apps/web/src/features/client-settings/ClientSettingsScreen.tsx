@@ -46,11 +46,11 @@ export function ClientSettingsScreen() {
     <div className="flex min-h-0 flex-1 flex-col gap-4 bg-gray-50 p-6">
       <h1 className="text-2xl font-bold text-gray-900">Configuración</h1>
 
-      <div className="flex gap-2 border-b border-gray-200">
+      <div className="tabs">
         {tabs.map((tab) => (
           <button
             key={tab.key}
-            className={`border-b-2 px-3 py-2 text-sm font-medium ${activeTab === tab.key ? "border-primary text-primary" : "border-transparent text-gray-500"}`}
+            className={`tab ${activeTab === tab.key ? "tab-active" : ""}`}
             onClick={() => setActiveTab(tab.key)}
           >
             {tab.label}
@@ -58,61 +58,63 @@ export function ClientSettingsScreen() {
         ))}
       </div>
 
-      {activeTab === "branding" ? (
-        <Card className="max-w-2xl">
-          <div className="flex flex-col gap-5">
-            <div>
-              <h2 className="text-base font-semibold text-gray-900">Identidad visual</h2>
-              <p className="mt-1 text-sm text-gray-500">
-                Personaliza el logo y los colores. Los cambios se aplican en tiempo real.
-              </p>
-            </div>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png"
-              className="hidden"
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) handleLogoFile(file);
-              }}
-            />
-
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-white">
-                {logoPreview ? (
-                  <img src={logoPreview} alt="Logo" className="h-full w-full object-contain" />
-                ) : (
-                  <span className="text-3xl font-extrabold text-primary">
-                    {branding.orgName.charAt(0).toUpperCase()}
-                  </span>
-                )}
+      <div className="tab-content">
+        {activeTab === "branding" ? (
+          <Card className="max-w-2xl">
+            <div className="flex flex-col gap-5">
+              <div>
+                <h2 className="text-base font-semibold text-gray-900">Identidad visual</h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  Personaliza el logo y los colores. Los cambios se aplican en tiempo real.
+                </p>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()}>
-                  Subir imagen (JPG/PNG)
-                </Button>
-                {logoPreview && (
-                  <Button type="button" variant="ghost" onClick={() => { setLogoPreview(null); setBranding({ logoUrl: null }); }}>
-                    Eliminar logo
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png"
+                className="hidden"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) handleLogoFile(file);
+                }}
+              />
+
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-white">
+                  {logoPreview ? (
+                    <img src={logoPreview} alt="Logo" className="h-full w-full object-contain" />
+                  ) : (
+                    <span className="text-3xl font-extrabold text-primary">
+                      {branding.orgName.charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()}>
+                    Subir imagen (JPG/PNG)
                   </Button>
-                )}
+                  {logoPreview && (
+                    <Button type="button" variant="ghost" onClick={() => { setLogoPreview(null); setBranding({ logoUrl: null }); }}>
+                      Eliminar logo
+                    </Button>
+                  )}
+                </div>
               </div>
+
+              <ColorField label="Color primario" value={primaryColor} onChange={(value) => handleColorChange("primaryColor", value)} />
+              <ColorField label="Color secundario" value={secondaryColor} onChange={(value) => handleColorChange("secondaryColor", value)} />
+              <ColorField label="Color de fondo" value={backgroundColor} onChange={(value) => handleColorChange("backgroundColor", value)} />
+
+              <Button type="button" onClick={saveBranding}>
+                {brandingSaved ? "¡Cambios guardados!" : "Confirmar cambios"}
+              </Button>
             </div>
-
-            <ColorField label="Color primario" value={primaryColor} onChange={(value) => handleColorChange("primaryColor", value)} />
-            <ColorField label="Color secundario" value={secondaryColor} onChange={(value) => handleColorChange("secondaryColor", value)} />
-            <ColorField label="Color de fondo" value={backgroundColor} onChange={(value) => handleColorChange("backgroundColor", value)} />
-
-            <Button type="button" onClick={saveBranding}>
-              {brandingSaved ? "¡Cambios guardados!" : "Confirmar cambios"}
-            </Button>
-          </div>
-        </Card>
-      ) : (
-        <ChangePasswordSection />
-      )}
+          </Card>
+        ) : (
+          <ChangePasswordSection />
+        )}
+      </div>
     </div>
   );
 }

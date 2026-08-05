@@ -67,7 +67,7 @@ export const MOCK_TOKENS: Record<UserRole, string> = {
 type AuthState = {
   user: User | null;
   token: string | null;
-  tokenExpiresAt: number | null; // Unix timestamp (seconds)
+  tokenExpiresAt: number | null;
   isAuthenticated: boolean;
   isInitialized: boolean;
   _hasHydrated: boolean;

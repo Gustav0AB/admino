@@ -29,10 +29,12 @@ export function CuentasTab() {
           </button>
         ))}
       </div>
-      {active === "cuentas" && <AccountsTab />}
-      {active === "tarjetas" && <CreditCardsTab />}
-      {active === "prestamos" && <LoansTab />}
-      {active === "ahorro" && <SavingsTab />}
+      <div className="tab-content">
+        {active === "cuentas" && <AccountsTab />}
+        {active === "tarjetas" && <CreditCardsTab />}
+        {active === "prestamos" && <LoansTab />}
+        {active === "ahorro" && <SavingsTab />}
+      </div>
     </div>
   );
 }

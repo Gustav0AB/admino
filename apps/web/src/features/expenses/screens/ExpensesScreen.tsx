@@ -74,7 +74,7 @@ export function ExpensesScreen({ activeTab = "gastos" }: { activeTab?: ExpenseTa
           loadAppData(appData);
         }
       })
-      .catch((err) => console.error("[ExpensesScreen] Fetch error:", err))
+      .catch((err) => console.error("[Finanzas] Error al cargar:", err))
       .finally(() => {
         initialLoadDone.current = true;
       });

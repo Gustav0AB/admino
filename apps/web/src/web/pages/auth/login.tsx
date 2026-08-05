@@ -16,7 +16,7 @@ export default function LoginPage() {
     setError(null);
     const cleanUsername = username.trim();
     if (!cleanUsername || !password) {
-      setError("Usuario y password son obligatorios");
+      setError("Usuario y contraseña son obligatorios");
       return;
     }
     setLoading(true);
@@ -24,7 +24,7 @@ export default function LoginPage() {
       await login({ username: cleanUsername, password });
       navigate(routes.dashboard, { replace: true });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Login failed");
+      setError(e instanceof Error ? e.message : "No se pudo iniciar sesión");
     } finally {
       setLoading(false);
     }
@@ -51,7 +51,7 @@ export default function LoginPage() {
             placeholder="usuario@dominio.com"
           />
           <TextField
-            label="Password"
+            label="Contraseña"
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}

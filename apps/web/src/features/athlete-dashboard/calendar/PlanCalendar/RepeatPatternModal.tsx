@@ -36,7 +36,7 @@ export function RepeatPatternModal({ open, defaultStartDate, onClose, onSave }: 
             <textarea className="min-h-28 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary" value={text} onChange={(event) => setTemplates((current) => current.map((item, i) => i === index ? event.target.value : item))} placeholder={"Pull\njalón al pecho 4x10\nremo 4x10"} />
           </div>
         ))}
-        <Button variant="ghost" size="sm" onClick={() => setTemplates((current) => [...current, ""])}>+ Agregar día al ciclo</Button>
+        <Button variant="ghost" size="sm" onClick={() => setTemplates((current) => [...current, ""])}>Agregar día al ciclo</Button>
         <pre className="rounded-lg border border-gray-200 bg-gray-50 p-3 whitespace-pre-wrap text-xs leading-5 text-gray-500">{CELL_HINT}</pre>
       </div>
     </Modal>

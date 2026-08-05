@@ -96,7 +96,7 @@ export function ExpenseFilters() {
             setFilterCategoria("Todos");
           }}
         >
-          ✕ Limpiar
+          Limpiar
         </button>
       )}
     </div>

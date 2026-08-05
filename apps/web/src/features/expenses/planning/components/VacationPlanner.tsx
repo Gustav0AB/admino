@@ -138,11 +138,10 @@ export function VacationPlanner() {
         <Summary value={`$${formatMXN(totalPending)}`} label="Por pagar" />
       </div>
 
-      <Button size="sm" onClick={openAddPlan}>+ Agregar viaje</Button>
+      <Button size="sm" onClick={openAddPlan}>Agregar viaje</Button>
 
       {vacations.length === 0 ? (
         <Card className="border-dashed text-center">
-          <p className="text-4xl">✈️</p>
           <p className="font-semibold text-gray-700">No hay viajes planeados</p>
           <p className="text-sm text-gray-400">Agrega tus próximas vacaciones y lleva el control de tareas y pagos</p>
         </Card>
@@ -163,31 +162,31 @@ export function VacationPlanner() {
                       <Badge color={STATUS_COLOR[plan.status]}>{STATUS_LABELS[plan.status]}</Badge>
                     </div>
                     <p className="text-xs text-gray-500">
-                      {plan.destination ? `📍 ${plan.destination}` : "Sin destino"}
+                      {plan.destination ? plan.destination : "Sin destino"}
                       {plan.startDate && plan.endDate ? ` · ${plan.startDate} → ${plan.endDate}${calcDays(plan.startDate, plan.endDate) ? ` (${calcDays(plan.startDate, plan.endDate)} días)` : ""}` : ""}
-                      {personCount > 0 ? ` · 👥 ${personCount}` : ""}
+                      {personCount > 0 ? ` · ${personCount} persona${personCount !== 1 ? "s" : ""}` : ""}
                     </p>
                   </div>
                   <div className="shrink-0 text-right text-xs text-gray-500">
                     {pending > 0 && <p className="font-bold text-gray-900">${formatMXN(pending)}</p>}
-                    {plan.tasks.length > 0 && <p>✅ {tasksDone}/{plan.tasks.length}</p>}
-                    <p>{isExpanded ? "▲" : "▼"}</p>
+                    {plan.tasks.length > 0 && <p>{tasksDone}/{plan.tasks.length}</p>}
+                    <p>{isExpanded ? "Ocultar" : "Ver"}</p>
                   </div>
                 </button>
 
                 {isExpanded && (
                   <div className="flex flex-col gap-4 border-t border-gray-100 pt-3">
                     {plan.notes && <p className="text-sm italic text-gray-500">{plan.notes}</p>}
-                    {personCount > 0 && <Tags title={`👥 Personas (${personCount})`} values={plan.persons} />}
+                    {personCount > 0 && <Tags title={`Personas (${personCount})`} values={plan.persons} />}
                     {plan.tasks.length > 0 && (
-                      <Section title={`📋 Por hacer ${tasksDone}/${plan.tasks.length}`}>
+                      <Section title={`Por hacer ${tasksDone}/${plan.tasks.length}`}>
                         {plan.tasks.map((task) => (
                           <CheckRow key={task.id} checked={task.done} label={task.task} onClick={() => updateVacation(plan.id, { tasks: plan.tasks.map((item) => item.id === task.id ? { ...item, done: !item.done } : item) })} />
                         ))}
                       </Section>
                     )}
                     {plan.payments.length > 0 && (
-                      <Section title={`💳 Por pagar · pagado $${formatMXN(paid)}`}>
+                      <Section title={`Por pagar · pagado $${formatMXN(paid)}`}>
                         {plan.payments.map((payment) => {
                           const total = payment.amount * (payment.perPerson ? Math.max(personCount, 1) : 1);
                           return (
@@ -207,8 +206,8 @@ export function VacationPlanner() {
                         <InfoRow label="Pendiente" value={`$${formatMXN(pending)}`} strong />
                       </Section>
                     )}
-                    <Section title="🗓 Actividades del viaje">
-                      <Button variant="ghost" size="sm" onClick={() => { setDayTargetVacationId(plan.id); setDayForm(blankDayForm()); setDayModalOpen(true); }}>+ Día</Button>
+                    <Section title="Actividades del viaje">
+                      <Button variant="ghost" size="sm" onClick={() => { setDayTargetVacationId(plan.id); setDayForm(blankDayForm()); setDayModalOpen(true); }}>Día</Button>
                       {plan.days.length === 0 ? <p className="text-sm text-gray-400">Sin actividades.</p> : plan.days.map((day) => (
                         <div key={day.id} className="grid grid-cols-[1fr_auto_auto] items-center gap-2 border-b border-gray-100 py-2 text-sm">
                           <div>
@@ -216,7 +215,7 @@ export function VacationPlanner() {
                             {day.date && <p className="text-xs text-gray-500">{day.date}</p>}
                           </div>
                           {day.estimatedCost > 0 && <p className="font-semibold text-gray-900">${formatMXN(day.estimatedCost)}</p>}
-                          <Button variant="ghost" size="sm" onClick={() => removeVacationDay(plan.id, day.id)}>✕</Button>
+                          <Button variant="ghost" size="sm" onClick={() => removeVacationDay(plan.id, day.id)}>Eliminar</Button>
                         </div>
                       ))}
                     </Section>
@@ -248,21 +247,21 @@ export function VacationPlanner() {
             <TextField label="Fecha fin" type="date" value={planForm.endDate} onChange={(event) => setPlanForm({ ...planForm, endDate: event.target.value })} />
           </div>
           <Field label="Estado"><ChipGroup options={STATUSES.map((status) => ({ label: STATUS_LABELS[status], value: status }))} value={planForm.status} onChange={(value) => setPlanForm({ ...planForm, status: value })} /></Field>
-          <FormList title="👥 Personas" value={planForm.newPerson} placeholder="Nombre" onValue={(value) => setPlanForm({ ...planForm, newPerson: value })} onAdd={() => addPerson(planForm, setPlanForm)}>
+          <FormList title="Personas" value={planForm.newPerson} placeholder="Nombre" onValue={(value) => setPlanForm({ ...planForm, newPerson: value })} onAdd={() => addPerson(planForm, setPlanForm)}>
             {planForm.persons.map((person) => <Tag key={person} onRemove={() => setPlanForm({ ...planForm, persons: planForm.persons.filter((item) => item !== person) })}>{person}</Tag>)}
           </FormList>
-          <FormList title="📋 Por hacer" value={planForm.newTask} placeholder="Ej: Reservar hotel" onValue={(value) => setPlanForm({ ...planForm, newTask: value })} onAdd={() => addTask(planForm, setPlanForm)}>
+          <FormList title="Por hacer" value={planForm.newTask} placeholder="Ej: Reservar hotel" onValue={(value) => setPlanForm({ ...planForm, newTask: value })} onAdd={() => addTask(planForm, setPlanForm)}>
             {planForm.tasks.map((task) => <EditCheckRow key={task.id} checked={task.done} label={task.task} onToggle={() => setPlanForm({ ...planForm, tasks: planForm.tasks.map((item) => item.id === task.id ? { ...item, done: !item.done } : item) })} onRemove={() => setPlanForm({ ...planForm, tasks: planForm.tasks.filter((item) => item.id !== task.id) })} />)}
           </FormList>
-          <Field label="💳 Por pagar">
+          <Field label="Por pagar">
             <div className="grid gap-2 sm:grid-cols-[2fr_1fr]">
               <TextField value={planForm.newPaymentDescription} onChange={(event) => setPlanForm({ ...planForm, newPaymentDescription: event.target.value })} placeholder="Ej: Boletos de avión" />
               <TextField type="number" value={planForm.newPaymentAmount} onChange={(event) => setPlanForm({ ...planForm, newPaymentAmount: event.target.value })} placeholder="$0" />
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
-              <Chip selected={planForm.newPaymentPerPerson} onClick={() => setPlanForm({ ...planForm, newPaymentPerPerson: !planForm.newPaymentPerPerson })}>👤 Por persona</Chip>
-              <Chip selected={planForm.newPaymentTrackInGastos} onClick={() => setPlanForm({ ...planForm, newPaymentTrackInGastos: !planForm.newPaymentTrackInGastos })}>{planForm.newPaymentTrackInGastos ? "✓ En gastos" : "Solo planeación"}</Chip>
-              <Button variant="ghost" size="sm" onClick={() => addPayment(planForm, setPlanForm)}>+ Agregar</Button>
+              <Chip selected={planForm.newPaymentPerPerson} onClick={() => setPlanForm({ ...planForm, newPaymentPerPerson: !planForm.newPaymentPerPerson })}>Por persona</Chip>
+              <Chip selected={planForm.newPaymentTrackInGastos} onClick={() => setPlanForm({ ...planForm, newPaymentTrackInGastos: !planForm.newPaymentTrackInGastos })}>{planForm.newPaymentTrackInGastos ? "En gastos" : "Solo planeación"}</Chip>
+              <Button variant="ghost" size="sm" onClick={() => addPayment(planForm, setPlanForm)}>Agregar</Button>
             </div>
             <div className="mt-2 flex flex-col gap-2">
               {planForm.payments.map((payment) => <EditCheckRow key={payment.id} checked={payment.done} label={`${payment.description} · $${formatMXN(payment.amount)}`} onToggle={() => setPlanForm({ ...planForm, payments: planForm.payments.map((item) => item.id === payment.id ? { ...item, done: !item.done } : item) })} onRemove={() => setPlanForm({ ...planForm, payments: planForm.payments.filter((item) => item.id !== payment.id) })} />)}
@@ -373,7 +372,7 @@ function EditCheckRow({ checked, label, onToggle, onRemove }: { checked: boolean
     <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 text-sm">
       <button type="button" className={`flex h-5 w-5 items-center justify-center rounded border ${checked ? "border-primary bg-primary text-white" : "border-gray-300"}`} onClick={onToggle}>{checked ? "✓" : ""}</button>
       <span className={checked ? "text-gray-400 line-through" : "text-gray-900"}>{label}</span>
-      <Button variant="ghost" size="sm" onClick={onRemove}>✕</Button>
+      <Button variant="ghost" size="sm" onClick={onRemove}>Eliminar</Button>
     </div>
   );
 }
@@ -381,14 +380,14 @@ function EditCheckRow({ checked, label, onToggle, onRemove }: { checked: boolean
 function FormList({ title, value, placeholder, onValue, onAdd, children }: { title: string; value: string; placeholder: string; onValue: (value: string) => void; onAdd: () => void; children: ReactNode }) {
   return (
     <Field label={title}>
-      <div className="flex gap-2"><TextField value={value} onChange={(event) => onValue(event.target.value)} placeholder={placeholder} /><Button variant="ghost" size="sm" onClick={onAdd}>+ Agregar</Button></div>
+      <div className="flex gap-2"><TextField value={value} onChange={(event) => onValue(event.target.value)} placeholder={placeholder} /><Button variant="ghost" size="sm" onClick={onAdd}>Agregar</Button></div>
       <div className="flex flex-col gap-2">{children}</div>
     </Field>
   );
 }
 
 function Tag({ children, onRemove }: { children: ReactNode; onRemove: () => void }) {
-  return <span className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-2 py-1 text-xs text-gray-700">{children}<button type="button" onClick={onRemove}>✕</button></span>;
+  return <span className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-2 py-1 text-xs text-gray-700">{children}<button type="button" onClick={onRemove}>Eliminar</button></span>;
 }
 
 function Chip({ selected, onClick, children }: { selected: boolean; onClick: () => void; children: ReactNode }) {

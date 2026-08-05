@@ -29,7 +29,7 @@ export type VacationPayment = {
   amount: number;
   perPerson: boolean;
   done: boolean;
-  trackInGastos: boolean; // false = planning only, won't appear in Todos los gastos
+  trackInGastos: boolean;
 };
 
 export type VacationPlan = {
@@ -38,7 +38,7 @@ export type VacationPlan = {
   destination: string;
   startDate: string;
   endDate: string;
-  budget?: number; // deprecated — computed from payments
+  budget?: number;
   notes: string;
   status: VacationStatus;
   days: VacationDay[];

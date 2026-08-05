@@ -69,18 +69,18 @@ function TroteTimer({ totalMin, workMin, restMin }: { totalMin: number; workMin?
   return (
     <Card className="flex flex-col gap-3">
       <div className="flex justify-between gap-3">
-        <p className="font-bold text-gray-900">🏃 Trote</p>
+        <p className="font-bold text-gray-900">Trote</p>
         <p className={`font-bold ${done ? "text-green-600" : "text-primary"}`}>{Math.floor(elapsed / 60)}min / {totalMin}min</p>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-gray-200"><div className="h-full rounded-full" style={{ width: `${progressPct}%`, backgroundColor: done ? "#22c55e" : "#2563eb" }} /></div>
       {hasIntervals && !done && (
         <div className="rounded-md px-3 py-2 text-sm font-semibold" style={{ backgroundColor: `${phaseColor}22`, color: phaseColor }}>
-          {phase === "work" ? "💪 Trabajo" : "😮‍💨 Descanso"} — {Math.floor(phaseRemaining / 60)}:{String(phaseRemaining % 60).padStart(2, "0")} restantes
+          {phase === "work" ? "Trabajo" : "Descanso"} — {Math.floor(phaseRemaining / 60)}:{String(phaseRemaining % 60).padStart(2, "0")} restantes
         </div>
       )}
       <div className="flex flex-wrap items-center gap-2">
-        {done ? <span className="font-semibold text-green-600">✓ Completado</span> : <Button size="sm" variant={running ? "danger" : "primary"} onClick={() => setRunning((value) => !value)}>{running ? "⏸ Pausar" : elapsed > 0 ? "▶ Continuar" : "▶ Iniciar"}</Button>}
-        {(elapsed > 0 || done) && <Button size="sm" variant="ghost" onClick={reset}>↺ Reset</Button>}
+        {done ? <span className="font-semibold text-green-600">Completado</span> : <Button size="sm" variant={running ? "danger" : "primary"} onClick={() => setRunning((value) => !value)}>{running ? "Pausar" : elapsed > 0 ? "Continuar" : "Iniciar"}</Button>}
+        {(elapsed > 0 || done) && <Button size="sm" variant="ghost" onClick={reset}>Reiniciar</Button>}
       </div>
     </Card>
   );
@@ -197,7 +197,6 @@ export function AthleteTrackerScreen() {
   if (!plan) {
     return (
       <div className="page empty-state">
-        <p className="text-4xl">🏋️</p>
         <h2>Sin plan asignado</h2>
         <p>Tu entrenador aún no te ha asignado un plan de entrenamiento.</p>
       </div>
@@ -216,8 +215,8 @@ export function AthleteTrackerScreen() {
             )}
           </div>
           <div className="flex gap-2">
-            <Button variant="ghost" size="sm" disabled={isFetching} onClick={() => refetch()}>↺</Button>
-            <Button variant="ghost" size="sm" onClick={() => { setShowDataForm((value) => !value); setEditName(user?.name ?? ""); setEditPeso(""); }}>✎</Button>
+            <Button variant="ghost" size="sm" disabled={isFetching} onClick={() => refetch()}>Actualizar</Button>
+            <Button variant="ghost" size="sm" onClick={() => { setShowDataForm((value) => !value); setEditName(user?.name ?? ""); setEditPeso(""); }}>Editar</Button>
           </div>
         </div>
         <p className="mt-2 text-sm italic text-gray-500">"{phrase}"</p>

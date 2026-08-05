@@ -32,7 +32,7 @@ export function MemberFormModal({ open, onClose, member, onSubmit, isLoading }: 
   function validate(): boolean {
     const errs: Record<string, string> = {};
     if (!name.trim()) errs.name = "El nombre es obligatorio";
-    if (email.trim() && !/^\S+@\S+\.\S+$/.test(email.trim())) errs.email = "Email inválido";
+    if (email.trim() && !/^\S+@\S+\.\S+$/.test(email.trim())) errs.email = "Correo inválido";
     if (!isEditing) {
       if (!/^[a-zA-Z0-9_.-]+$/.test(username.trim())) errs.username = "Solo letras, números, puntos, guiones y _";
       if (password.length < 8) errs.password = "Mínimo 8 caracteres";
@@ -81,7 +81,7 @@ export function MemberFormModal({ open, onClose, member, onSubmit, isLoading }: 
             )}
           </div>
         )}
-        <TextField label="Email (opcional, para restablecer contraseña)" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="correo@ejemplo.com" error={errors.email} />
+        <TextField label="Correo (opcional, para restablecer contraseña)" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="correo@ejemplo.com" error={errors.email} />
         {!isEditing && (
           <TextField label="Contraseña" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Mínimo 8 caracteres" error={errors.password} />
         )}

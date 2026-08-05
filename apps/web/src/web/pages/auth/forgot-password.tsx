@@ -29,7 +29,7 @@ export default function ForgotPasswordPage() {
         <div className="flex flex-col gap-4">
           <h1 className="text-2xl font-bold text-gray-900">Restablecer contraseña</h1>
           <p className="text-sm text-gray-500">
-            Ingresa tu usuario o email y te enviaremos instrucciones para crear una nueva contraseña.
+            Ingresa tu usuario o correo y te enviaremos instrucciones para crear una nueva contraseña.
           </p>
 
           {message ? (
@@ -42,7 +42,7 @@ export default function ForgotPasswordPage() {
           ) : (
             <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
               <TextField
-                label="Usuario o email"
+                label="Usuario o correo"
                 value={username}
                 onChange={(event) => setUsername(event.target.value)}
                 autoCapitalize="none"

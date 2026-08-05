@@ -83,12 +83,12 @@ function AthleteRow({
             {age !== null && <span>{age} años</span>}
             {athlete.categoria && <Badge color="blue">{athlete.categoria}</Badge>}
             {athlete.peso && <span>{athlete.peso}kg</span>}
-            {currentPlanName && <Badge>📋 {currentPlanName}</Badge>}
+            {currentPlanName && <Badge>{currentPlanName}</Badge>}
           </span>
         </span>
         <span className="flex flex-col items-end gap-1">
           <Badge color={athlete.isActive ? "green" : "red"}>{athlete.isActive ? "Activo" : "Inactivo"}</Badge>
-          <span className="text-xs text-gray-500">{expanded ? "▲" : "▼"}</span>
+          <span className="text-xs text-gray-500">{expanded ? "Ocultar" : "Ver"}</span>
         </span>
       </button>
 
@@ -143,7 +143,7 @@ function TrackerTab({ athletes, plans }: { athletes: EndUserMember[]; plans: Tra
             {assignedPlan ? (
               <div className="flex flex-col gap-2">
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Plan asignado</p>
-                <p className="font-semibold text-gray-900">📋 {assignedPlan.name}</p>
+                <p className="font-semibold text-gray-900">{assignedPlan.name}</p>
                 {assignedPlan.startDate && <p className="text-xs text-gray-500">{assignedPlan.startDate} → {assignedPlan.endDate}</p>}
                 {assignedPlan.cells?.[today] ? <div className="rounded-lg bg-blue-50 p-3 text-sm text-gray-900"><p className="mb-1 font-semibold text-primary">Hoy</p>{assignedPlan.cells[today]}</div> : <p className="text-sm italic text-gray-500">Sin actividad registrada para hoy.</p>}
               </div>
@@ -241,8 +241,9 @@ export function AthletesTab() {
         ))}
       </div>
 
-      {activeTab === "general" ? (
-        <>
+      <div className="tab-content">
+        {activeTab === "general" ? (
+          <>
           <div className="filter-bar">
             <TextField value={search} onChange={(event) => setSearch(event.target.value)} placeholder="🔍 Buscar atleta..." />
             <Dropdown value={filterCategoria} options={CATEGORIA_FILTER_OPTIONS} onChange={setFilterCategoria} />
@@ -263,10 +264,11 @@ export function AthletesTab() {
               />
             ))}
           </div>
-        </>
-      ) : (
-        <TrackerTab athletes={athletes} plans={plans} />
-      )}
+          </>
+        ) : (
+          <TrackerTab athletes={athletes} plans={plans} />
+        )}
+      </div>
     </div>
   );
 }

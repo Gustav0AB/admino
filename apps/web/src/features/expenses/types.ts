@@ -23,20 +23,16 @@ export type RecurringExpense = {
   id: string;
   title: string;
   amount: number;
-  days: number[];            // one or more days of month 1–31 (used when schedulingType="monthly")
+  days: number[];
   category: RecurringCategory;
   metodoPago: MetodoPago;
   creditCardId?: string;
-  cancelledMonths: string[]; // e.g. ["Enero", "Marzo"] — skipped those months
-
-  // Scheduling: "monthly" (default) = days-of-month, "interval" = every N days or months
+  cancelledMonths: string[];
   schedulingType?: RecurringSchedulingType;
-  intervalDays?: number;      // e.g. 20  — used when schedulingType="interval"
-  intervalMonths?: number;    // e.g. 6 or 12 — used when schedulingType="interval"
-  startDate?: string;         // ISO "YYYY-MM-DD" — anchor for interval calculation
-  expirationDate?: string;    // ISO "YYYY-MM-DD" — stop generating after this date
-
-  // Limited installments: if set, stops generating after totalInstallments fires
+  intervalDays?: number;
+  intervalMonths?: number;
+  startDate?: string;
+  expirationDate?: string;
   totalInstallments?: number;
   paidInstallments?: number;
 };

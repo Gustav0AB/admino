@@ -17,7 +17,7 @@ let io: Server;
 export function initSocket(httpServer: HttpServer): Server {
   io = new Server(httpServer, {
     cors: {
-      origin: [env.cors.webOrigin, env.cors.mobileOrigin],
+      origin: env.cors.allowedOrigins,
       credentials: true,
     },
   });

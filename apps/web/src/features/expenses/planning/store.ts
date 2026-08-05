@@ -14,26 +14,18 @@ type PlanningState = {
   vacations: VacationPlan[];
   scheduledExpenses: ScheduledExpense[];
   installmentPayments: InstallmentPayment[];
-
-  // Vacation actions
   addVacation: (plan: Omit<VacationPlan, "id" | "days">) => void;
   updateVacation: (id: string, patch: Partial<VacationPlan>) => void;
   removeVacation: (id: string) => void;
   addVacationDay: (vacationId: string, day: Omit<VacationDay, "id">) => void;
   updateVacationDay: (vacationId: string, dayId: string, patch: Partial<VacationDay>) => void;
   removeVacationDay: (vacationId: string, dayId: string) => void;
-
-  // Scheduled expense actions
   addScheduledExpense: (expense: Omit<ScheduledExpense, "id">) => void;
   updateScheduledExpense: (id: string, patch: Partial<ScheduledExpense>) => void;
   removeScheduledExpense: (id: string) => void;
-
-  // Installment payment actions
   addInstallment: (p: Omit<InstallmentPayment, "id">) => void;
   updateInstallment: (id: string, patch: Partial<InstallmentPayment>) => void;
   removeInstallment: (id: string) => void;
-
-  // Persist helpers
   getPlanningData: () => PlanningData;
   loadPlanningData: (data: PlanningData) => void;
   clearAll: () => void;

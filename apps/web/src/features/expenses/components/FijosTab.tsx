@@ -100,23 +100,25 @@ export function FijosTab() {
         ))}
       </div>
 
-      {(subTab === "Básicos" || subTab === "Servicios") && (
-        <div className="flex flex-wrap items-end gap-3">
-          <Dropdown value={String(selectedAño)} options={[thisYear - 1, thisYear, thisYear + 1].map((year) => ({ label: String(year), value: String(year) }))} onChange={(value) => setSelectedAño(Number(value))} />
-          <Dropdown value={selectedMes} options={MONTH_OPTIONS} onChange={setSelectedMes} />
-          {!isCurrent && (
-            <Button variant={isActivated ? "secondary" : "ghost"} size="sm" onClick={() => isActivated ? deactivateMonth(selectedMes, selectedAño) : activateMonth(selectedMes, selectedAño)}>
-              {isActivated ? "✓ gastos aplicados" : "+ aplicar a gastos"}
-            </Button>
-          )}
-        </div>
-      )}
+      <div className="tab-content">
+        {(subTab === "Básicos" || subTab === "Servicios") && (
+          <div className="mb-4 flex flex-wrap items-end gap-3">
+            <Dropdown value={String(selectedAño)} options={[thisYear - 1, thisYear, thisYear + 1].map((year) => ({ label: String(year), value: String(year) }))} onChange={(value) => setSelectedAño(Number(value))} />
+            <Dropdown value={selectedMes} options={MONTH_OPTIONS} onChange={setSelectedMes} />
+            {!isCurrent && (
+              <Button variant={isActivated ? "secondary" : "ghost"} size="sm" onClick={() => isActivated ? deactivateMonth(selectedMes, selectedAño) : activateMonth(selectedMes, selectedAño)}>
+                {isActivated ? "Gastos aplicados" : "Aplicar a gastos"}
+              </Button>
+            )}
+          </div>
+        )}
 
-      {subTab === "Básicos" && <RecurringList category="basico" selectedMes={selectedMes} />}
-      {subTab === "Servicios" && <RecurringList category="servicio" selectedMes={selectedMes} />}
-      {subTab === "Agendados" && <AgendadosList />}
-      {subTab === "Pagos a meses" && <PagosMesesTab />}
-      {subTab === "Simulación" && <SimulacionTab />}
+        {subTab === "Básicos" && <RecurringList category="basico" selectedMes={selectedMes} />}
+        {subTab === "Servicios" && <RecurringList category="servicio" selectedMes={selectedMes} />}
+        {subTab === "Agendados" && <AgendadosList />}
+        {subTab === "Pagos a meses" && <PagosMesesTab />}
+        {subTab === "Simulación" && <SimulacionTab />}
+      </div>
     </div>
   );
 }
@@ -179,7 +181,7 @@ function RecurringList({ category, selectedMes }: { category: RecurringCategory;
 
   return (
     <div className="flex flex-col gap-3">
-      {!showForm && <Button variant="ghost" size="sm" className="add-tile" onClick={() => { setEditId(null); setForm(blankRecurring()); setShowForm(true); }}>+ Agregar</Button>}
+      {!showForm && <Button variant="ghost" size="sm" className="add-tile" onClick={() => { setEditId(null); setForm(blankRecurring()); setShowForm(true); }}>Agregar</Button>}
       {showForm && (
         <Card className="border-primary">
           <div className="flex flex-col gap-3">
@@ -380,7 +382,7 @@ function SimpleList({ showForm, setShowForm, form, empty, children }: { showForm
   const hasChildren = Array.isArray(children) ? children.some(Boolean) : Boolean(children);
   return (
     <div className="flex flex-col gap-3">
-      {showForm ? <Card className="border-primary"><div className="flex flex-col gap-3">{form}</div></Card> : <Button variant="ghost" size="sm" className="add-tile" onClick={() => setShowForm(true)}>+ Agregar</Button>}
+      {showForm ? <Card className="border-primary"><div className="flex flex-col gap-3">{form}</div></Card> : <Button variant="ghost" size="sm" className="add-tile" onClick={() => setShowForm(true)}>Agregar</Button>}
       {!hasChildren && !showForm ? <Card className="text-center text-sm text-gray-500">{empty}</Card> : children}
     </div>
   );

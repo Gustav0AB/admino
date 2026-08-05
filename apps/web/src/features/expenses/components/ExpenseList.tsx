@@ -141,9 +141,9 @@ export function ExpenseList() {
             >
               {allSelected ? "✓" : ""}
             </button>
-            <Button size="sm" onClick={() => setAddModalOpen(true)}>+ Agregar</Button>
-            <Button variant="ghost" size="sm" onClick={() => setShowBulkAdd((value) => !value)}>+ Múltiple</Button>
-            <Button variant="ghost" size="sm" onClick={() => setDense((value) => !value)}>{dense ? "⊞ Cómodo" : "⊟ Compact"}</Button>
+            <Button size="sm" onClick={() => setAddModalOpen(true)}>Agregar</Button>
+            <Button variant="ghost" size="sm" onClick={() => setShowBulkAdd((value) => !value)}>Múltiple</Button>
+            <Button variant="ghost" size="sm" onClick={() => setDense((value) => !value)}>{dense ? "Vista cómoda" : "Vista compacta"}</Button>
           </div>
 
           {selected.length > 0 && (

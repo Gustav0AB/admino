@@ -6,7 +6,7 @@ import { AtletasContent } from "@/features/client-settings/EndUsersScreen";
 type Tab = "staff" | "atletas";
 
 const tabs: { key: Tab; label: string }[] = [
-  { key: "staff", label: "Staff" },
+  { key: "staff", label: "Equipo" },
   { key: "atletas", label: "Atletas" },
 ];
 
@@ -24,11 +24,11 @@ export function MembersScreen() {
         </Button>
       </header>
 
-      <div className="flex gap-2 border-b border-gray-200">
+      <div className="tabs">
         {tabs.map((item) => (
           <button
             key={item.key}
-            className={`border-b-2 px-3 py-2 text-sm font-medium ${tab === item.key ? "border-primary text-primary" : "border-transparent text-gray-500"}`}
+            className={`tab ${tab === item.key ? "tab-active" : ""}`}
             onClick={() => setTab(item.key)}
           >
             {item.label}
@@ -36,7 +36,7 @@ export function MembersScreen() {
         ))}
       </div>
 
-      <div className="min-h-0 flex-1">
+      <div className="tab-content">
         {tab === "staff" ? (
           <StaffContent onReady={(fn) => { openStaffCreate.current = fn; }} />
         ) : (

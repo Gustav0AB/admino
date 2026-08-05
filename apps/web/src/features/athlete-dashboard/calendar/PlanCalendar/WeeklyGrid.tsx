@@ -20,7 +20,7 @@ export function WeeklyGrid({ weeks, cells, events, editable, planStartDate, plan
   const canPatternDays = editable && onDayHeaderClick;
   function handleHeaderClick(index: number) {
     setSelectedDayIdx(selectedDayIdx === index ? null : index);
-    // Header index 0=Lun … 6=Dom → JS getDay() 1=Mon … 0=Sun
+    // Índice visual 0=Lun a 6=Dom; JS usa 1=Lun a 0=Dom.
     if (canPatternDays) onDayHeaderClick((index + 1) % 7, DAY_HEADERS[index]!);
   }
   const eventsByDate = events.reduce<Record<string, CalendarEvent[]>>((acc, event) => {

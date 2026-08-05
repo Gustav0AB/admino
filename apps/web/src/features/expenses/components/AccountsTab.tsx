@@ -85,7 +85,7 @@ export function AccountsTab() {
         <h2 className="text-sm font-bold text-gray-900">
           {accounts.length === 0 ? "Agrega tus cuentas" : `${accounts.length} cuenta${accounts.length !== 1 ? "s" : ""}`}
         </h2>
-        <Button size="sm" onClick={openAdd}>+ Cuenta</Button>
+        <Button size="sm" onClick={openAdd}>Cuenta</Button>
       </div>
 
       {showForm && (
@@ -184,14 +184,14 @@ function AccountCard({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="ghost" onClick={onEdit}>✎</Button>
+          <Button size="sm" variant="ghost" onClick={onEdit}>Editar</Button>
           {confirmRemove ? (
             <div className="flex gap-2 text-sm">
               <button type="button" className="font-semibold text-red-600" onClick={onRemove}>Sí</button>
               <button type="button" className="text-gray-500" onClick={() => setConfirmRemove(false)}>No</button>
             </div>
           ) : (
-            <Button size="sm" variant="ghost" onClick={() => setConfirmRemove(true)}>✕</Button>
+            <Button size="sm" variant="ghost" onClick={() => setConfirmRemove(true)}>Eliminar</Button>
           )}
         </div>
       </div>
@@ -199,8 +199,8 @@ function AccountCard({
       <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-500">
         <span>Saldo base: ${formatMXN(account.initialBalance)}</span>
         {account.balanceDate && <span>· actualizado {account.balanceDate}</span>}
-        {linkedIncomes > 0 && <span className="text-green-600">▲ {linkedIncomes} ingreso{linkedIncomes !== 1 ? "s" : ""}</span>}
-        {linkedExpenses > 0 && <span className="text-red-600">▼ {linkedExpenses} gasto{linkedExpenses !== 1 ? "s" : ""}</span>}
+        {linkedIncomes > 0 && <span className="text-green-600">{linkedIncomes} ingreso{linkedIncomes !== 1 ? "s" : ""}</span>}
+        {linkedExpenses > 0 && <span className="text-red-600">{linkedExpenses} gasto{linkedExpenses !== 1 ? "s" : ""}</span>}
       </div>
 
       {showReconcile ? (
@@ -230,7 +230,7 @@ function AccountCard({
         </div>
       ) : (
         <button type="button" className="mt-3 text-xs font-semibold text-primary" onClick={() => { setShowReconcile(true); setReconcileAmount(String(balance)); }}>
-          ⚖ Ajustar saldo real
+          Ajustar saldo real
         </button>
       )}
     </Card>

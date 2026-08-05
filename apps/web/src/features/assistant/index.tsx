@@ -40,12 +40,10 @@ export function AssistantScreen() {
 
   async function handleAnalyze() {
     if (!rawNotes.trim()) return;
-    // Instruction (e.g. "agrega estos gastos") is prepended so the model has the intent
     const payload = instruction.trim() ? `Instrucción: ${instruction.trim()}\n\nNotas:\n${rawNotes}` : rawNotes;
     const result = await analyzeNotes(payload);
     if (result) {
       setAnalysis(result);
-      // Default every detected expense to "Gastos del mes"
       setDestinos(Object.fromEntries((result.categories.gastos ?? []).map((_, i) => [i, "mes" as Destino])));
     }
   }
@@ -161,9 +159,9 @@ export function AssistantScreen() {
             {(analysis.categories.tareas?.length || analysis.categories.recordatorios?.length || analysis.categories.deseos?.length) ? (
               <Card>
                 <div className="flex flex-col gap-3 text-sm">
-                  {analysis.categories.tareas?.map((t, i) => <p key={`t${i}`}>✅ {t.tarea}{t.fechaVencimiento ? ` · ${t.fechaVencimiento}` : ""} <span className={`priority priority-${t.prioridad}`}>{t.prioridad}</span></p>)}
-                  {analysis.categories.recordatorios?.map((r, i) => <p key={`r${i}`}>🔔 {r.recordatorio} · {r.fecha}</p>)}
-                  {analysis.categories.deseos?.map((d, i) => <p key={`d${i}`}>🎁 {d.deseo}{d.estimadoCosto ? ` · ~$${d.estimadoCosto}` : ""}</p>)}
+                  {analysis.categories.tareas?.map((t, i) => <p key={`t${i}`}>{t.tarea}{t.fechaVencimiento ? ` · ${t.fechaVencimiento}` : ""} <span className={`priority priority-${t.prioridad}`}>{t.prioridad}</span></p>)}
+                  {analysis.categories.recordatorios?.map((r, i) => <p key={`r${i}`}>{r.recordatorio} · {r.fecha}</p>)}
+                  {analysis.categories.deseos?.map((d, i) => <p key={`d${i}`}>{d.deseo}{d.estimadoCosto ? ` · ~$${d.estimadoCosto}` : ""}</p>)}
                 </div>
               </Card>
             ) : null}

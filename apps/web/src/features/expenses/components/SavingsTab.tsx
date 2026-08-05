@@ -53,7 +53,7 @@ export function SavingsTab() {
         )}
       </Card>
 
-      {!showForm && <Button variant="ghost" size="sm" className="add-tile" onClick={() => { setShowForm(true); setForm(blankForm()); }}>+ Nueva meta</Button>}
+      {!showForm && <Button variant="ghost" size="sm" className="add-tile" onClick={() => { setShowForm(true); setForm(blankForm()); }}>Nueva meta</Button>}
 
       {showForm && (
         <Card className="border-primary">
@@ -128,14 +128,14 @@ function GoalCard({ goal }: { goal: SavingsGoal }) {
               {goal.notes && <p className="text-sm italic text-gray-500">{goal.notes}</p>}
             </div>
             <div className="flex items-center gap-2">
-              {goal.status === "completed" ? <span style={{ color: goal.color }} className="text-sm font-bold">✓ Completada</span> : <span style={{ color: goal.color }} className="font-extrabold">${formatMXN(remaining)}</span>}
+              {goal.status === "completed" ? <span style={{ color: goal.color }} className="text-sm font-bold">Completada</span> : <span style={{ color: goal.color }} className="font-extrabold">${formatMXN(remaining)}</span>}
               {confirmRemove ? (
                 <div className="flex gap-2 text-sm">
                   <button type="button" className="font-semibold text-red-600" onClick={() => removeSavingsGoal(goal.id)}>Sí</button>
                   <button type="button" className="text-gray-500" onClick={() => setConfirmRemove(false)}>No</button>
                 </div>
               ) : (
-                <Button variant="ghost" size="sm" onClick={() => setConfirmRemove(true)}>✕</Button>
+                <Button variant="ghost" size="sm" onClick={() => setConfirmRemove(true)}>Eliminar</Button>
               )}
             </div>
           </div>
@@ -163,7 +163,7 @@ function GoalCard({ goal }: { goal: SavingsGoal }) {
                   </div>
                 </div>
               ) : (
-                <Button variant="ghost" size="sm" onClick={() => setShowDepositForm(true)}>+ Registrar abono</Button>
+                <Button variant="ghost" size="sm" onClick={() => setShowDepositForm(true)}>Registrar abono</Button>
               )}
             </section>
           )}
@@ -177,7 +177,7 @@ function GoalCard({ goal }: { goal: SavingsGoal }) {
                     {deposit.notes && <p className="text-xs text-gray-500">{deposit.notes}</p>}
                   </div>
                   <p style={{ color: goal.color }} className="font-bold">${formatMXN(deposit.amount)}</p>
-                  <Button variant="ghost" size="sm" onClick={() => removeSavingsDeposit(goal.id, deposit.id)}>✕</Button>
+                  <Button variant="ghost" size="sm" onClick={() => removeSavingsDeposit(goal.id, deposit.id)}>Eliminar</Button>
                 </div>
               ))}
             </HistoryToggle>
@@ -189,7 +189,7 @@ function GoalCard({ goal }: { goal: SavingsGoal }) {
 }
 
 function Deadline({ daysLeft }: { daysLeft: number }) {
-  if (daysLeft < 0) return <span className="text-red-600">⚠️ Venció hace {Math.abs(daysLeft)} días</span>;
+  if (daysLeft < 0) return <span className="text-red-600">Venció hace {Math.abs(daysLeft)} días</span>;
   if (daysLeft === 0) return <span className="text-gray-500">Vence hoy</span>;
   return <span className="text-gray-500">{daysLeft} días restantes</span>;
 }
@@ -198,7 +198,7 @@ function HistoryToggle({ open, count, onClick, children }: { open: boolean; coun
   return (
     <>
       <button type="button" className="self-start text-xs font-semibold text-primary" onClick={onClick}>
-        {open ? "▲ Ocultar abonos" : `▼ ${count} abono${count !== 1 ? "s" : ""}`}
+        {open ? "Ocultar abonos" : `${count} abono${count !== 1 ? "s" : ""}`}
       </button>
       {open && <div className="flex flex-col gap-2">{children}</div>}
     </>

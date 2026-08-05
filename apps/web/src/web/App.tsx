@@ -1,10 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { lazy, Suspense } from "react";
+import { lazy, type ReactNode, Suspense } from "react";
 import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { ErrorBoundary } from "@/shared/components/feedback/ErrorBoundary";
 import { ToastProvider } from "@/shared/components/feedback/Toast";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { useAppLifecycle } from "@/shared/hooks/useAppLifecycle";
+import type { UserRole } from "@/shared/types/auth";
 import { AppLayout } from "./layouts/AppLayout";
 import { routes } from "./routes";
 
@@ -34,6 +35,11 @@ function ProtectedRoute() {
   return isAuthenticated ? <Outlet /> : <Navigate to={routes.login} replace />;
 }
 
+function RoleRoute({ roles, children }: { roles: UserRole[]; children: ReactNode }) {
+  const { hasAnyRole } = useAuth();
+  return hasAnyRole(roles) ? children : <Navigate to={routes.dashboard} replace />;
+}
+
 function AppRoutes() {
   useAppLifecycle();
 
@@ -49,20 +55,20 @@ function AppRoutes() {
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
             <Route path={routes.dashboard} element={<DashboardPage />} />
-            <Route path={routes.admin} element={<AdminScreen activeTab="orgs" />} />
-            <Route path={routes.adminLogs} element={<AdminScreen activeTab="logs" />} />
-            <Route path={routes.expenses} element={<ExpensesScreen activeTab="gastos" />} />
-            <Route path={routes.expensesFijos} element={<ExpensesScreen activeTab="fijos" />} />
-            <Route path={routes.expensesIngresos} element={<ExpensesScreen activeTab="ingresos" />} />
-            <Route path={routes.expensesCuentas} element={<ExpensesScreen activeTab="cuentas" />} />
-            <Route path={routes.expensesVacaciones} element={<ExpensesScreen activeTab="vacaciones" />} />
-            <Route path={routes.expensesResumen} element={<ExpensesScreen activeTab="resumen" />} />
-            <Route path={routes.assistant} element={<AssistantScreen />} />
-            <Route path={routes.athleteDashboard} element={<AthleteDashboardScreen />} />
-            <Route path={routes.athleteDashboardAthletes} element={<AthletesTab />} />
-            <Route path={routes.athleteTracker} element={<AthleteTrackerScreen />} />
-            <Route path={routes.clientSettings} element={<ClientSettingsScreen />} />
-            <Route path={routes.miembros} element={<MembersScreen />} />
+            <Route path={routes.admin} element={<RoleRoute roles={["SYSTEM_ADMIN"]}><AdminScreen activeTab="orgs" /></RoleRoute>} />
+            <Route path={routes.adminLogs} element={<RoleRoute roles={["SYSTEM_ADMIN"]}><AdminScreen activeTab="logs" /></RoleRoute>} />
+            <Route path={routes.expenses} element={<RoleRoute roles={["SYSTEM_ADMIN", "OWNER", "ADMIN"]}><ExpensesScreen activeTab="gastos" /></RoleRoute>} />
+            <Route path={routes.expensesFijos} element={<RoleRoute roles={["SYSTEM_ADMIN", "OWNER", "ADMIN"]}><ExpensesScreen activeTab="fijos" /></RoleRoute>} />
+            <Route path={routes.expensesIngresos} element={<RoleRoute roles={["SYSTEM_ADMIN", "OWNER", "ADMIN"]}><ExpensesScreen activeTab="ingresos" /></RoleRoute>} />
+            <Route path={routes.expensesCuentas} element={<RoleRoute roles={["SYSTEM_ADMIN", "OWNER", "ADMIN"]}><ExpensesScreen activeTab="cuentas" /></RoleRoute>} />
+            <Route path={routes.expensesVacaciones} element={<RoleRoute roles={["SYSTEM_ADMIN", "OWNER", "ADMIN"]}><ExpensesScreen activeTab="vacaciones" /></RoleRoute>} />
+            <Route path={routes.expensesResumen} element={<RoleRoute roles={["SYSTEM_ADMIN", "OWNER", "ADMIN"]}><ExpensesScreen activeTab="resumen" /></RoleRoute>} />
+            <Route path={routes.assistant} element={<RoleRoute roles={["SYSTEM_ADMIN", "OWNER", "ADMIN"]}><AssistantScreen /></RoleRoute>} />
+            <Route path={routes.athleteDashboard} element={<RoleRoute roles={["SYSTEM_ADMIN", "OWNER", "ADMIN"]}><AthleteDashboardScreen /></RoleRoute>} />
+            <Route path={routes.athleteDashboardAthletes} element={<RoleRoute roles={["SYSTEM_ADMIN", "OWNER", "ADMIN"]}><AthletesTab /></RoleRoute>} />
+            <Route path={routes.athleteTracker} element={<RoleRoute roles={["MEMBER"]}><AthleteTrackerScreen /></RoleRoute>} />
+            <Route path={routes.clientSettings} element={<RoleRoute roles={["OWNER", "ADMIN"]}><ClientSettingsScreen /></RoleRoute>} />
+            <Route path={routes.miembros} element={<RoleRoute roles={["OWNER", "ADMIN"]}><MembersScreen /></RoleRoute>} />
           </Route>
         </Route>
 

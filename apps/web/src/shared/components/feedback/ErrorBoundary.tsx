@@ -29,10 +29,10 @@ class ErrorBoundaryClass extends Component<ErrorBoundaryClassProps, ErrorBoundar
     return (
       <main className="flex min-h-screen items-center justify-center bg-gray-50 p-6">
         <Card className="w-full max-w-md text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-3xl">⚠</div>
-          <h1 className="text-xl font-bold text-gray-900">Something went wrong</h1>
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-3xl font-bold text-red-700">!</div>
+          <h1 className="text-xl font-bold text-gray-900">Algo salió mal</h1>
           <p className="mt-2 text-sm text-gray-500">{error.message}</p>
-          <Button className="mt-6" onClick={this.reset}>Try again</Button>
+          <Button className="mt-6" onClick={this.reset}>Intentar de nuevo</Button>
         </Card>
       </main>
     );

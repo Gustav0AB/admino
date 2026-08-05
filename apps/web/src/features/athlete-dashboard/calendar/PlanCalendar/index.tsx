@@ -226,7 +226,7 @@ export function PlanCalendar() {
     try {
       const html = buildPlanHtml(activePlan, allWeeks, events);
       await Print.printAsync({ html });
-    } catch (e) { console.error("PDF export failed", e); }
+    } catch (e) { console.error("Error al exportar PDF", e); }
   }
 
   const editable = editMode !== "view" || selectedPlanId !== null;

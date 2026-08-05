@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuthStore } from "@/shared/store/authStore";
 import { useNetworkStatus } from "@/shared/hooks/useNetworkStatus";
 
-const WARN_BEFORE_MS = 5 * 60 * 1000; // show warning 5 min before expiry
+const WARN_BEFORE_MS = 5 * 60 * 1000;
 const OFFLINE_COUNTDOWN_SECONDS = 30;
 
 type SessionGuardType = "session_expiring" | "offline";
@@ -26,7 +26,6 @@ export function useSessionGuard(): SessionGuardState {
   const [type, setType] = useState<SessionGuardType | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(0);
 
-  // Track current modal type in a ref so interval callbacks always see the latest value
   const typeRef = useRef<SessionGuardType | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const warnTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -66,7 +65,6 @@ export function useSessionGuard(): SessionGuardState {
     clearCountdown();
   }, [clearCountdown]);
 
-  // Session expiry monitoring — re-arms whenever tokenExpiresAt changes (i.e. after refresh)
   useEffect(() => {
     if (warnTimerRef.current) {
       clearTimeout(warnTimerRef.current);
@@ -85,7 +83,6 @@ export function useSessionGuard(): SessionGuardState {
         logout();
         return;
       }
-      // Don't overwrite an offline modal
       if (typeRef.current === "offline") return;
       showModal("session_expiring", remaining, () => {
         dismissModal();
@@ -108,7 +105,6 @@ export function useSessionGuard(): SessionGuardState {
     };
   }, [isAuthenticated, tokenExpiresAt]);
 
-  // Offline monitoring.
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -122,7 +118,6 @@ export function useSessionGuard(): SessionGuardState {
     }
   }, [isConnected, isAuthenticated]);
 
-  // Full cleanup on unmount
   useEffect(() => {
     return () => {
       clearCountdown();

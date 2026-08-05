@@ -3,21 +3,21 @@ export type EventType = "competition" | "seminar" | "vacation";
 export type CalendarEvent = {
   id: string;
   name: string;
-  date: string; // "YYYY-MM-DD"
+  date: string;
   type: EventType;
 };
 
 export type CalendarPlan = {
   id: string;
   name: string;
-  startDate: string; // "YYYY-MM-DD"
-  endDate: string;   // "YYYY-MM-DD"
+  startDate: string;
+  endDate: string;
   cells: Record<string, string>;
 };
 
 export type WeekRow = {
   weekNum: number;
-  days: string[]; // 7 ISO date strings, Mon → Sun
+  days: string[];
   range: string;
   month: string;
 };

@@ -62,10 +62,10 @@ export function Toolbar({
             placeholder="Seleccionar plan..."
           />
         </div>
-        <Button variant="ghost" size="sm" onClick={onNewPlan}>+ Nuevo plan</Button>
+        <Button variant="ghost" size="sm" onClick={onNewPlan}>Nuevo plan</Button>
         {showSave && <Button size="sm" loading={isSaving} onClick={onSave}>Guardar plan</Button>}
-        <Button variant="ghost" size="sm" onClick={onAddEvent}>+ Evento</Button>
-        {showRepeatPattern && <Button variant="ghost" size="sm" onClick={onOpenRepeatPattern}>+ Patrón repetitivo</Button>}
+        <Button variant="ghost" size="sm" onClick={onAddEvent}>Evento</Button>
+        {showRepeatPattern && <Button variant="ghost" size="sm" onClick={onOpenRepeatPattern}>Patrón repetitivo</Button>}
         {selectedPlanId && <Button variant="ghost" size="sm" onClick={onDownloadPdf}>⬇ PDF</Button>}
       </div>
 
@@ -77,7 +77,7 @@ export function Toolbar({
         </div>
       )}
 
-      {saveError && <div className="form-error">⚠ {saveError}</div>}
+      {saveError && <div className="form-error">{saveError}</div>}
       {(totalWeeks !== null || weeksToNext !== null) && (
         <div className="calendar-stats">
           {totalWeeks !== null && <StatPill value={String(totalWeeks)} label={totalWeeks === 1 ? "semana" : "semanas"} />}

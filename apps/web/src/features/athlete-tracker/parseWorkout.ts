@@ -26,7 +26,7 @@ export function parseCellText(text: string): ParsedWorkout {
   for (const line of rest) {
     const lower = line.toLowerCase();
     if (lower.startsWith("trote")) {
-      // "trote 2x4 40min" or "trote 40min"
+      // Formatos soportados: "trote 2x4 40min" o "trote 40min".
       const match = line.match(/trote\s+(?:(\d+)x(\d+)\s+)?(\d+)min/i);
       if (match) {
         trote = {

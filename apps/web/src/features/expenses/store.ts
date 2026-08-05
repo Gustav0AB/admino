@@ -313,26 +313,22 @@ export const useExpensesStore = create<ExpensesState>()(
           for (const r of s.recurringExpenses) {
             if (r.cancelledMonths.includes(month)) continue;
 
-            // Skip completed installments
             const totalInst = r.totalInstallments;
             const paidInst = r.paidInstallments ?? 0;
             if (totalInst !== undefined && paidInst >= totalInst) continue;
 
-            // Skip if past expiration date (month-level check for monthly type)
             if (r.expirationDate && r.schedulingType !== "interval") {
               const exp = new Date(r.expirationDate + "T12:00:00");
               const monthStart = new Date(year, monthIndex, 1);
               if (monthStart > exp) continue;
             }
 
-            // Determine which days to fire
             let daysToUse: number[] = [];
             if (!r.schedulingType || r.schedulingType === "monthly") {
               daysToUse = r.days;
             } else if (r.schedulingType === "interval" && r.startDate) {
               if (r.intervalDays) {
                 daysToUse = getIntervalDaysInMonth(r.startDate, r.intervalDays, year, monthIndex);
-                // Filter each occurrence against expiration
                 if (r.expirationDate) {
                   const exp = new Date(r.expirationDate + "T12:00:00");
                   daysToUse = daysToUse.filter((d) => new Date(year, monthIndex, d) <= exp);
@@ -350,7 +346,6 @@ export const useExpensesStore = create<ExpensesState>()(
               }
             }
 
-            // Respect remaining installments limit
             const remaining = totalInst !== undefined ? totalInst - paidInst : Infinity;
             let generated = 0;
 
@@ -574,7 +569,7 @@ export const useExpensesStore = create<ExpensesState>()(
           ];
         }
         const yr = currentYear();
-        // Migrate: add año to expenses that lack it, normalize activatedMonths to "Mes-YYYY" format
+        // Migra datos viejos sin año y meses activados guardados solo como "Mes".
         const expenses = (data.expenses ?? []).map((e) =>
           e.año !== undefined ? e : { ...e, año: yr }
         );

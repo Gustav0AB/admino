@@ -4,6 +4,13 @@ import { useAuth } from "@/shared/hooks/useAuth";
 import { navItems } from "../navItems";
 import { routes } from "../routes";
 
+const ROLE_LABELS = {
+  SYSTEM_ADMIN: "Administrador del sistema",
+  OWNER: "Propietario",
+  ADMIN: "Administrador",
+  MEMBER: "Miembro",
+} as const;
+
 export function Sidebar() {
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(true);
@@ -31,30 +38,22 @@ export function Sidebar() {
       <div className="app-brand" style={{ justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
           <span className="app-brand-mark">A</span>
-          <span>Admino</span>
+          <span className="app-brand-name">Admino</span>
         </div>
         <button
           type="button"
+          className="app-sidebar-toggle"
           onClick={() => setIsOpen((current) => !current)}
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            color: "var(--color-primary)",
-            padding: "0.25rem",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-          title={isOpen ? "Collapse sidebar" : "Expand sidebar"}
+          aria-label={isOpen ? "Contraer menú" : "Expandir menú"}
+          title={isOpen ? "Contraer menú" : "Expandir menú"}
         >
-          <span aria-hidden>{isOpen ? "<" : ">"}</span>
+          <MenuIcon />
         </button>
       </div>
 
       <div className="app-user">
         <div className="app-user-name">{user?.name}</div>
-        <div className="app-user-role">{user?.role}</div>
+        <div className="app-user-role">{user ? ROLE_LABELS[user.role] : ""}</div>
       </div>
 
       <nav className="app-nav">
@@ -68,7 +67,7 @@ export function Sidebar() {
             >
               <span className="app-nav-icon">{item.icon}</span>
               <span className="app-nav-label">{item.label}</span>
-              <span className="app-nav-caret">{openGroup === item.label ? "⌃" : "⌄"}</span>
+              <span className={`app-nav-caret ${openGroup === item.label ? "open" : ""}`} aria-hidden="true" />
             </button>
             {openGroup === item.label && (
               <div className="app-nav-children">
@@ -97,10 +96,26 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <button type="button" className="app-logout" onClick={signOut} title="Logout">
-        <span className="app-nav-icon">L</span>
-        <span className="app-nav-label">Logout</span>
+      <button type="button" className="app-logout" onClick={signOut} title="Cerrar sesión">
+        <span className="app-nav-icon"><LogoutIcon /></span>
+        <span className="app-nav-label">Cerrar sesión</span>
       </button>
     </aside>
+  );
+}
+
+function MenuIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 7h16M4 12h16M4 17h16" />
+    </svg>
+  );
+}
+
+function LogoutIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M10 5H5v14h5M14 8l4 4-4 4M8 12h10" />
+    </svg>
   );
 }

@@ -79,7 +79,7 @@ export function IncomesTab() {
     <div className="flex flex-col gap-4 p-4">
       <div className="flex items-center justify-between gap-3">
         <Dropdown value={selectedMes} options={MES_OPTIONS} onChange={setSelectedMes} />
-        <Button size="sm" onClick={openAdd}>+ Ingreso</Button>
+        <Button size="sm" onClick={openAdd}>Ingreso</Button>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
@@ -184,15 +184,15 @@ function IncomeRow({ income, onEdit, onRemove, onToggleEstado }: { income: Incom
             <span className={`text-xs ${isRecibido ? "text-green-600" : "text-gray-500"}`}>{isRecibido ? "Recibido" : "Pendiente"}</span>
           </div>
         </div>
-        <p className="font-bold text-green-600">+${formatMXN(income.monto)}</p>
-        <Button size="sm" variant="ghost" onClick={onEdit}>✎</Button>
+        <p className="font-bold text-green-600">${formatMXN(income.monto)}</p>
+        <Button size="sm" variant="ghost" onClick={onEdit}>Editar</Button>
         {confirmRemove ? (
           <div className="flex gap-2 text-sm">
             <button type="button" className="font-semibold text-red-600" onClick={onRemove}>Sí</button>
             <button type="button" className="text-gray-500" onClick={() => setConfirmRemove(false)}>No</button>
           </div>
         ) : (
-          <Button size="sm" variant="ghost" onClick={() => setConfirmRemove(true)}>✕</Button>
+          <Button size="sm" variant="ghost" onClick={() => setConfirmRemove(true)}>Eliminar</Button>
         )}
       </div>
     </Card>
