@@ -1,7 +1,12 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { authService } from "@/shared/services/authService";
-import type { AuthSession, LoginCredentials, User, UserRole } from "@/shared/types/auth";
+import type {
+  AuthSession,
+  LoginCredentials,
+  User,
+  UserRole,
+} from "@/shared/types/auth";
 
 function getExpensesStore() {
   try {
@@ -135,6 +140,6 @@ export const useAuthStore = create<AuthState>()(
         }
         state?.setHasHydrated(true);
       },
-    }
-  )
+    },
+  ),
 );
