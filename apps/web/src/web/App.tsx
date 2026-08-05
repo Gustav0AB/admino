@@ -63,7 +63,8 @@ function AppRoutes() {
             <Route path={routes.expensesCuentas} element={<RoleRoute roles={["SYSTEM_ADMIN", "OWNER", "ADMIN"]}><ExpensesScreen activeTab="cuentas" /></RoleRoute>} />
             <Route path={routes.expensesVacaciones} element={<RoleRoute roles={["SYSTEM_ADMIN", "OWNER", "ADMIN"]}><ExpensesScreen activeTab="vacaciones" /></RoleRoute>} />
             <Route path={routes.expensesResumen} element={<RoleRoute roles={["SYSTEM_ADMIN", "OWNER", "ADMIN"]}><ExpensesScreen activeTab="resumen" /></RoleRoute>} />
-            <Route path={routes.assistant} element={<RoleRoute roles={["SYSTEM_ADMIN", "OWNER", "ADMIN"]}><AssistantScreen /></RoleRoute>} />
+            <Route path={routes.notes} element={<RoleRoute roles={["SYSTEM_ADMIN", "OWNER", "ADMIN"]}><AssistantScreen /></RoleRoute>} />
+            <Route path={routes.assistant} element={<Navigate to={routes.notes} replace />} />
             <Route path={routes.athleteDashboard} element={<RoleRoute roles={["SYSTEM_ADMIN", "OWNER", "ADMIN"]}><AthleteDashboardScreen /></RoleRoute>} />
             <Route path={routes.athleteDashboardAthletes} element={<RoleRoute roles={["SYSTEM_ADMIN", "OWNER", "ADMIN"]}><AthletesTab /></RoleRoute>} />
             <Route path={routes.athleteTracker} element={<RoleRoute roles={["MEMBER"]}><AthleteTrackerScreen /></RoleRoute>} />

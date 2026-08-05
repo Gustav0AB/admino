@@ -36,13 +36,9 @@ export async function httpClient<T>(
     throw new ApiError(401, "Unauthorized");
   }
 
-  if (response.status >= 500) {
-    throw new ApiError(response.status, "Server error");
-  }
-
   if (!response.ok) {
-    const body = await response.json().catch(() => ({})) as { message?: string };
-    throw new ApiError(response.status, body.message ?? "Request failed");
+    const body = await response.json().catch(() => ({})) as { error?: string; message?: string };
+    throw new ApiError(response.status, body.error ?? body.message ?? "Request failed");
   }
 
   return response.json() as Promise<T>;

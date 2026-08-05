@@ -48,10 +48,10 @@ export const navItems: NavItem[] = [
     ],
   },
   {
-    label: "Asistente",
-    to: routes.assistant,
+    label: "Notas",
+    to: routes.notes,
     roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN"],
-    icon: <Icon><path d="M12 3a7 7 0 0 0-7 7v3a4 4 0 0 0 4 4h1v-5H7v-2a5 5 0 0 1 10 0v2h-3v5h1a4 4 0 0 0 4-4v-3a7 7 0 0 0-7-7zM9 20h6" /></Icon>,
+    icon: <Icon><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5" /></Icon>,
   },
   {
     label: "Planes",

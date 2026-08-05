@@ -637,10 +637,82 @@ button.add-tile:hover {
 }
 
 .assistant-content {
+  display: grid;
+  grid-template-columns: minmax(20rem, 0.9fr) minmax(0, 1.4fr);
+  gap: 1rem;
+  width: 100%;
+}
+
+.assistant-input-panel,
+.assistant-results-panel {
+  min-height: 0;
+}
+
+.assistant-results-panel > div {
+  height: 100%;
+}
+
+.assistant-input-panel {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  width: min(100%, 56rem);
+  overflow-y: auto;
+}
+
+.assistant-results-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  overflow-y: auto;
+}
+
+.assistant-notes-input {
+  min-height: clamp(16rem, 45vh, 32rem);
+  resize: vertical;
+}
+
+.saved-notes-list {
+  display: flex;
+  max-height: 18rem;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow-y: auto;
+}
+
+.saved-note {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.5rem;
+}
+
+.saved-note-main {
+  min-width: 0;
+  flex: 1;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+}
+
+.saved-note-main span,
+.saved-note-main strong {
+  display: block;
+}
+
+.saved-note-main span {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.saved-note-main strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 0.875rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .filter-bar {
@@ -1027,6 +1099,14 @@ button.add-tile:hover {
 @media (max-width: 900px) {
   .calendar-form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .assistant-content {
+    grid-template-columns: 1fr;
+  }
+
+  .assistant-notes-input {
+    min-height: 14rem;
   }
 }
 

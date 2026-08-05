@@ -11,6 +11,7 @@ export const routes = {
   expensesCuentas: "/expenses/cuentas",
   expensesVacaciones: "/expenses/vacaciones",
   expensesResumen: "/expenses/resumen",
+  notes: "/notes",
   assistant: "/assistant",
   athleteDashboard: "/athlete-dashboard",
   athleteDashboardAthletes: "/athlete-dashboard/athletes",

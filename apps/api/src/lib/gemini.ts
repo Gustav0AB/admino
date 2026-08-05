@@ -2,6 +2,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { env } from "@config/env";
 
 const USE_MOCK = !env.geminiApiKey;
+const GEMINI_MODEL = "gemini-3.6-flash";
 let client: GoogleGenerativeAI | null = null;
 
 function getClient() {
@@ -31,7 +32,7 @@ export async function analyzeNotes(notes: string): Promise<AnalysisResult> {
 
   const client = getClient();
   if (!client) throw new Error("Gemini client not initialized");
-  const model = client.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = client.getGenerativeModel({ model: GEMINI_MODEL });
 
   const prompt = `Analiza las siguientes notas desorganizadas y extrae:
 1. Gastos (con monto, frecuencia y fecha si aplica)
@@ -83,7 +84,7 @@ export async function getStructuringOptions(analysisResult: AnalysisResult): Pro
 
   const client = getClient();
   if (!client) throw new Error("Gemini client not initialized");
-  const model = client.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = client.getGenerativeModel({ model: GEMINI_MODEL });
 
   const prompt = `Basado en este análisis de notas:
 ${JSON.stringify(analysisResult, null, 2)}
@@ -124,7 +125,7 @@ export async function getSuggestions(analysisResult: AnalysisResult): Promise<Su
 
   const client = getClient();
   if (!client) throw new Error("Gemini client not initialized");
-  const model = client.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = client.getGenerativeModel({ model: GEMINI_MODEL });
 
   const prompt = `Basado en este análisis financiero y de tareas:
 ${JSON.stringify(analysisResult, null, 2)}

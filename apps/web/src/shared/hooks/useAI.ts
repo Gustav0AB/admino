@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { httpClient } from "@/shared/api/client";
+import { ENV } from "@/shared/config/env";
 
 export interface AnalysisResult {
   categories: {
@@ -26,19 +28,11 @@ export function useAI() {
     setError(null);
 
     try {
-      const response = await fetch("/api/v1/ai/analyze", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ notes }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Error de API: ${response.statusText}`);
+      if (ENV.USE_MOCK) {
+        return getMockAnalysisResult(notes);
       }
 
-      const data: APIResponse<AnalysisResult> = await response.json();
+      const data = await httpClient<APIResponse<AnalysisResult>>("/ai/analyze", { method: "POST", body: { notes } });
 
       if (!data.success) {
         throw new Error(data.error || "No se pudieron analizar las notas");
@@ -58,5 +52,21 @@ export function useAI() {
     loading,
     error,
     analyzeNotes,
+  };
+}
+
+function getMockAnalysisResult(notes: string): AnalysisResult {
+  return {
+    categories: {
+      gastos: [
+        { item: "Limpieza", monto: 600, frecuencia: "Quincena", fecha: "15 y 30" },
+        { item: "Spotify", monto: 239, frecuencia: "Mes", fecha: "7" },
+      ],
+      tareas: [{ tarea: "Pagar tarjeta", fechaVencimiento: "2026-11-30", prioridad: "alta" }],
+      recordatorios: [],
+      deseos: [{ deseo: "iPhone 16", estimadoCosto: 15000 }],
+    },
+    summary: `Análisis demo de ${notes.length} caracteres.`,
+    suggestions: ["Cambiar VITE_API_MODE=LIVE para usar Gemini real."],
   };
 }
