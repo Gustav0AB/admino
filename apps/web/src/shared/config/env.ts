@@ -15,6 +15,6 @@ const resolveApiMode = (): ApiMode => {
 const API_MODE = resolveApiMode();
 
 export const ENV = {
-  API_URL: import.meta.env.VITE_API_URL ?? "http://localhost:3000/api/v1",
+  API_URL: import.meta.env.VITE_API_URL ?? "/api/v1",
   USE_MOCK: API_MODE === "MOCK",
 } as const;

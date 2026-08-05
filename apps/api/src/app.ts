@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+import fs from "node:fs";
+import path from "node:path";
 import { env } from "@config/env";
 import { requestLogger, errorLogger } from "@middleware/logger";
 import { responseWrapper } from "@middleware/response";
@@ -39,6 +41,17 @@ export function createApp() {
 
   // ── Health check ─────────────────────────────────────────────────────────
   app.get("/health", (_req, res) => res.json({ status: "ok" }));
+
+  app.use("/api/v1", (_req, res) => {
+    res.status(404).json({ statusCode: 404, message: "Not Found", error: "Not Found", timestamp: new Date().toISOString(), path: _req.path });
+  });
+
+  const webDist = path.resolve(__dirname, "../../web/dist");
+  const indexHtml = path.join(webDist, "index.html");
+  if (fs.existsSync(indexHtml)) {
+    app.use(express.static(webDist));
+    app.get("*", (_req, res) => res.sendFile(indexHtml));
+  }
 
   // ── 404 ───────────────────────────────────────────────────────────────────
   app.use((_req, res) => {
