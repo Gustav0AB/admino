@@ -154,54 +154,54 @@ export function AssistantScreen() {
         <section className="assistant-results-panel">
           {analysis ? (
             <>
-            <Card>
-              <p className="analysis-summary">{analysis.summary}</p>
-            </Card>
-
-            {gastos.length > 0 && (
               <Card>
-                <div className="flex flex-col gap-3">
-                  <h3 className="text-sm font-bold text-gray-900">Gastos detectados</h3>
-                  {gastos.map((g, i) => (
-                    <div key={i} className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-2">
-                      <div>
-                        <p className="font-semibold text-gray-900">{g.item} · ${g.monto}</p>
-                        <p className="text-xs text-gray-500">{g.frecuencia}{g.fecha ? ` · ${g.fecha}` : ""}</p>
+                <p className="analysis-summary">{analysis.summary}</p>
+              </Card>
+
+              {gastos.length > 0 && (
+                <Card>
+                  <div className="flex flex-col gap-3">
+                    <h3 className="text-sm font-bold text-gray-900">Gastos detectados</h3>
+                    {gastos.map((g, i) => (
+                      <div key={i} className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-2">
+                        <div>
+                          <p className="font-semibold text-gray-900">{g.item} · ${g.monto}</p>
+                          <p className="text-xs text-gray-500">{g.frecuencia}{g.fecha ? ` · ${g.fecha}` : ""}</p>
+                        </div>
+                        <Dropdown
+                          value={destinos[i] ?? "mes"}
+                          options={DESTINO_OPTIONS}
+                          onChange={(value) => setDestinos((current) => ({ ...current, [i]: value as Destino }))}
+                        />
                       </div>
-                      <Dropdown
-                        value={destinos[i] ?? "mes"}
-                        options={DESTINO_OPTIONS}
-                        onChange={(value) => setDestinos((current) => ({ ...current, [i]: value as Destino }))}
-                      />
+                    ))}
+                    <div className="flex justify-end">
+                      <Button size="sm" onClick={handleApply} disabled={toAddCount === 0}>
+                        Agregar {toAddCount > 0 ? `(${toAddCount})` : ""}
+                      </Button>
                     </div>
-                  ))}
-                  <div className="flex justify-end">
-                    <Button size="sm" onClick={handleApply} disabled={toAddCount === 0}>
-                      Agregar {toAddCount > 0 ? `(${toAddCount})` : ""}
-                    </Button>
                   </div>
-                </div>
-              </Card>
-            )}
+                </Card>
+              )}
 
-            {(analysis.categories.tareas?.length || analysis.categories.recordatorios?.length || analysis.categories.deseos?.length) ? (
-              <Card>
-                <div className="flex flex-col gap-3 text-sm">
-                  {analysis.categories.tareas?.map((t, i) => <p key={`t${i}`}>{t.tarea}{t.fechaVencimiento ? ` · ${t.fechaVencimiento}` : ""} <span className={`priority priority-${t.prioridad}`}>{t.prioridad}</span></p>)}
-                  {analysis.categories.recordatorios?.map((r, i) => <p key={`r${i}`}>{r.recordatorio} · {r.fecha}</p>)}
-                  {analysis.categories.deseos?.map((d, i) => <p key={`d${i}`}>{d.deseo}{d.estimadoCosto ? ` · ~$${d.estimadoCosto}` : ""}</p>)}
-                </div>
-              </Card>
-            ) : null}
+              {(analysis.categories.tareas?.length || analysis.categories.recordatorios?.length || analysis.categories.deseos?.length) ? (
+                <Card>
+                  <div className="flex flex-col gap-3 text-sm">
+                    {analysis.categories.tareas?.map((t, i) => <p key={`t${i}`}>{t.tarea}{t.fechaVencimiento ? ` · ${t.fechaVencimiento}` : ""} <span className={`priority priority-${t.prioridad}`}>{t.prioridad}</span></p>)}
+                    {analysis.categories.recordatorios?.map((r, i) => <p key={`r${i}`}>{r.recordatorio} · {r.fecha}</p>)}
+                    {analysis.categories.deseos?.map((d, i) => <p key={`d${i}`}>{d.deseo}{d.estimadoCosto ? ` · ~$${d.estimadoCosto}` : ""}</p>)}
+                  </div>
+                </Card>
+              ) : null}
 
-            {analysis.suggestions?.length > 0 && (
-              <Card>
-                <h3 className="text-sm font-bold text-gray-900">Sugerencias</h3>
-                <ul className="suggestions-list">
-                  {analysis.suggestions.map((s, i) => <li key={i}>{s}</li>)}
-                </ul>
-              </Card>
-            )}
+              {analysis.suggestions?.length > 0 && (
+                <Card>
+                  <h3 className="text-sm font-bold text-gray-900">Sugerencias</h3>
+                  <ul className="suggestions-list">
+                    {analysis.suggestions.map((s, i) => <li key={i}>{s}</li>)}
+                  </ul>
+                </Card>
+              )}
             </>
           ) : (
             <Card>

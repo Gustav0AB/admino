@@ -648,10 +648,6 @@ button.add-tile:hover {
   min-height: 0;
 }
 
-.assistant-results-panel > div {
-  height: 100%;
-}
-
 .assistant-input-panel {
   display: flex;
   flex-direction: column;
