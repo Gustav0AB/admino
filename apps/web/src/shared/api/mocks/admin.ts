@@ -44,7 +44,7 @@ export const mockAdminOrgs: AdminOrg[] = [
 
 export const mockAdminOrgDetail: AdminOrgDetail = {
   ...mockAdminOrgs[0]!,
-  members: [
+  clientMembers: [
     {
       id: "mem-1",
       name: "Sam Coach",

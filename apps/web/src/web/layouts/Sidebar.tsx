@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { LogOut, Menu } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { navItems } from "../navItems";
@@ -22,20 +23,26 @@ export function Sidebar() {
     () => navItems.filter((item) => user && item.roles.includes(user.role)),
     [user]
   );
+  const activeGroup = visibleItems.find((item) => item.children?.some((child) => child.to === pathname));
+  const activeGroupLabel = activeGroup?.label;
 
   useEffect(() => {
-    const activeGroup = visibleItems.find((item) => item.children?.some((child) => child.to === pathname));
-    if (activeGroup) setOpenGroup(activeGroup.label);
-  }, [pathname, visibleItems]);
+    if (activeGroupLabel) setOpenGroup(activeGroupLabel);
+  }, [activeGroupLabel]);
 
   function signOut() {
     logout();
     navigate(routes.login, { replace: true });
   }
 
+  function toggleGroup(label: string) {
+    if (!isOpen) setIsOpen(true);
+    setOpenGroup((current) => current === label ? null : label);
+  }
+
   return (
     <aside className={`app-sidebar ${!isOpen ? "collapsed" : ""}`}>
-      <div className="app-brand" style={{ justifyContent: "space-between" }}>
+      <div className="app-brand">
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
           <span className="app-brand-mark">A</span>
           <span className="app-brand-name">Admino</span>
@@ -47,7 +54,7 @@ export function Sidebar() {
           aria-label={isOpen ? "Contraer menú" : "Expandir menú"}
           title={isOpen ? "Contraer menú" : "Expandir menú"}
         >
-          <MenuIcon />
+          <Menu />
         </button>
       </div>
 
@@ -61,8 +68,8 @@ export function Sidebar() {
           <div key={item.label} className="app-nav-group">
             <button
               type="button"
-              className={`app-nav-item app-nav-group-button ${openGroup === item.label ? "app-nav-item-active" : ""}`}
-              onClick={() => setOpenGroup((current) => current === item.label ? null : item.label)}
+              className={`app-nav-item app-nav-group-button ${activeGroupLabel === item.label ? "app-nav-item-active" : ""}`}
+              onClick={() => toggleGroup(item.label)}
               title={item.label}
             >
               <span className="app-nav-icon">{item.icon}</span>
@@ -75,6 +82,7 @@ export function Sidebar() {
                   <NavLink
                     key={child.to}
                     to={child.to}
+                    end
                     className={({ isActive }) => `app-nav-item app-nav-subitem ${isActive ? "app-nav-item-active" : ""}`}
                   >
                     {child.label}
@@ -97,25 +105,9 @@ export function Sidebar() {
       </nav>
 
       <button type="button" className="app-logout" onClick={signOut} title="Cerrar sesión">
-        <span className="app-nav-icon"><LogoutIcon /></span>
+        <span className="app-nav-icon"><LogOut /></span>
         <span className="app-nav-label">Cerrar sesión</span>
       </button>
     </aside>
-  );
-}
-
-function MenuIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M4 7h16M4 12h16M4 17h16" />
-    </svg>
-  );
-}
-
-function LogoutIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M10 5H5v14h5M14 8l4 4-4 4M8 12h10" />
-    </svg>
   );
 }

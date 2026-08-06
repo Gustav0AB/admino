@@ -307,10 +307,7 @@ export function AdminScreen({ activeTab = "orgs" }: { activeTab?: AdminTab }) {
   return (
     <div className="page feature-page">
       <header className="feature-header">
-        <div>
-          <p className="eyebrow">Panel de administración</p>
-          <h1 className="page-title">{ADMIN_TABS.find((tab) => tab.key === activeTab)?.label}</h1>
-        </div>
+        <h1 className="page-title">Panel de administración · {ADMIN_TABS.find((tab) => tab.key === activeTab)?.label}</h1>
       </header>
       <section className="feature-content">
         {activeTab === "orgs" ? <OrganizationsTab /> : <AuditLogsTab />}

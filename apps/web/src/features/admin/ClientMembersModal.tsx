@@ -32,10 +32,10 @@ export function ClientMembersModal({ open, onClose, orgDetail, isLoading, onImpe
         <p className="py-10 text-center text-sm text-gray-500">Cargando…</p>
       ) : (
         <div className="flex max-h-[420px] flex-col gap-2 overflow-y-auto">
-          {orgDetail?.members.length === 0 && (
+          {orgDetail?.clientMembers.length === 0 && (
             <p className="py-8 text-center text-sm text-gray-500">Sin miembros</p>
           )}
-          {orgDetail?.members.map((member) => (
+          {orgDetail?.clientMembers.map((member) => (
             <Card key={member.id} padding="sm" className={member.isActive ? "" : "opacity-60"}>
               <div className="flex items-center gap-3">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">

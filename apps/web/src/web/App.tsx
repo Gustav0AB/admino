@@ -57,12 +57,7 @@ function AppRoutes() {
             <Route path={routes.dashboard} element={<DashboardPage />} />
             <Route path={routes.admin} element={<RoleRoute roles={["SYSTEM_ADMIN"]}><AdminScreen activeTab="orgs" /></RoleRoute>} />
             <Route path={routes.adminLogs} element={<RoleRoute roles={["SYSTEM_ADMIN"]}><AdminScreen activeTab="logs" /></RoleRoute>} />
-            <Route path={routes.expenses} element={<RoleRoute roles={["SYSTEM_ADMIN", "OWNER", "ADMIN"]}><ExpensesScreen activeTab="gastos" /></RoleRoute>} />
-            <Route path={routes.expensesFijos} element={<RoleRoute roles={["SYSTEM_ADMIN", "OWNER", "ADMIN"]}><ExpensesScreen activeTab="fijos" /></RoleRoute>} />
-            <Route path={routes.expensesIngresos} element={<RoleRoute roles={["SYSTEM_ADMIN", "OWNER", "ADMIN"]}><ExpensesScreen activeTab="ingresos" /></RoleRoute>} />
-            <Route path={routes.expensesCuentas} element={<RoleRoute roles={["SYSTEM_ADMIN", "OWNER", "ADMIN"]}><ExpensesScreen activeTab="cuentas" /></RoleRoute>} />
-            <Route path={routes.expensesVacaciones} element={<RoleRoute roles={["SYSTEM_ADMIN", "OWNER", "ADMIN"]}><ExpensesScreen activeTab="vacaciones" /></RoleRoute>} />
-            <Route path={routes.expensesResumen} element={<RoleRoute roles={["SYSTEM_ADMIN", "OWNER", "ADMIN"]}><ExpensesScreen activeTab="resumen" /></RoleRoute>} />
+            <Route path={routes.expenses} element={<RoleRoute roles={["SYSTEM_ADMIN", "OWNER", "ADMIN"]}><ExpensesScreen /></RoleRoute>} />
             <Route path={routes.notes} element={<RoleRoute roles={["SYSTEM_ADMIN", "OWNER", "ADMIN"]}><AssistantScreen /></RoleRoute>} />
             <Route path={routes.assistant} element={<Navigate to={routes.notes} replace />} />
             <Route path={routes.athleteDashboard} element={<RoleRoute roles={["SYSTEM_ADMIN", "OWNER", "ADMIN"]}><AthleteDashboardScreen /></RoleRoute>} />

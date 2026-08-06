@@ -6,9 +6,9 @@ export const expensesApi = {
   get: () =>
     ENV.USE_MOCK
       ? Promise.resolve({ data: {} })
-      : httpClient<{ data: AppData | Record<string, never> }>("/expenses"),
+      : httpClient<AppData | Record<string, never>>("/expenses").then((data) => ({ data })),
   put: (data: AppData) =>
     ENV.USE_MOCK
       ? Promise.resolve({ data })
-      : httpClient<{ data: AppData }>("/expenses", { method: "PUT", body: data }),
+      : httpClient<AppData>("/expenses", { method: "PUT", body: data }).then((data) => ({ data })),
 };

@@ -228,10 +228,7 @@ export function AthletesTab() {
   return (
     <div className="page feature-page">
       <header className="feature-header">
-        <div>
-          <p className="eyebrow">Planes</p>
-          <h1 className="page-title">Atletas</h1>
-        </div>
+        <h1 className="page-title">Planes · Atletas</h1>
       </header>
       <div className="tabs">
         {(["general", "tracker"] as const).map((tab) => (

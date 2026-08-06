@@ -34,7 +34,7 @@ export type AdminOrgMember = {
 };
 
 export type AdminOrgDetail = AdminOrg & {
-  members: AdminOrgMember[];
+  clientMembers: AdminOrgMember[];
 };
 
 export type AuditLog = {

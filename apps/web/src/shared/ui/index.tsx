@@ -1,5 +1,7 @@
 import {
   useEffect,
+  useMemo,
+  useRef,
   useState,
   type ButtonHTMLAttributes,
   type HTMLAttributes,
@@ -7,6 +9,7 @@ import {
   type ReactNode,
   type SelectHTMLAttributes,
 } from "react";
+import { CalendarDays, ChevronLeft, ChevronRight, LoaderCircle, X } from "lucide-react";
 
 const classes = (...values: (string | false | undefined)[]) => values.filter(Boolean).join(" ");
 
@@ -53,16 +56,13 @@ export function Button({ variant = "primary", size = "md", loading = false, load
 }
 
 function Spinner() {
-  return <svg className="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden>
-    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-  </svg>;
+  return <LoaderCircle className="mr-2 h-4 w-4 animate-spin" aria-hidden />;
 }
 
 type CardProps = HTMLAttributes<HTMLDivElement> & { padding?: "none" | "sm" | "md" | "lg" };
 const cardPadding = { none: "", sm: "p-4", md: "p-6", lg: "p-8" };
 export function Card({ children, padding = "md", className = "", ...props }: CardProps) {
-  return <div className={classes("rounded-xl border border-gray-200 bg-white shadow-sm", cardPadding[padding], className)} {...props}>{children}</div>;
+  return <div className={classes("ui-card", cardPadding[padding], className)} {...props}>{children}</div>;
 }
 
 type DropdownOption<T extends string = string> = { label: string; value: T };
@@ -147,16 +147,12 @@ export function Modal({ open, onClose, title, children, footer, closeLabel = "Ce
     <div className="relative z-10 flex max-h-[90vh] w-full max-w-lg flex-col rounded-xl border border-gray-200 bg-white shadow-xl" role="dialog" aria-modal="true" aria-labelledby="components-modal-title">
       <div className="flex shrink-0 items-center justify-between border-b border-gray-200 px-6 py-4">
         <h2 id="components-modal-title" className="text-base font-semibold text-gray-900">{title}</h2>
-        <button type="button" onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700" aria-label={closeLabel}><CloseIcon /></button>
+        <button type="button" onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700" aria-label={closeLabel}><X className="h-5 w-5" aria-hidden /></button>
       </div>
       <div className="flex-1 overflow-y-auto px-6 py-4">{children}</div>
       {footer && <div className="flex shrink-0 justify-end gap-3 border-t border-gray-200 px-6 py-4">{footer}</div>}
     </div>
   </div>;
-}
-
-function CloseIcon() {
-  return <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>;
 }
 
 type ConfirmModalProps = {
@@ -201,26 +197,26 @@ export function Table<T extends Record<string, unknown>>({ columns, rows, keyExt
   const visible = paginated ? rows.slice(page * size, (page + 1) * size) : rows;
   const from = rows.length ? page * size + 1 : 0;
   const to = Math.min((page + 1) * size, rows.length);
-  return <div className="space-y-2">
-    <div className="overflow-x-auto rounded-lg border border-gray-200"><table className="min-w-full divide-y divide-gray-200 bg-white text-sm">
-      <thead className="bg-gray-50"><tr>{columns.map((column) => <th key={column.key} className={classes("px-4 py-3 font-medium text-gray-600", alignment[column.align ?? "left"])}>{column.header}</th>)}</tr></thead>
-      <tbody className="divide-y divide-gray-100">
+  return <div className="ui-table-block">
+    <div className="ui-table-scroll"><table className="ui-table">
+      <thead><tr>{columns.map((column) => <th key={column.key} className={alignment[column.align ?? "left"]}>{column.header}</th>)}</tr></thead>
+      <tbody>
         {loading ? <TableMessage span={columns.length}>{text.loading}</TableMessage>
           : !rows.length ? <TableMessage span={columns.length}>{emptyText ?? text.noData}</TableMessage>
-          : visible.map((row, index) => <tr key={keyExtractor(row, index)} className="transition-colors hover:bg-gray-50">
-            {columns.map((column) => <td key={column.key} className={classes("px-4 py-3 text-gray-700", alignment[column.align ?? "left"])}>
+          : visible.map((row, index) => <tr key={keyExtractor(row, index)}>
+            {columns.map((column) => <td key={column.key} className={alignment[column.align ?? "left"]}>
               {column.render ? column.render(row, index) : String(row[column.key] ?? "")}
             </td>)}
           </tr>)}
       </tbody>
     </table></div>
-    {paginated && !loading && rows.length > 0 && <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-sm text-gray-500">
-      <div className="flex items-center gap-2"><span>{text.rowsPerPage}</span><select value={size} onChange={(event) => setSize(Number(event.target.value))} className="rounded border border-gray-200 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+    {paginated && !loading && rows.length > 0 && <div className="ui-table-footer">
+      <div className="ui-table-page-size"><span>{text.rowsPerPage}</span><select value={size} onChange={(event) => setSize(Number(event.target.value))} className="ui-input">
         {pageSizes.map((value) => <option key={value} value={value}>{value}</option>)}
       </select></div>
-      <div className="flex items-center gap-3"><span>{from}–{to} {text.of} {rows.length}</span><div className="flex items-center gap-1">
+      <div className="ui-table-pagination"><span>{from}-{to} {text.of} {rows.length}</span><div className="ui-table-page-buttons">
         <PageButton label={text.prevPage} disabled={page === 0} onClick={() => setPage((value) => Math.max(0, value - 1))} direction="left" />
-        <span className="min-w-[4rem] text-center">{page + 1} / {totalPages}</span>
+        <span>{page + 1} / {totalPages}</span>
         <PageButton label={text.nextPage} disabled={page >= totalPages - 1} onClick={() => setPage((value) => Math.min(totalPages - 1, value + 1))} direction="right" />
       </div></div>
     </div>}
@@ -228,28 +224,97 @@ export function Table<T extends Record<string, unknown>>({ columns, rows, keyExt
 }
 
 function TableMessage({ span, children }: { span: number; children: ReactNode }) {
-  return <tr><td colSpan={span} className="py-8 text-center text-gray-400">{children}</td></tr>;
+  return <tr><td colSpan={span} className="ui-table-message">{children}</td></tr>;
 }
 function PageButton({ label, disabled, onClick, direction }: { label: string; disabled: boolean; onClick: () => void; direction: "left" | "right" }) {
-  return <button type="button" aria-label={label} disabled={disabled} onClick={onClick} className="rounded p-1 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40">
-    <svg className="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" d={direction === "left" ? "m15 18-6-6 6-6" : "m9 18 6-6-6-6"} /></svg>
+  return <button type="button" aria-label={label} disabled={disabled} onClick={onClick} className="ui-icon-button">
+    {direction === "left" ? <ChevronLeft /> : <ChevronRight />}
   </button>;
 }
 
 type DatePickerProps = {
-  label?: string; value: string; onChange: (value: string) => void;
+  label?: string; value: string; onChange: (value: string) => void; placeholder?: string;
 };
-export function DatePicker({ label, value, onChange }: DatePickerProps) {
-  return <div className="flex flex-col gap-1">
+const WEEK_REF = new Date(2023, 0, 1);
+const locale = "es-MX";
+
+function parseLocal(iso: string) {
+  const [year, month, day] = iso.split("-").map(Number);
+  return new Date(year ?? 0, (month ?? 1) - 1, day ?? 1);
+}
+
+function toISO(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function capitalize(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+export function DatePicker({ label, value, onChange, placeholder = "Selecciona fecha" }: DatePickerProps) {
+  const today = new Date();
+  const [open, setOpen] = useState(false);
+  const [cursor, setCursor] = useState(() => value ? parseLocal(value) : new Date(today.getFullYear(), today.getMonth(), 1));
+  const ref = useRef<HTMLDivElement>(null);
+  const months = useMemo(() => Array.from({ length: 12 }, (_, month) => new Date(2023, month, 1).toLocaleDateString(locale, { month: "long" })), []);
+  const days = useMemo(() => Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(WEEK_REF);
+    date.setDate(WEEK_REF.getDate() + index);
+    return date.toLocaleDateString(locale, { weekday: "short" });
+  }), []);
+
+  useEffect(() => {
+    if (!open) return;
+    function closeOnOutsideClick(event: MouseEvent) {
+      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    return () => document.removeEventListener("mousedown", closeOnOutsideClick);
+  }, [open]);
+
+  const year = cursor.getFullYear();
+  const month = cursor.getMonth();
+  const cells: (number | null)[] = [
+    ...Array<null>(new Date(year, month, 1).getDay()).fill(null),
+    ...Array.from({ length: new Date(year, month + 1, 0).getDate() }, (_, index) => index + 1),
+  ];
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const selected = value ? parseLocal(value) : null;
+  const displayValue = selected ? selected.toLocaleDateString(locale, { day: "2-digit", month: "short", year: "numeric" }) : "";
+  const isSelected = (day: number) => selected && day === selected.getDate() && month === selected.getMonth() && year === selected.getFullYear();
+  const isToday = (day: number) => day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+
+  function select(day: number) {
+    onChange(toISO(new Date(year, month, day)));
+    setOpen(false);
+  }
+
+  return <div className="ui-datepicker" ref={ref}>
     {label && <label className="text-sm font-medium text-gray-700">{label}</label>}
-    <div className="flex gap-2">
-      <input
-        type="date"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="ui-input min-w-0 flex-1"
-      />
-      {value && <Button type="button" variant="ghost" size="sm" onClick={() => onChange("")}>Limpiar</Button>}
-    </div>
+    <button type="button" className="ui-datepicker-trigger" onClick={() => setOpen((current) => !current)}>
+      <span className={displayValue ? "" : "ui-datepicker-placeholder"}>{displayValue || placeholder}</span>
+      <CalendarDays />
+    </button>
+    {open && <div className="ui-datepicker-popover">
+      <div className="ui-datepicker-header">
+        <button type="button" className="ui-icon-button" onClick={() => setCursor(new Date(year, month - 1, 1))} aria-label="Mes anterior"><ChevronLeft /></button>
+        <strong>{capitalize(months[month] ?? "")} {year}</strong>
+        <button type="button" className="ui-icon-button" onClick={() => setCursor(new Date(year, month + 1, 1))} aria-label="Mes siguiente"><ChevronRight /></button>
+      </div>
+      <div className="ui-datepicker-weekdays">{days.map((day) => <span key={day}>{day}</span>)}</div>
+      <div className="ui-datepicker-days">
+        {cells.map((day, index) => <div key={index}>
+          {day !== null && <button
+            type="button"
+            className={classes("ui-datepicker-day", isSelected(day) && "selected", isToday(day) && "today")}
+            onClick={() => select(day)}
+          >
+            {day}
+          </button>}
+        </div>)}
+      </div>
+      {value && <button type="button" className="ui-datepicker-clear" onClick={() => { onChange(""); setOpen(false); }}>Limpiar</button>}
+    </div>}
   </div>;
 }

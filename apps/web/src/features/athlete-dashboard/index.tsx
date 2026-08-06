@@ -4,10 +4,7 @@ export function AthleteDashboardScreen() {
   return (
     <div className="page feature-page">
       <header className="feature-header">
-        <div>
-          <p className="eyebrow">Planes</p>
-          <h1 className="page-title">Calendario</h1>
-        </div>
+        <h1 className="page-title">Planes · Calendario</h1>
       </header>
       <div className="calendar-panel">
         <PlanCalendar />

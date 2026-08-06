@@ -46,7 +46,7 @@ const FEATURE_CARDS: FeatureCard[] = [
 
 export default function DashboardPage() {
   const { user, hasAnyRole } = useAuth();
-  const { hasFeature, branding, features } = useClientStore();
+  const { hasFeature, branding } = useClientStore();
   const isSystemAdmin = user?.role === "SYSTEM_ADMIN";
 
   const visibleCards = FEATURE_CARDS.filter((card) => {
@@ -61,15 +61,7 @@ export default function DashboardPage() {
   return (
     <div className="page">
       <header className="page-header">
-        <p className="eyebrow">{greeting},</p>
-        <h1 className="page-title">
-          {user?.name ?? branding.orgName}
-        </h1>
-        {features.length > 0 && (
-          <p className="page-meta">
-            {features.length} {features.length === 1 ? "servicio activo" : "servicios activos"}
-          </p>
-        )}
+        <h1 className="page-title">{greeting}, {user?.name ?? branding.orgName}</h1>
       </header>
 
       <section className="feature-grid">

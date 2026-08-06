@@ -4,6 +4,7 @@ import { useAI, type AnalysisResult } from "@/shared/hooks/useAI";
 import { useToast } from "@/shared/components/feedback/Toast";
 import { useExpensesStore } from "@/features/expenses/store";
 import { currentMonthName, currentYear } from "@/features/expenses/helpers";
+import { expensesApi } from "@/features/expenses/api";
 import { useAssistantStore } from "./store";
 import type { Frecuencia } from "@/features/expenses/types";
 
@@ -27,6 +28,11 @@ function mapFrecuencia(frecuencia?: string): Frecuencia {
   return "unico";
 }
 
+function defaultDestino(instruction: string): Destino {
+  const text = instruction.toLowerCase();
+  return text.includes("fij") || text.includes("recurrent") ? "fijos" : "mes";
+}
+
 export function AssistantScreen() {
   const toast = useToast();
   const { rawNotes, notes, setRawNotes, saveNote, updateNote, removeNote } = useAssistantStore();
@@ -48,7 +54,7 @@ export function AssistantScreen() {
     if (result) {
       updateNote(noteId, { summary: result.summary });
       setAnalysis(result);
-      setDestinos(Object.fromEntries((result.categories.gastos ?? []).map((_, i) => [i, "mes" as Destino])));
+      setDestinos(Object.fromEntries((result.categories.gastos ?? []).map((_, i) => [i, defaultDestino(cleanInstruction)])));
     }
   }
 
@@ -57,7 +63,7 @@ export function AssistantScreen() {
     [gastos, destinos],
   );
 
-  function handleApply() {
+  async function handleApply() {
     let added = 0;
     gastos.forEach((g, i) => {
       const destino = destinos[i] ?? "mes";
@@ -87,6 +93,14 @@ export function AssistantScreen() {
       }
       added++;
     });
+    if (added > 0) {
+      try {
+        await expensesApi.put(useExpensesStore.getState().getAppData());
+      } catch {
+        toast.error("Se agregó localmente, pero no se pudo guardar en finanzas");
+        return;
+      }
+    }
     toast.success(added > 0 ? `${added} gasto${added === 1 ? "" : "s"} agregado${added === 1 ? "" : "s"}` : "Nada que agregar");
     setAnalysis(null);
     setDestinos({});
@@ -95,10 +109,7 @@ export function AssistantScreen() {
   return (
     <div className="page feature-page">
       <header className="feature-header">
-        <div>
-          <p className="eyebrow">Captura</p>
-          <h1 className="page-title">Notas</h1>
-        </div>
+        <h1 className="page-title">Captura · Notas</h1>
       </header>
 
       <div className="feature-content assistant-content">

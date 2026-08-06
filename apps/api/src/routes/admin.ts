@@ -26,6 +26,7 @@ const createClientSchema = z.object({
 const updateClientSchema = z.object({
   name: z.string().min(1).optional(),
   tipo: z.string().optional(),
+  isActive: z.boolean().optional(),
   clientPermissions: z.array(z.string()).optional(),
   memberPermissions: z.array(z.string()).optional(),
   branding: z
@@ -128,6 +129,7 @@ router.patch("/clients/:id", async (req: Request, res: Response, next: NextFunct
       data: {
         ...(body.name && { name: body.name }),
         ...(body.tipo && { tipo: body.tipo }),
+        ...(body.isActive !== undefined && { isActive: body.isActive }),
         ...(body.clientPermissions && { clientPermissions: body.clientPermissions }),
         ...(body.memberPermissions && { memberPermissions: body.memberPermissions }),
         ...(body.branding && { branding: { ...(client.branding as object), ...body.branding } }),
