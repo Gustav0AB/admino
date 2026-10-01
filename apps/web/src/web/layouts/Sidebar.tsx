@@ -19,11 +19,11 @@ export function Sidebar() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const hasFeature = useClientStore((s) => s.hasFeature);
+  const features = useClientStore((s) => s.features);
 
   const visibleItems = useMemo(
-    () => navItems.filter((item) => user && item.roles.includes(user.role) && (user.role === "SYSTEM_ADMIN" || !item.feature || hasFeature(item.feature))),
-    [hasFeature, user]
+    () => navItems.filter((item) => user && item.roles.includes(user.role) && (user.role === "SYSTEM_ADMIN" || !item.feature || features.includes(item.feature))),
+    [features, user]
   );
   const activeGroup = visibleItems.find((item) => item.children?.some((child) => child.to === pathname));
   const activeGroupLabel = activeGroup?.label;

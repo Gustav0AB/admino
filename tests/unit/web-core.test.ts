@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { daysUntil, formatSpanishDate, parseCellText, randomPhrase, todayIso } from "@features/athlete-tracker/parseWorkout";
-import { buildPlanHtml, calcTotalWeeks, getWeeksForRange, weeksToNextEvent } from "@features/athlete-dashboard/calendar/PlanCalendar/calendarUtils";
+import { buildPlanHtml, buildRepeatedCells, calcTotalWeeks, getWeeksForRange, weeksToNextEvent } from "@features/athlete-dashboard/calendar/PlanCalendar/calendarUtils";
 import { buildAppData, formatMXN, getAccountBalance, getAvailableAños, getAvailableMeses, getBillingCycleStatus, getBillingPeriodCharges, getBillingPeriodLabel, getCreditCycleInfo, getCreditHistory, getCurrentCreditBalance, getFilteredExpenses, getIntervalDaysInMonth, getIntervalMonthDay, getMSIPendingForCard, isCardPayment } from "@features/expenses/helpers";
 
 const expense = (patch: Record<string, unknown> = {}) => ({
@@ -44,6 +44,15 @@ describe("calendar", () => {
     expect(html).toContain("Plan");
     expect(html).toContain("Carrera");
     expect(html).toContain("Fuerza<br/>5x5");
+  });
+
+  it("skips rest days while repeating a pattern", () => {
+    expect(buildRepeatedCells(["Fuerza", null, "Cardio"], "2026-06-01", "2026-06-06")).toEqual({
+      "2026-06-01": "Fuerza",
+      "2026-06-03": "Cardio",
+      "2026-06-04": "Fuerza",
+      "2026-06-06": "Cardio",
+    });
   });
 });
 

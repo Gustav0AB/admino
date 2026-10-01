@@ -44,8 +44,8 @@ function RoleRoute({ roles, children }: { roles: UserRole[]; children: ReactNode
 
 function FeatureRoute({ feature, roles, children }: { feature: ClientFeature; roles: UserRole[]; children: ReactNode }) {
   const { user, hasAnyRole } = useAuth();
-  const hasFeature = useClientStore((s) => s.hasFeature);
-  return hasAnyRole(roles) && (user?.role === "SYSTEM_ADMIN" || hasFeature(feature)) ? children : <Navigate to={routes.dashboard} replace />;
+  const features = useClientStore((s) => s.features);
+  return hasAnyRole(roles) && (user?.role === "SYSTEM_ADMIN" || features.includes(feature)) ? children : <Navigate to={routes.dashboard} replace />;
 }
 
 function AppRoutes() {

@@ -7,10 +7,12 @@ export function useAppLifecycle() {
   const queryClient = useQueryClient();
   const { loadConfig } = useClientStore();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const token = useAuthStore((s) => s.token);
+  const user = useAuthStore((s) => s.user);
 
   useEffect(() => {
     loadConfig();
-  }, [isAuthenticated]);
+  }, [loadConfig, token, user?.orgId, user?.role]);
 
   useEffect(() => {
     if (!isAuthenticated) {

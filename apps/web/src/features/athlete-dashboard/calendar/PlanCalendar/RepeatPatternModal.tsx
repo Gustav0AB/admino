@@ -6,7 +6,7 @@ type RepeatPatternModalProps = {
   open: boolean;
   defaultStartDate: string;
   onClose: () => void;
-  onSave: (templates: string[], startDateIso: string) => void;
+  onSave: (templates: (string | null)[], startDateIso: string) => void;
 };
 
 const MIN_TEMPLATES = 2;
@@ -17,7 +17,7 @@ export function RepeatPatternModal({
   onClose,
   onSave,
 }: RepeatPatternModalProps) {
-  const [templates, setTemplates] = useState<string[]>(["", ""]);
+  const [templates, setTemplates] = useState<(string | null)[]>(["", ""]);
   const [startDate, setStartDate] = useState(defaultStartDate);
 
   useEffect(() => {
@@ -79,9 +79,24 @@ export function RepeatPatternModal({
                 </button>
               )}
             </div>
+            <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700">
+              <input
+                type="checkbox"
+                checked={text === null}
+                onChange={(event) =>
+                  setTemplates((current) =>
+                    current.map((item, i) =>
+                      i === index ? (event.target.checked ? null : "") : item,
+                    ),
+                  )
+                }
+              />
+              Día de descanso
+            </label>
             <textarea
               className="min-h-28 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-              value={text}
+              value={text ?? ""}
+              disabled={text === null}
               onChange={(event) =>
                 setTemplates((current) =>
                   current.map((item, i) =>

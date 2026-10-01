@@ -865,8 +865,9 @@ button.add-tile:hover {
 .page-title {
   margin: 0;
   color: var(--text);
-  font-size: 1rem;
+  font-size: 1.5rem;
   font-weight: 750;
+  line-height: 1.2;
 }
 
 .feature-grid {
@@ -925,6 +926,7 @@ button.add-tile:hover {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  margin-bottom: 1rem;
 }
 
 .feature-content {

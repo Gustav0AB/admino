@@ -53,12 +53,12 @@ const FEATURE_CARDS: FeatureCard[] = [
 
 export default function DashboardPage() {
   const { user, hasAnyRole } = useAuth();
-  const { hasFeature, branding } = useClientStore();
+  const { features, branding } = useClientStore();
   const isSystemAdmin = user?.role === "SYSTEM_ADMIN";
 
   const visibleCards = FEATURE_CARDS.filter((card) => {
     if (!hasAnyRole(card.roles as Parameters<typeof hasAnyRole>[0])) return false;
-    if (card.feature && !isSystemAdmin && !hasFeature(card.feature)) return false;
+    if (card.feature && !isSystemAdmin && !features.includes(card.feature)) return false;
     return true;
   });
 

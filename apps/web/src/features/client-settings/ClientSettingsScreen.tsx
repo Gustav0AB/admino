@@ -50,8 +50,10 @@ export function ClientSettingsScreen() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col   bg-gray-50 p-6">
-      <h1 className="text-2xl font-bold text-gray-900">Configuración</h1>
+    <div className="page feature-page">
+      <header className="feature-header">
+        <h1 className="page-title">Configuración</h1>
+      </header>
 
       <div className="tabs">
         {tabs.map((tab) => (

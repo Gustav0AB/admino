@@ -16,9 +16,9 @@ export function MembersScreen() {
   const openAtletaCreate = useRef<() => void>(() => {});
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-gray-50 p-6">
-      <header className="flex items-center justify-between  ">
-        <h1 className="text-2xl font-bold text-gray-900">Miembros</h1>
+    <div className="page feature-page">
+      <header className="feature-header">
+        <h1 className="page-title">Miembros</h1>
         <Button
           size="sm"
           onClick={() =>

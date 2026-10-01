@@ -74,6 +74,21 @@ export function calcTotalWeeks(startDate: string, endDate: string): number {
   return Math.max(1, Math.ceil(diff / (7 * 24 * 60 * 60 * 1000)));
 }
 
+export function buildRepeatedCells(templates: (string | null)[], startDate: string, endDate: string): Record<string, string> {
+  if (templates.length === 0) return {};
+  const cursor = isoToLocalDate(startDate);
+  const end = isoToLocalDate(endDate);
+  const cells: Record<string, string> = {};
+  let index = 0;
+  while (cursor <= end) {
+    const template = templates[index % templates.length];
+    if (template !== null) cells[toIso(cursor)] = template ?? "";
+    cursor.setDate(cursor.getDate() + 1);
+    index++;
+  }
+  return cells;
+}
+
 export function weeksToNextEvent(events: CalendarEvent[], today = new Date()): number | null {
   const todayIso = toIso(today);
   const upcoming = events

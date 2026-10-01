@@ -207,6 +207,9 @@ export function AthleteTrackerScreen() {
 
   return (
     <div className="page feature-page">
+      <header className="feature-header">
+        <h1 className="page-title">Mi entrenamiento</h1>
+      </header>
       <Card className="border-blue-100 bg-blue-50">
         <div className="flex items-start justify-between gap-3">
           <div>

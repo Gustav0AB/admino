@@ -4,7 +4,7 @@ import * as Print from "@/shared/utils/printHtml";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   mockCalendarPlans, mockCalendarEvents, getWeeksForRange, defaultWeeks,
-  calcTotalWeeks, weeksToNextEvent, buildPlanHtml, toIso, isoToLocalDate,
+  calcTotalWeeks, weeksToNextEvent, buildPlanHtml, buildRepeatedCells, toIso, isoToLocalDate,
 } from "./calendarUtils";
 import { Toolbar } from "./Toolbar";
 import { WeeklyGrid } from "./WeeklyGrid";
@@ -210,18 +210,9 @@ export function PlanCalendar() {
     if (Object.keys(batch).length > 0) applyCellsBatch(batch);
   }
 
-  function handleApplyPattern(templates: string[], startDateIso: string) {
+  function handleApplyPattern(templates: (string | null)[], startDateIso: string) {
     if (!activePlan?.endDate) return;
-    const cursor = isoToLocalDate(startDateIso);
-    const end = isoToLocalDate(activePlan.endDate);
-    const batch: Record<string, string> = {};
-    let i = 0;
-    while (cursor <= end) {
-      batch[toIso(cursor)] = templates[i % templates.length] ?? "";
-      cursor.setDate(cursor.getDate() + 1);
-      i++;
-    }
-    applyCellsBatch(batch);
+    applyCellsBatch(buildRepeatedCells(templates, startDateIso, activePlan.endDate));
   }
 
   function handleSave() {
