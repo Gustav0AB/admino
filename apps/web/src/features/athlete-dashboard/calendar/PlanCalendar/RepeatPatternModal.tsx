@@ -6,10 +6,19 @@ type RepeatPatternModalProps = {
   open: boolean;
   defaultStartDate: string;
   onClose: () => void;
-  onSave: (templates: (string | null)[], startDateIso: string) => void;
+  onSave: (templates: string[], startDateIso: string, restWeekdays: number[]) => void;
 };
 
 const MIN_TEMPLATES = 2;
+const WEEKDAYS = [
+  { label: "Lunes", value: 1 },
+  { label: "Martes", value: 2 },
+  { label: "Miércoles", value: 3 },
+  { label: "Jueves", value: 4 },
+  { label: "Viernes", value: 5 },
+  { label: "Sábado", value: 6 },
+  { label: "Domingo", value: 0 },
+];
 
 export function RepeatPatternModal({
   open,
@@ -17,13 +26,15 @@ export function RepeatPatternModal({
   onClose,
   onSave,
 }: RepeatPatternModalProps) {
-  const [templates, setTemplates] = useState<(string | null)[]>(["", ""]);
+  const [templates, setTemplates] = useState<string[]>(["", ""]);
   const [startDate, setStartDate] = useState(defaultStartDate);
+  const [restWeekdays, setRestWeekdays] = useState<number[]>([]);
 
   useEffect(() => {
     if (open) {
       setTemplates(["", ""]);
       setStartDate(defaultStartDate);
+      setRestWeekdays([]);
     }
   }, [open, defaultStartDate]);
 
@@ -40,7 +51,7 @@ export function RepeatPatternModal({
           <Button
             size="sm"
             onClick={() => {
-              onSave(templates, startDate);
+              onSave(templates, startDate, restWeekdays);
               onClose();
             }}
           >
@@ -51,14 +62,37 @@ export function RepeatPatternModal({
     >
       <div className="flex max-h-[65vh] flex-col   overflow-y-auto pr-1">
         <p className="text-sm leading-5 text-gray-500">
-          Define un ciclo de días y se repetirá automáticamente desde la fecha
-          de inicio hasta el fin del plan.
+          Define un ciclo de entrenamientos. Los días de descanso se saltan sin
+          avanzar el ciclo.
         </p>
         <DatePicker
           label="Empezar el ciclo desde"
           value={startDate}
           onChange={setStartDate}
         />
+        <fieldset className="rounded-lg border border-gray-200 p-3">
+          <legend className="px-1 text-sm font-semibold text-gray-900">
+            Días de descanso
+          </legend>
+          <div className="flex flex-wrap gap-x-4 gap-y-2">
+            {WEEKDAYS.map((day) => (
+              <label key={day.value} className="flex items-center gap-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={restWeekdays.includes(day.value)}
+                  onChange={() =>
+                    setRestWeekdays((current) =>
+                      current.includes(day.value)
+                        ? current.filter((value) => value !== day.value)
+                        : [...current, day.value],
+                    )
+                  }
+                />
+                {day.label}
+              </label>
+            ))}
+          </div>
+        </fieldset>
         {templates.map((text, index) => (
           <div key={index} className="rounded-lg border border-gray-200 p-3">
             <div className="mb-2 flex justify-between gap-3">
@@ -79,24 +113,9 @@ export function RepeatPatternModal({
                 </button>
               )}
             </div>
-            <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700">
-              <input
-                type="checkbox"
-                checked={text === null}
-                onChange={(event) =>
-                  setTemplates((current) =>
-                    current.map((item, i) =>
-                      i === index ? (event.target.checked ? null : "") : item,
-                    ),
-                  )
-                }
-              />
-              Día de descanso
-            </label>
             <textarea
               className="min-h-28 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-              value={text ?? ""}
-              disabled={text === null}
+              value={text}
               onChange={(event) =>
                 setTemplates((current) =>
                   current.map((item, i) =>

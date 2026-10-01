@@ -210,9 +210,9 @@ export function PlanCalendar() {
     if (Object.keys(batch).length > 0) applyCellsBatch(batch);
   }
 
-  function handleApplyPattern(templates: (string | null)[], startDateIso: string) {
+  function handleApplyPattern(templates: string[], startDateIso: string, restWeekdays: number[]) {
     if (!activePlan?.endDate) return;
-    applyCellsBatch(buildRepeatedCells(templates, startDateIso, activePlan.endDate));
+    applyCellsBatch(buildRepeatedCells(templates, startDateIso, activePlan.endDate, restWeekdays));
   }
 
   function handleSave() {
