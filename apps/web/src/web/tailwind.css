@@ -1,0 +1,4 @@
+/* No @tailwind base (preflight): admino's hand-written styles.css was authored
+   without it — same as the shared components pkg. Only utilities are needed. */
+@tailwind components;
+@tailwind utilities;

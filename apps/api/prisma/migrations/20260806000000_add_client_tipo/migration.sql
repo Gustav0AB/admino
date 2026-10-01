@@ -1,0 +1,1 @@
+ALTER TABLE "organizations" ADD COLUMN IF NOT EXISTS "tipo" TEXT NOT NULL DEFAULT 'gym';
