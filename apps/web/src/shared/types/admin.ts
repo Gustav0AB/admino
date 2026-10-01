@@ -56,13 +56,11 @@ export type CreateOrgInput = {
   ownerName: string;
   password: string;
   clientPermissions: string[];
-  memberPermissions: string[];
 };
 
 export type UpdateOrgInput = {
   name?: string;
   clientPermissions?: string[];
-  memberPermissions?: string[];
 };
 
 export type ImpersonateInput = {

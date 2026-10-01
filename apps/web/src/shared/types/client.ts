@@ -10,4 +10,5 @@ export type ClientBranding = {
 export type ClientFeature =
   | "athlete_dashboard"
   | "athlete_tracker"
-  | "finanzas";
+  | "finanzas"
+  | "notes";

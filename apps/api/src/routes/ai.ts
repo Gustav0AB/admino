@@ -1,11 +1,11 @@
 import { Router, Request, Response } from "express";
 import { z } from "zod";
-import { analyzeNotes, getStructuringOptions, getSuggestions } from "@lib/gemini";
-import { requireAuth } from "@middleware/auth";
+import { analyzeNotes, getStructuringOptions, getSuggestions, type AnalysisResult } from "@lib/gemini";
+import { requireAuth, requireFeature } from "@middleware/auth";
 
 const router = Router();
 
-router.use(requireAuth);
+router.use(requireAuth, requireFeature("notes"));
 
 const analyzeNotesSchema = z.object({
   notes: z.string().min(10, "Notes must be at least 10 characters"),
@@ -62,7 +62,7 @@ router.post("/structure", async (req: Request, res: Response) => {
       });
     }
 
-    const options = await getStructuringOptions(analysis as any);
+    const options = await getStructuringOptions(analysis as AnalysisResult);
 
     res.json({
       success: true,
@@ -96,7 +96,7 @@ router.post("/suggestions", async (req: Request, res: Response) => {
       });
     }
 
-    const suggestions = await getSuggestions(analysis as any);
+    const suggestions = await getSuggestions(analysis as AnalysisResult);
 
     res.json({
       success: true,

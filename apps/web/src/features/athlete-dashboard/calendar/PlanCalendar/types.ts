@@ -5,6 +5,7 @@ export type CalendarEvent = {
   name: string;
   date: string;
   type: EventType;
+  planId?: string | null;
 };
 
 export type CalendarPlan = {

@@ -13,12 +13,23 @@ function getClient() {
   return client;
 }
 
+function localDateIso(date = new Date()): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
 export interface AnalysisResult {
   categories: {
-    gastos: Array<{ item: string; monto: number; frecuencia: string; fecha?: string }>;
+    gastos: Array<{ item: string; monto: number; frecuencia: string; fecha?: string; descripcion?: string; metodoPago?: string }>;
     tareas: Array<{ tarea: string; fechaVencimiento?: string; prioridad: "alta" | "media" | "baja" }>;
     recordatorios: Array<{ recordatorio: string; fecha: string }>;
     deseos: Array<{ deseo: string; estimadoCosto?: number }>;
+  };
+  athletePlan?: {
+    name: string;
+    startDate: string;
+    endDate: string;
+    days: Array<{ date: string; text: string }>;
+    events?: Array<{ name: string; date: string; type: "competition" | "seminar" | "vacation" }>;
   };
   summary: string;
   suggestions: string[];
@@ -34,11 +45,15 @@ export async function analyzeNotes(notes: string): Promise<AnalysisResult> {
   if (!client) throw new Error("Gemini client not initialized");
   const model = client.getGenerativeModel({ model: GEMINI_MODEL });
 
-  const prompt = `Analiza las siguientes notas desorganizadas y extrae:
-1. Gastos (con monto, frecuencia y fecha si aplica)
+  const prompt = `Fecha actual: ${localDateIso()}.
+
+Analiza las siguientes notas desorganizadas y extrae:
+1. Gastos (con monto, frecuencia y fecha si aplica; usa YYYY-MM-DD cuando haya vencimiento completo)
 2. Tareas pendientes (con fecha de vencimiento si aplica)
 3. Recordatorios importantes (con fechas)
 4. Deseos/cosas que quiere comprar (con costo estimado si aplica)
+5. Si las notas describen un plan deportivo completo, crea athletePlan con fechas ISO YYYY-MM-DD y texto narrativo por día. Si hay competencias, seminarios o vacaciones dentro del plan, agrégalas en athletePlan.events. Si no hay plan deportivo claro, omite athletePlan.
+6. Convierte fechas relativas como "mañana", "el viernes" o "este mes" usando la fecha actual.
 
 Notas:
 ${notes}
@@ -46,14 +61,22 @@ ${notes}
 Responde en JSON con esta estructura exacta:
 {
   "categories": {
-    "gastos": [{"item": "...", "monto": 0, "frecuencia": "...", "fecha": "..."}],
+    "gastos": [{"item": "...", "monto": 0, "frecuencia": "...", "fecha": "...", "descripcion": "...", "metodoPago": "efectivo|credito"}],
     "tareas": [{"tarea": "...", "fechaVencimiento": "...", "prioridad": "alta|media|baja"}],
     "recordatorios": [{"recordatorio": "...", "fecha": "..."}],
     "deseos": [{"deseo": "...", "estimadoCosto": 0}]
   },
+  "athletePlan": {"name": "...", "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD", "days": [{"date": "YYYY-MM-DD", "text": "..."}], "events": [{"name": "...", "date": "YYYY-MM-DD", "type": "competition|seminar|vacation"}]},
   "summary": "Resumen breve de lo encontrado",
   "suggestions": ["sugerencia 1", "sugerencia 2"]
-}`;
+}
+
+Ejemplos de interpretación:
+- "Plan fuerza 4 semanas desde lunes: lunes sentadilla 5x5, miércoles banca 4x6, viernes peso muerto 3x5" => athletePlan.days con cada sesión en su fecha.
+- "Competencia regional el 2026-09-20" => athletePlan.events con type "competition".
+- "Seminario técnica el viernes" => athletePlan.events con type "seminar" y fecha calculada desde la fecha actual.
+- "Vacaciones del 10 al 14" => athletePlan.events con type "vacation".
+- "Seguro auto 4200 vence 2026-09-15 crédito" => categories.gastos con fecha "2026-09-15" y metodoPago "credito".`;
 
   const result = await model.generateContent(prompt);
   const text = result.response.text();
@@ -157,9 +180,10 @@ function getMockAnalysisResult(notes: string): AnalysisResult {
   return {
     categories: {
       gastos: [
-        { item: "Limpieza", monto: 600, frecuencia: "Quincena", fecha: "15 y 30" },
-        { item: "Pollo/Comida", monto: 1200, frecuencia: "Quincena", fecha: "15 y 30" },
-        { item: "Spotify", monto: 239, frecuencia: "Mes", fecha: "7" },
+        { item: "Limpieza", monto: 600, frecuencia: "Quincena", fecha: "15 y 30", descripcion: "Casa", metodoPago: "efectivo" },
+        { item: "Pollo/Comida", monto: 1200, frecuencia: "Quincena", fecha: "15 y 30", descripcion: "Comida familiar", metodoPago: "efectivo" },
+        { item: "Spotify", monto: 239, frecuencia: "Mes", fecha: "7", descripcion: "Suscripcion", metodoPago: "efectivo" },
+        { item: "Seguro auto", monto: 4200, frecuencia: "Unico", fecha: "2026-09-15", descripcion: "Renovacion anual", metodoPago: "credito" },
       ],
       tareas: [
         { tarea: "Pagar tarjeta/cuenta", fechaVencimiento: "2026-11-30", prioridad: "alta" },
@@ -170,6 +194,16 @@ function getMockAnalysisResult(notes: string): AnalysisResult {
         { deseo: "iPhone 16", estimadoCosto: 15000 },
       ],
     },
+    athletePlan: notes.toLowerCase().includes("plan") ? {
+      name: "Plan demo",
+      startDate: "2026-08-10",
+      endDate: "2026-08-16",
+      days: [
+        { date: "2026-08-10", text: "Fuerza\nSentadilla 5x5" },
+        { date: "2026-08-12", text: "Cardio\n30 min zona 2" },
+      ],
+      events: [{ name: "Competencia demo", date: "2026-08-16", type: "competition" }],
+    } : undefined,
     summary: "Se encontraron 3 gastos recurrentes (limpieza, comida, Spotify), 1 pago pendiente importante y 2 deseos de compra. Los gastos mensuales rondan $2,039 + recurrentes.",
     suggestions: [
       "Crear calendario de pagos para no olvidar el 15 y 30",

@@ -26,21 +26,27 @@ export default function ForgotPasswordPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-white p-6">
       <Card className="w-full max-w-md">
-        <div className="flex flex-col gap-4">
-          <h1 className="text-2xl font-bold text-gray-900">Restablecer contraseña</h1>
+        <div className="flex flex-col  ">
+          <h1 className="text-2xl font-bold text-gray-900">
+            Restablecer contraseña
+          </h1>
           <p className="text-sm text-gray-500">
-            Ingresa tu usuario o correo y te enviaremos instrucciones para crear una nueva contraseña.
+            Ingresa tu usuario o correo y te enviaremos instrucciones para crear
+            una nueva contraseña.
           </p>
 
           {message ? (
             <>
               <p className="text-sm text-gray-700">{message}</p>
-              <Button variant="ghost" onClick={() => navigate(routes.login, { replace: true })}>
+              <Button
+                variant="ghost"
+                onClick={() => navigate(routes.login, { replace: true })}
+              >
                 Volver a iniciar sesión
               </Button>
             </>
           ) : (
-            <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+            <form className="flex flex-col  " onSubmit={handleSubmit}>
               <TextField
                 label="Usuario o correo"
                 value={username}
@@ -48,10 +54,19 @@ export default function ForgotPasswordPage() {
                 autoCapitalize="none"
                 autoComplete="username"
               />
-              <Button type="submit" disabled={!username.trim()} loading={loading} loadingText="Enviando…">
+              <Button
+                type="submit"
+                disabled={!username.trim()}
+                loading={loading}
+                loadingText="Enviando…"
+              >
                 Enviar instrucciones
               </Button>
-              <Button type="button" variant="ghost" onClick={() => navigate(-1)}>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => navigate(-1)}
+              >
                 Cancelar
               </Button>
             </form>

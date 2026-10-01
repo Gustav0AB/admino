@@ -275,7 +275,7 @@ model TrainingPlanAssignment {
   member     Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
   plan       TrainingPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
 
-  @@unique([memberId, planId])
+  @@unique([memberId])
   @@index([planId])
   @@map("training_plan_assignments")
 }

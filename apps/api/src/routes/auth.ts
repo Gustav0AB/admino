@@ -30,6 +30,9 @@ const resetPasswordSchema = z.object({
   newPassword: z.string().min(8),
 });
 
+const adminPasswordSchema = z.object({ newPassword: z.string().min(8) });
+const adminPasswordUserType = z.enum(["SYSTEM_ADMIN", "CLIENT_MEMBER", "MEMBER"]);
+
 /**
  * POST /auth/login
  * Resolves user across SystemAdmin → OrgMember → Client, verifies password,
@@ -111,6 +114,49 @@ router.patch(
 
       const hash = await bcrypt.hash(newPassword, 10);
       await updateFn(hash);
+
+      res.json({ message: "Password updated successfully" });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+/**
+ * PATCH /auth/users/:userType/:id/password
+ * Only the system admin or the owner of the account can set another user's password.
+ */
+router.patch(
+  "/users/:userType/:id/password",
+  requireAuth,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const actor = (req as AuthRequest).user!;
+      const userType = adminPasswordUserType.parse(req.params.userType);
+      const { id } = req.params as Record<string, string>;
+      const { newPassword } = adminPasswordSchema.parse(req.body);
+
+      if (actor.role !== "SYSTEM_ADMIN" && actor.role !== "OWNER") {
+        throw new HttpError(403, "Only the system admin or account owner can change passwords");
+      }
+
+      const hash = await bcrypt.hash(newPassword, 10);
+      if (userType === "SYSTEM_ADMIN") {
+        if (actor.role !== "SYSTEM_ADMIN") throw new HttpError(403, "Forbidden");
+        await prisma.systemAdmin.update({ where: { id }, data: { password: hash } });
+      } else if (userType === "CLIENT_MEMBER") {
+        const target = await prisma.clientMember.findUnique({ where: { id } });
+        if (!target || (actor.role !== "SYSTEM_ADMIN" && target.clientId !== actor.orgId)) {
+          throw new HttpError(404, "User not found");
+        }
+        await prisma.clientMember.update({ where: { id }, data: { password: hash } });
+      } else {
+        const target = await prisma.member.findUnique({ where: { id } });
+        if (!target || (actor.role !== "SYSTEM_ADMIN" && target.clientId !== actor.orgId)) {
+          throw new HttpError(404, "User not found");
+        }
+        await prisma.member.update({ where: { id }, data: { password: hash } });
+      }
 
       res.json({ message: "Password updated successfully" });
     } catch (e) {

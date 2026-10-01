@@ -139,32 +139,34 @@ export function AthleteTrackerScreen() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workout-checks", today] }),
   });
 
-  useQuery<{ itemIndex: number; completed: boolean }[]>({
+  const { data: workoutChecks = [] } = useQuery<{ itemIndex: number; completed: boolean }[]>({
     queryKey: ["workout-checks", today],
     queryFn: async () => {
       if (ENV.USE_MOCK) return [];
       const res = await httpClient<{ data: { itemIndex: number; completed: boolean }[] }>(`/workout-checks?date=${today}`);
       return res.data;
     },
-    onSuccess: (data: { itemIndex: number; completed: boolean }[]) => {
-      const map: Record<number, boolean> = {};
-      data.forEach((item) => { map[item.itemIndex] = item.completed; });
-      setChecked(map);
-    },
-  } as any);
+  });
 
-  useQuery<WorkoutFeedback | null>({
+  const { data: savedFeedback = null } = useQuery<WorkoutFeedback | null>({
     queryKey: ["workout-feedback", today],
     queryFn: async () => {
       if (ENV.USE_MOCK) return null;
       const res = await httpClient<{ data: WorkoutFeedback | null }>(`/workout-feedback?date=${today}`);
       return res.data;
     },
-    onSuccess: (data: WorkoutFeedback | null) => {
-      setRpe(data?.rpe ?? null);
-      setFeedbackNotes(data?.notes ?? "");
-    },
-  } as any);
+  });
+
+  useEffect(() => {
+    const map: Record<number, boolean> = {};
+    workoutChecks.forEach((item) => { map[item.itemIndex] = item.completed; });
+    setChecked(map);
+  }, [workoutChecks]);
+
+  useEffect(() => {
+    setRpe(savedFeedback?.rpe ?? null);
+    setFeedbackNotes(savedFeedback?.notes ?? "");
+  }, [savedFeedback]);
 
   const saveFeedback = useMutation({
     mutationFn: async () => {

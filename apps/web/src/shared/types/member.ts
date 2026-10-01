@@ -87,6 +87,7 @@ export type UpdateMemberInput = {
 
 export const SECTION_PERMISSIONS = [
   { key: "finanzas", label: "Finanzas" },
-  { key: "athlete_dashboard", label: "Planes de atletas (admins)" },
+  { key: "athlete_dashboard", label: "Planeación (admins)" },
   { key: "athlete_tracker", label: "Mi entrenamiento (miembros)" },
+  { key: "notes", label: "Notas" },
 ] as const;

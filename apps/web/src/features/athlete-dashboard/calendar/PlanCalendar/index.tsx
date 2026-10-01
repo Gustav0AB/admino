@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import * as Print from "@/shared/utils/printHtml";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -12,10 +13,11 @@ import { CellEditModal } from "./CellEditModal";
 import { RepeatPatternModal } from "./RepeatPatternModal";
 import { httpClient } from "@/shared/api/client";
 import { ENV } from "@/shared/config/env";
+import { routes } from "@/web/routes";
 import type { CalendarPlan, CalendarEvent } from "./types";
 import type { EditMode } from "./Toolbar";
 
-const PAGE_SIZE = 4;
+const DESKTOP_PAGE_SIZE = 4;
 
 const MONTH_NAMES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
 const JS_DAY_NAMES_ES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
@@ -27,11 +29,13 @@ function formatCellLabel(dateIso: string): string {
 
 export function PlanCalendar() {
   const queryClient = useQueryClient();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const { data: backendPlans = [] } = useQuery<CalendarPlan[]>({
     queryKey: ["training-plans"],
     queryFn: async () => {
-      if (ENV.USE_MOCK) return mockCalendarPlans;
+      if (ENV.USE_MOCK) return queryClient.getQueryData<CalendarPlan[]>(["training-plans"]) ?? mockCalendarPlans;
       const res = await httpClient<{ data: { id: string; name: string; startDate: string | null; endDate: string | null; cells: Record<string, string> }[] }>("/training-plans");
       return res.data.map((p) => ({ id: p.id, name: p.name, startDate: p.startDate ? p.startDate.slice(0, 10) : "", endDate: p.endDate ? p.endDate.slice(0, 10) : "", cells: p.cells }));
     },
@@ -41,8 +45,8 @@ export function PlanCalendar() {
     queryKey: ["training-events"],
     queryFn: async () => {
       if (ENV.USE_MOCK) return mockCalendarEvents;
-      const res = await httpClient<{ data: { id: string; name: string; date: string; type: string }[] }>("/training-events");
-      return res.data.map((e) => ({ id: e.id, name: e.name, date: e.date.slice(0, 10), type: e.type as CalendarEvent["type"] }));
+      const res = await httpClient<{ data: { id: string; name: string; date: string; type: string; planId?: string | null }[] }>("/training-events");
+      return res.data.map((e) => ({ id: e.id, name: e.name, date: e.date.slice(0, 10), type: e.type as CalendarEvent["type"], planId: e.planId ?? null }));
     },
   });
 
@@ -97,9 +101,29 @@ export function PlanCalendar() {
     { kind: "cell"; dateIso: string } | { kind: "weekday"; weekdayJs: number } | null
   >(null);
   const [page, setPage] = useState(0);
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia("(max-width: 760px)").matches);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 760px)");
+    const update = () => setIsMobile(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
 
   const selectedPlan = plans.find((p) => p.id === selectedPlanId) ?? null;
   const activePlan = editMode !== "view" ? draftPlan : selectedPlan;
+
+  const routeSelectedPlanId = (location.state as { selectedPlanId?: string } | null)?.selectedPlanId;
+  useEffect(() => {
+    if (routeSelectedPlanId && plans.some((p) => p.id === routeSelectedPlanId)) {
+      setSelectedPlanId(routeSelectedPlanId);
+      setEditMode("view");
+      setDraftPlan(null);
+      setPage(0);
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location.pathname, navigate, plans, routeSelectedPlanId]);
 
   const draftName = draftPlan?.name ?? "";
   const draftStartDate = draftPlan?.startDate ?? "";
@@ -112,9 +136,10 @@ export function PlanCalendar() {
     return defaultWeeks();
   }, [activePlan]);
 
-  const totalPages = Math.ceil(allWeeks.length / PAGE_SIZE);
+  const pageSize = isMobile ? 1 : DESKTOP_PAGE_SIZE;
+  const totalPages = Math.ceil(allWeeks.length / pageSize);
   const safePage = Math.min(page, Math.max(0, totalPages - 1));
-  const visibleWeeks = allWeeks.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
+  const visibleWeeks = allWeeks.slice(safePage * pageSize, safePage * pageSize + pageSize);
 
   const cells: Record<string, string> = activePlan?.cells ?? {};
 
@@ -229,6 +254,10 @@ export function PlanCalendar() {
     } catch (e) { console.error("Error al exportar PDF", e); }
   }
 
+  function handleAssignPlan() {
+    if (selectedPlanId) navigate(routes.athleteDashboardAthletes, { state: { selectedPlanId } });
+  }
+
   const editable = editMode !== "view" || selectedPlanId !== null;
 
   return (
@@ -243,7 +272,7 @@ export function PlanCalendar() {
         onDraftNameChange={handleDraftNameChange} onDraftStartChange={handleDraftStartChange}
         onDraftEndChange={handleDraftEndChange} onSave={handleSave}
         onAddEvent={() => setAddEventOpen(true)} onOpenRepeatPattern={() => setRepeatPatternOpen(true)}
-        onDownloadPdf={handleDownloadPdf}
+        onDownloadPdf={handleDownloadPdf} onAssignPlan={handleAssignPlan}
       />
 
       <WeeklyGrid

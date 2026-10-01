@@ -25,7 +25,13 @@ function calcAge(iso: string): number | null {
   return age;
 }
 
-export function EndUserFormModal({ open, onClose, member, onSubmit, isLoading }: Props) {
+export function EndUserFormModal({
+  open,
+  onClose,
+  member,
+  onSubmit,
+  isLoading,
+}: Props) {
   const slug = useClientStore((s) => s.branding.slug);
   const isEditing = !!member;
   const [name, setName] = useState("");
@@ -53,8 +59,12 @@ export function EndUserFormModal({ open, onClose, member, onSubmit, isLoading }:
     if (!lastname.trim()) errs.lastname = "El apellido es obligatorio";
     if (!birthdate) errs.birthdate = "La fecha de nacimiento es obligatoria";
     if (!isEditing && withAccount) {
-      if (!/^[a-zA-Z0-9_.-]+$/.test(username.trim()) || username.trim().length < 3)
-        errs.username = "Mínimo 3 caracteres, solo letras, números, puntos, guiones y _";
+      if (
+        !/^[a-zA-Z0-9_.-]+$/.test(username.trim()) ||
+        username.trim().length < 3
+      )
+        errs.username =
+          "Mínimo 3 caracteres, solo letras, números, puntos, guiones y _";
       if (password.length < 8) errs.password = "Mínimo 8 caracteres";
     }
     setErrors(errs);
@@ -64,7 +74,11 @@ export function EndUserFormModal({ open, onClose, member, onSubmit, isLoading }:
   function handleSubmit() {
     if (!validate()) return;
     if (isEditing) {
-      onSubmit({ name: name.trim(), lastname: lastname.trim(), birthdate } as UpdateEndUserMemberInput);
+      onSubmit({
+        name: name.trim(),
+        lastname: lastname.trim(),
+        birthdate,
+      } as UpdateEndUserMemberInput);
       return;
     }
     onSubmit({
@@ -84,38 +98,83 @@ export function EndUserFormModal({ open, onClose, member, onSubmit, isLoading }:
       title={isEditing ? "Editar miembro" : "Nuevo miembro"}
       footer={
         <>
-          <Button variant="ghost" onClick={onClose} disabled={!!isLoading}>Cancelar</Button>
-          <Button onClick={handleSubmit} loading={!!isLoading} disabled={!!isLoading}>
+          <Button variant="ghost" onClick={onClose} disabled={!!isLoading}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            loading={!!isLoading}
+            disabled={!!isLoading}
+          >
             {isEditing ? "Guardar" : "Agregar"}
           </Button>
         </>
       }
     >
-      <div className="flex flex-col gap-4">
-        <TextField label="Nombre" value={name} onChange={(event) => setName(event.target.value)} placeholder="Nombre" error={errors.name} />
-        <TextField label="Apellido" value={lastname} onChange={(event) => setLastname(event.target.value)} placeholder="Apellido" error={errors.lastname} />
+      <div className="flex flex-col  ">
+        <TextField
+          label="Nombre"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder="Nombre"
+          error={errors.name}
+        />
+        <TextField
+          label="Apellido"
+          value={lastname}
+          onChange={(event) => setLastname(event.target.value)}
+          placeholder="Apellido"
+          error={errors.lastname}
+        />
         <div>
-          <DatePicker label="Fecha de nacimiento" value={birthdate} onChange={setBirthdate} />
-          {errors.birthdate && <p className="mt-1 text-xs text-danger">{errors.birthdate}</p>}
-          {age !== null && <p className="mt-1 text-xs text-gray-500">Edad: {age} años</p>}
+          <DatePicker
+            label="Fecha de nacimiento"
+            value={birthdate}
+            onChange={setBirthdate}
+          />
+          {errors.birthdate && (
+            <p className="mt-1 text-xs text-danger">{errors.birthdate}</p>
+          )}
+          {age !== null && (
+            <p className="mt-1 text-xs text-gray-500">Edad: {age} años</p>
+          )}
         </div>
 
         {!isEditing && (
           <label className="flex items-center gap-2 text-sm text-gray-700">
-            <input type="checkbox" checked={withAccount} onChange={(event) => setWithAccount(event.target.checked)} />
+            <input
+              type="checkbox"
+              checked={withAccount}
+              onChange={(event) => setWithAccount(event.target.checked)}
+            />
             Crear cuenta de acceso
           </label>
         )}
 
         {!isEditing && withAccount && (
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col  ">
             <div>
-              <TextField label="Nombre de usuario" value={username} onChange={(event) => setUsername(event.target.value)} placeholder="ej. juan_perez" error={errors.username} />
+              <TextField
+                label="Nombre de usuario"
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+                placeholder="ej. juan_perez"
+                error={errors.username}
+              />
               {slug && username.trim() && (
-                <p className="mt-1 text-xs text-gray-500">Iniciará sesión como: {slug}-{username.trim()}</p>
+                <p className="mt-1 text-xs text-gray-500">
+                  Iniciará sesión como: {slug}-{username.trim()}
+                </p>
               )}
             </div>
-            <TextField label="Contraseña" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Mínimo 8 caracteres" error={errors.password} />
+            <TextField
+              label="Contraseña"
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="Mínimo 8 caracteres"
+              error={errors.password}
+            />
           </div>
         )}
       </div>

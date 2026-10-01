@@ -7,6 +7,7 @@ type Props = {
   orgDetail: AdminOrgDetail | null;
   isLoading?: boolean;
   onImpersonate: (member: AdminOrgMember) => void;
+  onChangePassword: (member: AdminOrgMember) => void;
   isImpersonating?: boolean;
 };
 
@@ -20,7 +21,7 @@ function initials(name: string) {
   return name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
 }
 
-export function ClientMembersModal({ open, onClose, orgDetail, isLoading, onImpersonate, isImpersonating }: Props) {
+export function ClientMembersModal({ open, onClose, orgDetail, isLoading, onImpersonate, onChangePassword, isImpersonating }: Props) {
   return (
     <Modal
       open={open}
@@ -52,6 +53,7 @@ export function ClientMembersModal({ open, onClose, orgDetail, isLoading, onImpe
                 <Button size="sm" variant="ghost" onClick={() => onImpersonate(member)} disabled={isImpersonating || !member.isActive}>
                   {isImpersonating ? "Entrando…" : "Impersonar"}
                 </Button>
+                <Button size="sm" variant="ghost" onClick={() => onChangePassword(member)}>Contraseña</Button>
               </div>
             </Card>
           ))}

@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge, Button, Card } from "@/shared/ui";
 import { ENV } from "@/shared/config/env";
 import { httpClient } from "@/shared/api/client";
+import { useAuthStore } from "@/shared/store/authStore";
+import { AdminPasswordModal } from "@/shared/components/inputs/AdminPasswordModal";
 import { EndUserFormModal } from "./EndUserFormModal";
 import type {
   EndUserMember,
@@ -31,6 +33,8 @@ export function AtletasContent({ onReady }: { onReady: (openCreate: () => void) 
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<EndUserMember | null>(null);
+  const [passwordMember, setPasswordMember] = useState<EndUserMember | null>(null);
+  const canChangePasswords = useAuthStore((s) => s.user?.role === "OWNER");
 
   useEffect(() => {
     onReady(() => { setEditingMember(null); setModalOpen(true); });
@@ -129,6 +133,7 @@ export function AtletasContent({ onReady }: { onReady: (openCreate: () => void) 
                       <Button size="sm" variant={member.isActive ? "danger" : "ghost"} onClick={() => confirmToggle(member)}>
                         {member.isActive ? "Desactivar" : "Activar"}
                       </Button>
+                      {canChangePasswords && member.username && <Button size="sm" variant="ghost" onClick={() => setPasswordMember(member)}>Contraseña</Button>}
                     </div>
                   </div>
                 </Card>
@@ -145,6 +150,7 @@ export function AtletasContent({ onReady }: { onReady: (openCreate: () => void) 
         onSubmit={handleSubmit}
         isLoading={createMember.isPending || updateMember.isPending}
       />
+      {passwordMember && <AdminPasswordModal open={!!passwordMember} onClose={() => setPasswordMember(null)} userId={passwordMember.id} userType="MEMBER" userName={`${passwordMember.name} ${passwordMember.lastname}`} />}
     </>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { LogOut, Menu } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/shared/hooks/useAuth";
+import { useClientStore } from "@/shared/store/clientStore";
 import { navItems } from "../navItems";
 import { routes } from "../routes";
 
@@ -18,10 +19,11 @@ export function Sidebar() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const hasFeature = useClientStore((s) => s.hasFeature);
 
   const visibleItems = useMemo(
-    () => navItems.filter((item) => user && item.roles.includes(user.role)),
-    [user]
+    () => navItems.filter((item) => user && item.roles.includes(user.role) && (user.role === "SYSTEM_ADMIN" || !item.feature || hasFeature(item.feature))),
+    [hasFeature, user]
   );
   const activeGroup = visibleItems.find((item) => item.children?.some((child) => child.to === pathname));
   const activeGroupLabel = activeGroup?.label;

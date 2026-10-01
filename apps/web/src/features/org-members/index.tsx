@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge, Button, Card } from "@/shared/ui";
 import { ENV } from "@/shared/config/env";
 import { httpClient } from "@/shared/api/client";
+import { useAuthStore } from "@/shared/store/authStore";
+import { AdminPasswordModal } from "@/shared/components/inputs/AdminPasswordModal";
 import { mockOrgMembers } from "@/shared/api/mocks/member";
 import type { OrgMember, CreateMemberInput, UpdateMemberInput } from "@/shared/types/member";
 import { MemberFormModal } from "@/features/client-settings/MemberFormModal";
@@ -23,6 +25,8 @@ export function StaffContent({ onReady }: { onReady: (openCreate: () => void) =>
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<OrgMember | null>(null);
+  const [passwordMember, setPasswordMember] = useState<OrgMember | null>(null);
+  const canChangePasswords = useAuthStore((s) => s.user?.role === "OWNER");
 
   useEffect(() => {
     onReady(() => { setEditingMember(null); setModalOpen(true); });
@@ -117,6 +121,9 @@ export function StaffContent({ onReady }: { onReady: (openCreate: () => void) =>
                       </Button>
                     </div>
                   )}
+                  {canChangePasswords && (
+                    <Button size="sm" variant="ghost" onClick={() => setPasswordMember(member)}>Contraseña</Button>
+                  )}
                 </div>
               </Card>
             ))}
@@ -131,6 +138,7 @@ export function StaffContent({ onReady }: { onReady: (openCreate: () => void) =>
         onSubmit={handleSubmit}
         isLoading={createMember.isPending || updateMember.isPending}
       />
+      {passwordMember && <AdminPasswordModal open={!!passwordMember} onClose={() => setPasswordMember(null)} userId={passwordMember.id} userType="CLIENT_MEMBER" userName={passwordMember.name} />}
     </>
   );
 }

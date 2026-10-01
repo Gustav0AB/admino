@@ -18,13 +18,25 @@ const assignSchema = z.object({
   memberId: z.string(),
   planId: z.string(),
 });
+const dateQuerySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+
+async function requireSameClient(memberId: string, planId: string, orgId?: string | null) {
+  const [member, plan] = await Promise.all([
+    prisma.member.findUnique({ where: { id: memberId }, select: { clientId: true } }),
+    prisma.trainingPlan.findUnique({ where: { id: planId }, select: { clientId: true } }),
+  ]);
+  if (!member) throw new HttpError(404, "Member not found");
+  if (!plan) throw new HttpError(404, "Plan not found");
+  if (member.clientId !== plan.clientId || (orgId && plan.clientId !== orgId)) {
+    throw new HttpError(403, "Forbidden");
+  }
+}
 
 router.get("/my-plan", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { sub: memberId } = (req as AuthRequest).user;
-    const assignment = await prisma.trainingPlanAssignment.findFirst({
+    const assignment = await prisma.trainingPlanAssignment.findUnique({
       where: { memberId },
-      orderBy: { assignedAt: "desc" },
       include: {
         plan: { include: { events: { orderBy: { date: "asc" } } } },
       },
@@ -43,6 +55,43 @@ router.get("/", requireRole("OWNER", "ADMIN", "SYSTEM_ADMIN"), requireFeature("a
       orderBy: { createdAt: "desc" },
     });
     res.json({ data: plans });
+  } catch (e) { next(e); }
+});
+
+router.get("/activity/:memberId", requireRole("OWNER", "ADMIN", "SYSTEM_ADMIN"), requireFeature("athlete_dashboard"), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const memberId = req.params["memberId"] as string;
+    const date = dateQuerySchema.parse(req.query.date);
+    const user = (req as AuthRequest).user;
+    const member = await prisma.member.findUnique({
+      where: { id: memberId },
+      select: { clientId: true },
+    });
+    if (!member) throw new HttpError(404, "Member not found");
+    if (user.orgId && member.clientId !== user.orgId) throw new HttpError(403, "Forbidden");
+
+    const [assignment, checks, feedback] = await Promise.all([
+      prisma.trainingPlanAssignment.findUnique({
+        where: { memberId },
+        include: { plan: true },
+      }),
+      prisma.workoutCheck.findMany({
+        where: { memberId, date },
+        orderBy: { itemIndex: "asc" },
+      }),
+      prisma.workoutFeedback.findUnique({
+        where: { memberId_date: { memberId, date } },
+      }),
+    ]);
+    if (assignment && assignment.plan.clientId !== member.clientId) throw new HttpError(403, "Forbidden");
+    res.json({
+      data: {
+        date,
+        plan: assignment?.plan ?? null,
+        checks,
+        feedback,
+      },
+    });
   } catch (e) { next(e); }
 });
 
@@ -99,13 +148,11 @@ router.post("/assign", requireRole("OWNER", "ADMIN", "SYSTEM_ADMIN"), requireFea
   try {
     const { memberId, planId } = assignSchema.parse(req.body);
     const user = (req as AuthRequest).user;
-    const plan = await prisma.trainingPlan.findUnique({ where: { id: planId } });
-    if (!plan) throw new HttpError(404, "Plan not found");
-    if (user.orgId && plan.clientId !== user.orgId) throw new HttpError(403, "Forbidden");
+    await requireSameClient(memberId, planId, user.orgId);
     const assignment = await prisma.trainingPlanAssignment.upsert({
-      where: { memberId_planId: { memberId, planId } },
+      where: { memberId },
       create: { memberId, planId },
-      update: { assignedAt: new Date() },
+      update: { planId, assignedAt: new Date() },
     });
     res.status(201).json({ data: assignment });
   } catch (e) { next(e); }
@@ -114,12 +161,11 @@ router.post("/assign", requireRole("OWNER", "ADMIN", "SYSTEM_ADMIN"), requireFea
 router.delete("/assign/:memberId/:planId", requireRole("OWNER", "ADMIN", "SYSTEM_ADMIN"), requireFeature("athlete_dashboard"), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = (req as AuthRequest).user;
+    const memberId = req.params["memberId"] as string;
     const planId = req.params["planId"] as string;
-    const plan = await prisma.trainingPlan.findUnique({ where: { id: planId } });
-    if (!plan) throw new HttpError(404, "Plan not found");
-    if (user.orgId && plan.clientId !== user.orgId) throw new HttpError(403, "Forbidden");
+    await requireSameClient(memberId, planId, user.orgId);
     await prisma.trainingPlanAssignment.deleteMany({
-      where: { memberId: req.params["memberId"] as string, planId },
+      where: { memberId, planId },
     });
     res.status(204).send();
   } catch (e) { next(e); }

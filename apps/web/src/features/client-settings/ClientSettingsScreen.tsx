@@ -15,12 +15,19 @@ export function ClientSettingsScreen() {
   const { branding, setBranding } = useClientStore();
   const [primaryColor, setPrimaryColor] = useState(branding.primaryColor);
   const [secondaryColor, setSecondaryColor] = useState(branding.secondaryColor);
-  const [backgroundColor, setBackgroundColor] = useState(branding.backgroundColor);
-  const [logoPreview, setLogoPreview] = useState<string | null>(branding.logoUrl);
+  const [backgroundColor, setBackgroundColor] = useState(
+    branding.backgroundColor,
+  );
+  const [logoPreview, setLogoPreview] = useState<string | null>(
+    branding.logoUrl,
+  );
   const [brandingSaved, setBrandingSaved] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  function handleColorChange(key: "primaryColor" | "secondaryColor" | "backgroundColor", value: string) {
+  function handleColorChange(
+    key: "primaryColor" | "secondaryColor" | "backgroundColor",
+    value: string,
+  ) {
     if (key === "primaryColor") setPrimaryColor(value);
     if (key === "secondaryColor") setSecondaryColor(value);
     if (key === "backgroundColor") setBackgroundColor(value);
@@ -43,7 +50,7 @@ export function ClientSettingsScreen() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 bg-gray-50 p-6">
+    <div className="flex min-h-0 flex-1 flex-col   bg-gray-50 p-6">
       <h1 className="text-2xl font-bold text-gray-900">Configuración</h1>
 
       <div className="tabs">
@@ -63,9 +70,12 @@ export function ClientSettingsScreen() {
           <Card className="max-w-2xl">
             <div className="flex flex-col gap-5">
               <div>
-                <h2 className="text-base font-semibold text-gray-900">Identidad visual</h2>
+                <h2 className="text-base font-semibold text-gray-900">
+                  Identidad visual
+                </h2>
                 <p className="mt-1 text-sm text-gray-500">
-                  Personaliza el logo y los colores. Los cambios se aplican en tiempo real.
+                  Personaliza el logo y los colores. Los cambios se aplican en
+                  tiempo real.
                 </p>
               </div>
 
@@ -80,10 +90,14 @@ export function ClientSettingsScreen() {
                 }}
               />
 
-              <div className="flex flex-wrap items-center gap-4">
+              <div className="flex flex-wrap items-center  ">
                 <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-white">
                   {logoPreview ? (
-                    <img src={logoPreview} alt="Logo" className="h-full w-full object-contain" />
+                    <img
+                      src={logoPreview}
+                      alt="Logo"
+                      className="h-full w-full object-contain"
+                    />
                   ) : (
                     <span className="text-3xl font-extrabold text-primary">
                       {branding.orgName.charAt(0).toUpperCase()}
@@ -91,20 +105,45 @@ export function ClientSettingsScreen() {
                   )}
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()}>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
                     Subir imagen (JPG/PNG)
                   </Button>
                   {logoPreview && (
-                    <Button type="button" variant="ghost" onClick={() => { setLogoPreview(null); setBranding({ logoUrl: null }); }}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => {
+                        setLogoPreview(null);
+                        setBranding({ logoUrl: null });
+                      }}
+                    >
                       Eliminar logo
                     </Button>
                   )}
                 </div>
               </div>
 
-              <ColorField label="Color primario" value={primaryColor} onChange={(value) => handleColorChange("primaryColor", value)} />
-              <ColorField label="Color secundario" value={secondaryColor} onChange={(value) => handleColorChange("secondaryColor", value)} />
-              <ColorField label="Color de fondo" value={backgroundColor} onChange={(value) => handleColorChange("backgroundColor", value)} />
+              <ColorField
+                label="Color primario"
+                value={primaryColor}
+                onChange={(value) => handleColorChange("primaryColor", value)}
+              />
+              <ColorField
+                label="Color secundario"
+                value={secondaryColor}
+                onChange={(value) => handleColorChange("secondaryColor", value)}
+              />
+              <ColorField
+                label="Color de fondo"
+                value={backgroundColor}
+                onChange={(value) =>
+                  handleColorChange("backgroundColor", value)
+                }
+              />
 
               <Button type="button" onClick={saveBranding}>
                 {brandingSaved ? "¡Cambios guardados!" : "Confirmar cambios"}
@@ -119,7 +158,15 @@ export function ClientSettingsScreen() {
   );
 }
 
-function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+function ColorField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
   return (
     <div className="flex items-end gap-3">
       <input

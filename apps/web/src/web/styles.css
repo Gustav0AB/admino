@@ -27,7 +27,11 @@ body,
 }
 
 body {
-  font-family: Inter, Instrument Sans, system-ui, sans-serif;
+  font-family:
+    Inter,
+    Instrument Sans,
+    system-ui,
+    sans-serif;
   color: var(--text);
   background: var(--bg);
 }
@@ -48,7 +52,15 @@ button {
   font: inherit;
 }
 
-button:not([class*="focus:ring"]):not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-danger"]):not(.app-sidebar-toggle):not(.app-nav-item):not(.tab):not(.feature-card-button):not(.calendar-day-button):not(.calendar-header-cell):not(.pager-dot):not(.ui-icon-button):not(.ui-datepicker-trigger):not(.ui-datepicker-day):not(.ui-datepicker-clear) {
+button:not([class*="focus:ring"]):not([class*="bg-primary"]):not(
+    [class*="bg-secondary"]
+  ):not([class*="bg-danger"]):not(.app-sidebar-toggle):not(.app-nav-item):not(
+    .tab
+  ):not(.feature-card-button):not(.calendar-day-button):not(
+    .calendar-header-cell
+  ):not(.pager-dot):not(.ui-icon-button):not(.ui-datepicker-trigger):not(
+    .ui-datepicker-day
+  ):not(.ui-datepicker-clear) {
   cursor: pointer;
   border: 1px solid var(--border);
   border-radius: 0.6rem;
@@ -56,7 +68,10 @@ button:not([class*="focus:ring"]):not([class*="bg-primary"]):not([class*="bg-sec
   padding: 0.45rem 0.75rem;
   color: #334155;
   font-weight: 650;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
 button.ui-button {
@@ -70,7 +85,10 @@ button.ui-button {
   background: white;
   color: #334155;
   font-weight: 700;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .ui-button-sm {
@@ -425,7 +443,15 @@ button.ui-button {
   font-weight: 700;
 }
 
-button:not([class*="focus:ring"]):not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-danger"]):not(.app-sidebar-toggle):not(.app-nav-item):not(.tab):not(.feature-card-button):not(.calendar-day-button):not(.calendar-header-cell):not(.pager-dot):not(.ui-icon-button):not(.ui-datepicker-trigger):not(.ui-datepicker-day):not(.ui-datepicker-clear):hover {
+button:not([class*="focus:ring"]):not([class*="bg-primary"]):not(
+    [class*="bg-secondary"]
+  ):not([class*="bg-danger"]):not(.app-sidebar-toggle):not(.app-nav-item):not(
+    .tab
+  ):not(.feature-card-button):not(.calendar-day-button):not(
+    .calendar-header-cell
+  ):not(.pager-dot):not(.ui-icon-button):not(.ui-datepicker-trigger):not(
+    .ui-datepicker-day
+  ):not(.ui-datepicker-clear):hover {
   border-color: rgba(43, 101, 121, 0.35);
   background: var(--color-primary-muted);
   color: var(--color-primary);
@@ -469,7 +495,9 @@ input[type="number"] {
   border-right: 1px solid var(--border);
   background: var(--surface);
   padding: 1.25rem;
-  transition: width 0.3s ease, padding 0.3s ease;
+  transition:
+    width 0.3s ease,
+    padding 0.3s ease;
   width: 16rem;
 }
 
@@ -586,7 +614,10 @@ input[type="number"] {
   padding: 0.7rem 0.8rem;
   text-align: left;
   color: #334155;
-  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
   position: relative;
   text-decoration: none;
 }
@@ -769,23 +800,45 @@ input[type="number"] {
 }
 
 @media (max-width: 760px) {
-  .app-shell {
-    grid-template-columns: 1fr;
-    height: auto;
-    overflow: visible;
+  .app-shell:has(.app-sidebar) {
+    display: block;
+    height: 100dvh;
+    min-height: 100vh;
+    overflow: hidden;
   }
 
   .app-sidebar {
-    position: sticky;
+    position: fixed;
     top: 0;
+    bottom: 0;
+    left: 0;
     z-index: 20;
-    min-height: auto;
-    border-right: 0;
-    border-bottom: 1px solid var(--border);
+    max-width: calc(100vw - 1rem);
+    min-height: 100dvh;
+    border-right: 1px solid var(--border);
+    box-shadow: 12px 0 30px rgba(15, 23, 42, 0.12);
   }
 
   .app-nav {
     flex: none;
+  }
+
+  .app-main {
+    min-height: 100dvh;
+    overflow-y: auto;
+  }
+
+  .app-shell:has(.app-sidebar.collapsed) .app-main {
+    margin-left: 4.5rem;
+  }
+
+  .page {
+    padding: 1rem;
+  }
+
+  .feature-header {
+    align-items: flex-start;
+    flex-wrap: wrap;
   }
 }
 
@@ -841,7 +894,9 @@ button.add-tile:hover {
   border-right: 1px solid var(--border);
   border-radius: 0;
   box-shadow: none;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .feature-card-button:hover > div {
@@ -863,7 +918,6 @@ button.add-tile:hover {
 .feature-page {
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
 }
 
 .feature-header {
@@ -956,6 +1010,36 @@ button.add-tile:hover {
   font-size: 0.875rem;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.assistant-plan-preview {
+  display: flex;
+  max-height: 16rem;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow-y: auto;
+}
+
+.assistant-plan-preview p {
+  margin: 0;
+  border-top: 1px solid var(--border);
+  padding-top: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.assistant-plan-preview strong,
+.assistant-plan-preview span {
+  display: block;
+}
+
+.assistant-plan-preview strong {
+  color: var(--color-primary);
+  font-size: 0.75rem;
+}
+
+.assistant-plan-preview span {
+  margin-top: 0.15rem;
+  white-space: pre-wrap;
 }
 
 .filter-bar {
@@ -1094,7 +1178,10 @@ button.add-tile:hover {
 
 .calendar-form-grid {
   display: grid;
-  grid-template-columns: minmax(16rem, 2fr) minmax(10rem, 1fr) minmax(10rem, 1fr);
+  grid-template-columns: minmax(16rem, 2fr) minmax(10rem, 1fr) minmax(
+      10rem,
+      1fr
+    );
   gap: 0.75rem;
 }
 
@@ -1193,7 +1280,9 @@ button.add-tile:hover {
 
 .calendar-header-clickable {
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .calendar-header-clickable:hover {
@@ -1260,6 +1349,10 @@ button.add-tile:hover {
 
 .calendar-day-button span {
   color: #9ca3af;
+}
+
+.calendar-mobile-day-label {
+  display: none;
 }
 
 .calendar-events {
@@ -1334,6 +1427,100 @@ button.add-tile:hover {
 
   .assistant-notes-input {
     min-height: 14rem;
+  }
+}
+
+@media (max-width: 760px) {
+  .calendar-panel {
+    border-radius: 0.85rem;
+  }
+
+  .calendar-toolbar {
+    border-radius: 0.85rem 0.85rem 0 0;
+    padding: 0.85rem;
+  }
+
+  .calendar-toolbar-row {
+    align-items: stretch;
+  }
+
+  .calendar-plan-select {
+    min-width: 100%;
+    max-width: none;
+  }
+
+  .calendar-toolbar-row .ui-button {
+    flex: 1 1 8rem;
+  }
+
+  .calendar-stats {
+    gap: 0.65rem;
+    font-size: 0.8rem;
+  }
+
+  .calendar-grid-scroll {
+    padding: 0.75rem;
+  }
+
+  .calendar-grid {
+    min-width: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .calendar-week-header {
+    display: none;
+  }
+
+  .calendar-week-row {
+    display: block;
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 0.85rem;
+    background: white;
+  }
+
+  .calendar-week-row:last-child {
+    margin-bottom: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .calendar-week-number {
+    align-items: flex-start;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    padding: 0.65rem 0.75rem;
+  }
+
+  .calendar-day-cell {
+    min-height: 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    padding: 0.55rem;
+  }
+
+  .calendar-day-cell:last-child {
+    border-bottom: 0;
+  }
+
+  .calendar-day-button {
+    min-height: 3.25rem;
+    padding: 0.35rem 0.45rem;
+    font-size: 0.85rem;
+  }
+
+  .calendar-mobile-day-label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.72rem;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+
+  .calendar-pagination {
+    gap: 0.75rem;
   }
 }
 

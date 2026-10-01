@@ -89,7 +89,7 @@ type ExpensesState = {
   updateRecurringExpense: (id: string, patch: Partial<Omit<RecurringExpense, "id">>) => void;
   removeRecurringExpense: (id: string) => void;
   toggleCancelMonth: (id: string, mes: string) => void;
-  activateMonth: (month: string, year?: number) => void;
+  activateMonth: (month: string, year?: number, force?: boolean) => void;
   deactivateMonth: (month: string, year?: number) => void;
 
   addExpense: () => void;
@@ -301,10 +301,10 @@ export const useExpensesStore = create<ExpensesState>()(
           }),
         })),
 
-      activateMonth: (month, year = currentYear()) =>
+      activateMonth: (month, year = currentYear(), force = false) =>
         set((s) => {
           const key = `${month}-${year}`;
-          if (s.activatedMonths.includes(key)) return s;
+          if (!force && s.activatedMonths.includes(key)) return s;
 
           const monthIndex = MESES_LIST.indexOf(month);
           const newExpenses: Expense[] = [];
@@ -379,7 +379,7 @@ export const useExpensesStore = create<ExpensesState>()(
           }
 
           return {
-            activatedMonths: [...s.activatedMonths, key],
+            activatedMonths: s.activatedMonths.includes(key) ? s.activatedMonths : [...s.activatedMonths, key],
             expenses: [...s.expenses, ...newExpenses],
             recurringExpenses: Object.keys(recurringUpdates).length > 0
               ? s.recurringExpenses.map((r) =>

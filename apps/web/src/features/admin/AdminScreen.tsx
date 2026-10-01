@@ -5,9 +5,14 @@ import { useAuthStore } from "@/shared/store/authStore";
 import { useToast } from "@/shared/components/feedback/Toast";
 import { ENV } from "@/shared/config/env";
 import { httpClient } from "@/shared/api/client";
-import { mockAdminOrgDetail, mockAdminOrgs, mockAuditLogs } from "@/shared/api/mocks/admin";
+import {
+  mockAdminOrgDetail,
+  mockAdminOrgs,
+  mockAuditLogs,
+} from "@/shared/api/mocks/admin";
 import { ClientFormModal } from "./ClientFormModal";
 import { ClientMembersModal } from "./ClientMembersModal";
+import { AdminPasswordModal } from "@/shared/components/inputs/AdminPasswordModal";
 import type {
   AdminOrg,
   AdminOrgDetail,
@@ -19,19 +24,20 @@ import type {
   ImpersonateResult,
 } from "@/shared/types/admin";
 
-const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+const delay = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms));
 const CLIENT_TYPE_LABELS = {
   gym: "Gimnasio",
-  organization: "Organización",
+  organization: "Cuenta",
 } as const;
 const ACTOR_TYPE_LABELS: Record<string, string> = {
   SYSTEM_ADMIN: "Administrador del sistema",
-  ORG_MEMBER: "Miembro de organización",
+  ORG_MEMBER: "Miembro de cuenta",
 };
 const TARGET_TYPE_LABELS: Record<string, string> = {
-  Organization: "Organización",
-  OrgMember: "Miembro de organización",
-  ORG_MEMBER: "Miembro de organización",
+  Organization: "Cuenta",
+  OrgMember: "Miembro de cuenta",
+  ORG_MEMBER: "Miembro de cuenta",
 };
 
 function formatDate(iso: string) {
@@ -46,14 +52,14 @@ function formatDate(iso: string) {
 
 function actionLabel(action: string) {
   const map: Record<string, string> = {
-    "org.create": "Org creada",
-    "org.update": "Org actualizada",
-    "org.deactivate": "Org desactivada",
-    "org.export": "Org exportada",
-    "client.create": "Cliente creado",
-    "client.update": "Cliente actualizado",
-    "client.deactivate": "Cliente desactivado",
-    "client.export": "Cliente exportado",
+    "org.create": "Cuenta creada",
+    "org.update": "Cuenta actualizada",
+    "org.deactivate": "Cuenta desactivada",
+    "org.export": "Cuenta exportada",
+    "client.create": "Cuenta creada",
+    "client.update": "Cuenta actualizada",
+    "client.deactivate": "Cuenta desactivada",
+    "client.export": "Cuenta exportada",
     "member.create": "Miembro creado",
     "member.update": "Miembro actualizado",
     "member.deactivate": "Miembro desactivado",
@@ -74,7 +80,9 @@ function OrganizationsTab() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingOrg, setEditingOrg] = useState<AdminOrg | null>(null);
   const [membersOpen, setMembersOpen] = useState(false);
-  const [selectedOrgDetail, setSelectedOrgDetail] = useState<AdminOrgDetail | null>(null);
+  const [selectedOrgDetail, setSelectedOrgDetail] =
+    useState<AdminOrgDetail | null>(null);
+  const [passwordMember, setPasswordMember] = useState<AdminOrgMember | null>(null);
 
   const { data: orgs = [], isLoading } = useQuery<AdminOrg[]>({
     queryKey: ["admin-orgs"],
@@ -97,10 +105,14 @@ function OrganizationsTab() {
           name: input.name,
           slug: input.accountName,
           tipo: input.tipo,
-          branding: { primaryColor: "#2563EB", secondaryColor: "#1E40AF", logoUrl: null },
+          branding: {
+            primaryColor: "#2563EB",
+            secondaryColor: "#1E40AF",
+            logoUrl: null,
+          },
           isActive: true,
           clientPermissions: input.clientPermissions,
-          memberPermissions: input.memberPermissions,
+          memberPermissions: [],
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           _count: { clientMembers: 1, members: 0 },
@@ -115,17 +127,19 @@ function OrganizationsTab() {
           ownerName: input.ownerName,
           ownerPassword: input.password,
           clientPermissions: input.clientPermissions,
-          memberPermissions: input.memberPermissions,
         },
       });
       return res.data;
     },
     onSuccess: (newOrg) => {
-      queryClient.setQueryData<AdminOrg[]>(["admin-orgs"], (old = []) => [newOrg, ...old]);
+      queryClient.setQueryData<AdminOrg[]>(["admin-orgs"], (old = []) => [
+        newOrg,
+        ...old,
+      ]);
       setFormOpen(false);
-      toast.success("Cliente creado correctamente");
+      toast.success("Cuenta creada correctamente");
     },
-    onError: () => toast.error("Error al crear la organización"),
+    onError: () => toast.error("Error al crear la cuenta"),
   });
 
   const updateOrg = useMutation({
@@ -134,16 +148,21 @@ function OrganizationsTab() {
         await delay(500);
         return null;
       }
-      const res = await httpClient<{ data: AdminOrg }>(`/admin/clients/${id}`, { method: "PATCH", body: data });
+      const res = await httpClient<{ data: AdminOrg }>(`/admin/clients/${id}`, {
+        method: "PATCH",
+        body: data,
+      });
       return res.data;
     },
     onSuccess: (_result, { id, data }) => {
-      queryClient.setQueryData<AdminOrg[]>(["admin-orgs"], (old = []) => old.map((org) => (org.id === id ? { ...org, ...data } : org)));
+      queryClient.setQueryData<AdminOrg[]>(["admin-orgs"], (old = []) =>
+        old.map((org) => (org.id === id ? { ...org, ...data } : org)),
+      );
       setFormOpen(false);
       setEditingOrg(null);
-      toast.success("Cliente actualizado");
+      toast.success("Cuenta actualizada");
     },
-    onError: () => toast.error("Error al actualizar la organización"),
+    onError: () => toast.error("Error al actualizar la cuenta"),
   });
 
   const toggleOrgActive = useMutation({
@@ -152,12 +171,20 @@ function OrganizationsTab() {
         await delay(500);
         return;
       }
-      if (activate) await httpClient(`/admin/clients/${id}`, { method: "PATCH", body: { isActive: true } });
+      if (activate)
+        await httpClient(`/admin/clients/${id}`, {
+          method: "PATCH",
+          body: { isActive: true },
+        });
       else await httpClient(`/admin/clients/${id}`, { method: "DELETE" });
     },
     onSuccess: (_result, { id, activate }) => {
-      queryClient.setQueryData<AdminOrg[]>(["admin-orgs"], (old = []) => old.map((org) => (org.id === id ? { ...org, isActive: activate } : org)));
-      toast.success(activate ? "Cliente activado" : "Cliente desactivado");
+      queryClient.setQueryData<AdminOrg[]>(["admin-orgs"], (old = []) =>
+        old.map((org) =>
+          org.id === id ? { ...org, isActive: activate } : org,
+        ),
+      );
+      toast.success(activate ? "Cuenta activada" : "Cuenta desactivada");
     },
     onError: () => toast.error("Error al cambiar el estado"),
   });
@@ -168,10 +195,19 @@ function OrganizationsTab() {
         await delay(700);
         return {
           token: "mock-impersonation-token",
-          user: { sub: input.targetId, username: "mock_impersonated", role: "OWNER", orgId: "org-1", impersonatedBy: "mock-admin-1" },
+          user: {
+            sub: input.targetId,
+            username: "mock_impersonated",
+            role: "OWNER",
+            orgId: "org-1",
+            impersonatedBy: "mock-admin-1",
+          },
         } as ImpersonateResult;
       }
-      const res = await httpClient<{ data: ImpersonateResult }>("/admin/impersonate", { method: "POST", body: input });
+      const res = await httpClient<{ data: ImpersonateResult }>(
+        "/admin/impersonate",
+        { method: "POST", body: input },
+      );
       return res.data;
     },
     onSuccess: (result) => {
@@ -187,7 +223,9 @@ function OrganizationsTab() {
         },
         isAuthenticated: true,
       });
-      toast.info(`Sesión iniciada como ${result.user.username}. Cierra sesión para volver.`);
+      toast.info(
+        `Sesión iniciada como ${result.user.username}. Cierra sesión para volver.`,
+      );
     },
     onError: () => toast.error("Error al impersonar el usuario"),
   });
@@ -196,8 +234,14 @@ function OrganizationsTab() {
     try {
       const exportData = ENV.USE_MOCK
         ? { ...mockAdminOrgDetail, id: org.id, name: org.name, slug: org.slug }
-        : (await httpClient<{ data: unknown }>(`/admin/clients/${org.id}/export`)).data;
-      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+        : (
+            await httpClient<{ data: unknown }>(
+              `/admin/clients/${org.id}/export`,
+            )
+          ).data;
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+        type: "application/json",
+      });
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = url;
@@ -214,28 +258,75 @@ function OrganizationsTab() {
     setMembersOpen(true);
     if (ENV.USE_MOCK) {
       await delay(400);
-      setSelectedOrgDetail({ ...mockAdminOrgDetail, id: org.id, name: org.name, slug: org.slug });
+      setSelectedOrgDetail({
+        ...mockAdminOrgDetail,
+        id: org.id,
+        name: org.name,
+        slug: org.slug,
+      });
       return;
     }
-    const res = await httpClient<{ data: AdminOrgDetail }>(`/admin/clients/${org.id}`);
+    const res = await httpClient<{ data: AdminOrgDetail }>(
+      `/admin/clients/${org.id}`,
+    );
     setSelectedOrgDetail(res.data);
   }
 
   const columns: Column<OrgRow>[] = [
-    { key: "name", header: "Cliente" },
-    { key: "tipo", header: "Tipo", render: (row) => CLIENT_TYPE_LABELS[row.tipo] ?? row.tipo },
-    { key: "users", header: "Usuarios", render: (row) => row._count.clientMembers },
+    { key: "name", header: "Cuenta" },
+    {
+      key: "tipo",
+      header: "Tipo",
+      render: (row) => CLIENT_TYPE_LABELS[row.tipo] ?? row.tipo,
+    },
+    {
+      key: "users",
+      header: "Usuarios",
+      render: (row) => row._count.clientMembers,
+    },
     { key: "members", header: "Miembros", render: (row) => row._count.members },
-    { key: "state", header: "Estado", render: (row) => <Badge color={row.isActive ? "green" : "red"}>{row.isActive ? "Activo" : "Inactivo"}</Badge> },
+    {
+      key: "state",
+      header: "Estado",
+      render: (row) => (
+        <Badge color={row.isActive ? "green" : "red"}>
+          {row.isActive ? "Activo" : "Inactivo"}
+        </Badge>
+      ),
+    },
     {
       key: "actions",
       header: "Acciones",
       render: (row) => (
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="ghost" onClick={() => handleOpenMembers(row)}>Miembros</Button>
-          <Button size="sm" variant="ghost" onClick={() => { setEditingOrg(row); setFormOpen(true); }}>Editar</Button>
-          <Button size="sm" variant="ghost" onClick={() => handleExport(row)}>Exportar</Button>
-          <Button size="sm" variant={row.isActive ? "danger" : "ghost"} onClick={() => toggleOrgActive.mutate({ id: row.id, activate: !row.isActive })} disabled={toggleOrgActive.isPending}>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => handleOpenMembers(row)}
+          >
+            Miembros
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              setEditingOrg(row);
+              setFormOpen(true);
+            }}
+          >
+            Editar
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => handleExport(row)}>
+            Exportar
+          </Button>
+          <Button
+            size="sm"
+            variant={row.isActive ? "danger" : "ghost"}
+            onClick={() =>
+              toggleOrgActive.mutate({ id: row.id, activate: !row.isActive })
+            }
+            disabled={toggleOrgActive.isPending}
+          >
             {row.isActive ? "Desactivar" : "Activar"}
           </Button>
         </div>
@@ -245,29 +336,62 @@ function OrganizationsTab() {
 
   return (
     <>
-      <div className="mb-4 flex items-center justify-between gap-4">
-        <p className="text-sm font-medium text-gray-700">{orgs.length} {orgs.length === 1 ? "cliente" : "clientes"}</p>
-        <Button size="sm" onClick={() => { setEditingOrg(null); setFormOpen(true); }}>Nuevo cliente</Button>
+      <div className="mb-4 flex items-center justify-between">
+        <p className="text-sm font-medium text-gray-700">
+          {orgs.length} {orgs.length === 1 ? "cuenta" : "cuentas"}
+        </p>
+        <Button
+          size="sm"
+          onClick={() => {
+            setEditingOrg(null);
+            setFormOpen(true);
+          }}
+        >
+          Nueva cuenta
+        </Button>
       </div>
-      <Table columns={columns} rows={orgs as OrgRow[]} keyExtractor={(row) => row.id} loading={isLoading} emptyText="No hay clientes" />
+      <Table
+        columns={columns}
+        rows={orgs as OrgRow[]}
+        keyExtractor={(row) => row.id}
+        loading={isLoading}
+        emptyText="No hay cuentas"
+      />
       <ClientFormModal
         open={formOpen}
-        onClose={() => { setFormOpen(false); setEditingOrg(null); }}
+        onClose={() => {
+          setFormOpen(false);
+          setEditingOrg(null);
+        }}
         org={editingOrg}
         isLoading={createOrg.isPending || updateOrg.isPending}
         onSubmit={(data) => {
-          if (editingOrg) updateOrg.mutate({ id: editingOrg.id, data: data as UpdateOrgInput });
+          if (editingOrg)
+            updateOrg.mutate({
+              id: editingOrg.id,
+              data: data as UpdateOrgInput,
+            });
           else createOrg.mutate(data as CreateOrgInput);
         }}
       />
       <ClientMembersModal
         open={membersOpen}
-        onClose={() => { setMembersOpen(false); setSelectedOrgDetail(null); }}
+        onClose={() => {
+          setMembersOpen(false);
+          setSelectedOrgDetail(null);
+        }}
         orgDetail={selectedOrgDetail}
         isLoading={!selectedOrgDetail && membersOpen}
         isImpersonating={impersonateMember.isPending}
-        onImpersonate={(member: AdminOrgMember) => impersonateMember.mutate({ targetId: member.id, targetType: "ORG_MEMBER" })}
+        onImpersonate={(member: AdminOrgMember) =>
+          impersonateMember.mutate({
+            targetId: member.id,
+            targetType: "ORG_MEMBER",
+          })
+        }
+        onChangePassword={setPasswordMember}
       />
+      {passwordMember && selectedOrgDetail && <AdminPasswordModal open={!!passwordMember} onClose={() => setPasswordMember(null)} userId={passwordMember.id} userType="CLIENT_MEMBER" userName={passwordMember.name} />}
     </>
   );
 }
@@ -286,18 +410,45 @@ function AuditLogsTab() {
   });
 
   const columns: Column<LogRow>[] = [
-    { key: "createdAt", header: "Fecha", render: (row) => formatDate(row.createdAt) },
-    { key: "actorType", header: "Tipo actor", render: (row) => ACTOR_TYPE_LABELS[row.actorType] ?? row.actorType },
-    { key: "action", header: "Acción", render: (row) => actionLabel(row.action) },
-    { key: "targetType", header: "Objetivo", render: (row) => row.targetType ? TARGET_TYPE_LABELS[row.targetType] ?? row.targetType : "—" },
-    { key: "orgId", header: "Org ID", render: (row) => row.orgId ?? "Sistema" },
+    {
+      key: "createdAt",
+      header: "Fecha",
+      render: (row) => formatDate(row.createdAt),
+    },
+    {
+      key: "actorType",
+      header: "Tipo actor",
+      render: (row) => ACTOR_TYPE_LABELS[row.actorType] ?? row.actorType,
+    },
+    {
+      key: "action",
+      header: "Acción",
+      render: (row) => actionLabel(row.action),
+    },
+    {
+      key: "targetType",
+      header: "Objetivo",
+      render: (row) =>
+        row.targetType
+          ? (TARGET_TYPE_LABELS[row.targetType] ?? row.targetType)
+          : "—",
+    },
+    { key: "orgId", header: "Cuenta ID", render: (row) => row.orgId ?? "Sistema" },
   ];
 
-  return <Table columns={columns} rows={logs as LogRow[]} keyExtractor={(row) => row.id} loading={isLoading} emptyText="Sin registros de actividad" />;
+  return (
+    <Table
+      columns={columns}
+      rows={logs as LogRow[]}
+      keyExtractor={(row) => row.id}
+      loading={isLoading}
+      emptyText="Sin registros de actividad"
+    />
+  );
 }
 
 const ADMIN_TABS = [
-  { key: "orgs", label: "Organizaciones" },
+  { key: "orgs", label: "Cuentas" },
   { key: "logs", label: "Auditoría" },
 ] as const;
 
@@ -307,7 +458,10 @@ export function AdminScreen({ activeTab = "orgs" }: { activeTab?: AdminTab }) {
   return (
     <div className="page feature-page">
       <header className="feature-header">
-        <h1 className="page-title">Panel de administración · {ADMIN_TABS.find((tab) => tab.key === activeTab)?.label}</h1>
+        <h1 className="page-title">
+          Panel de administración ·{" "}
+          {ADMIN_TABS.find((tab) => tab.key === activeTab)?.label}
+        </h1>
       </header>
       <section className="feature-content">
         {activeTab === "orgs" ? <OrganizationsTab /> : <AuditLogsTab />}

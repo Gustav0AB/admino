@@ -31,6 +31,11 @@ router.post("/", requireRole("OWNER", "ADMIN", "SYSTEM_ADMIN"), async (req: Requ
     const data = eventSchema.parse(req.body);
     const clientId = (req as AuthRequest).user.orgId;
     if (!clientId) throw new HttpError(403, "Forbidden");
+    if (data.planId) {
+      const plan = await prisma.trainingPlan.findUnique({ where: { id: data.planId } });
+      if (!plan) throw new HttpError(404, "Plan not found");
+      if (plan.clientId !== clientId) throw new HttpError(403, "Forbidden");
+    }
     const event = await prisma.trainingEvent.create({
       data: { name: data.name, date: new Date(data.date), type: data.type, clientId, planId: data.planId ?? null },
     });

@@ -61,6 +61,7 @@ export function WeeklyGrid({ weeks, cells, events, editable, planStartDate, plan
               return (
                 <div key={dayIso} className={`calendar-day-cell ${outOfRange ? "calendar-day-muted" : ""} ${selectedDayIdx === dayIdx ? "calendar-day-active" : ""}`}>
                   <button type="button" className="calendar-day-button" onClick={() => canOpen ? onCellOpenModal(dayIso) : setSelectedDayIdx(selectedDayIdx === dayIdx ? null : dayIdx)}>
+                    <span className="calendar-mobile-day-label">{DAY_HEADERS[dayIdx]} · {dayIso.slice(8, 10)}</span>
                     {cellText || (editable && !outOfRange ? <span>Toca para agregar...</span> : "")}
                   </button>
                   <div className="calendar-events">

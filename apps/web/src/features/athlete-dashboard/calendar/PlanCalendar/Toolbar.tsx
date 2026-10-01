@@ -24,6 +24,7 @@ type ToolbarProps = {
   onAddEvent: () => void;
   onOpenRepeatPattern: () => void;
   onDownloadPdf: () => void;
+  onAssignPlan: () => void;
 };
 
 export function Toolbar({
@@ -47,6 +48,7 @@ export function Toolbar({
   onAddEvent,
   onOpenRepeatPattern,
   onDownloadPdf,
+  onAssignPlan,
 }: ToolbarProps) {
   const showSave = editMode === "new" || editMode === "edit";
   const showForm = showSave;
@@ -66,7 +68,8 @@ export function Toolbar({
         {showSave && <Button size="sm" loading={isSaving} onClick={onSave}>Guardar plan</Button>}
         <Button variant="ghost" size="sm" onClick={onAddEvent}>Evento</Button>
         {showRepeatPattern && <Button variant="ghost" size="sm" onClick={onOpenRepeatPattern}>Patrón repetitivo</Button>}
-        {selectedPlanId && <Button variant="ghost" size="sm" onClick={onDownloadPdf}>⬇ PDF</Button>}
+        {selectedPlanId && <Button variant="ghost" size="sm" onClick={onAssignPlan}>Asignar</Button>}
+        {selectedPlanId && <Button variant="ghost" size="sm" onClick={onDownloadPdf}>PDF</Button>}
       </div>
 
       {showForm && (

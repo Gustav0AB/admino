@@ -54,8 +54,10 @@ export function ChangePasswordSection() {
 
   return (
     <Card className="max-w-xl">
-      <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-        <h2 className="text-base font-semibold text-gray-900">Cambiar contraseña</h2>
+      <form className="flex flex-col  " onSubmit={handleSubmit}>
+        <h2 className="text-base font-semibold text-gray-900">
+          Cambiar contraseña
+        </h2>
         <TextField
           label="Contraseña actual"
           type="password"
@@ -80,7 +82,11 @@ export function ChangePasswordSection() {
           placeholder="••••••••"
           error={errors.confirm}
         />
-        <Button type="submit" loading={mutation.isPending} disabled={mutation.isPending}>
+        <Button
+          type="submit"
+          loading={mutation.isPending}
+          disabled={mutation.isPending}
+        >
           Actualizar contraseña
         </Button>
       </form>

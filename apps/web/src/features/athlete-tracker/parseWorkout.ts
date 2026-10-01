@@ -54,7 +54,9 @@ export function todayIso(): string {
 }
 
 export function formatSpanishDate(isoOrDate: string | Date): string {
-  const d = typeof isoOrDate === "string" ? new Date(isoOrDate) : isoOrDate;
+  const d = typeof isoOrDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(isoOrDate)
+    ? new Date(`${isoOrDate}T12:00:00`)
+    : new Date(isoOrDate);
   const months = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
   return `${d.getDate()} de ${months[d.getMonth()] ?? ""}`;
 }

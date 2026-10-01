@@ -17,16 +17,27 @@ export default function ResetPasswordPage() {
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
-    if (!token) { setError("Enlace inválido o incompleto"); return; }
-    if (newPassword.length < 8) { setError("Mínimo 8 caracteres"); return; }
-    if (newPassword !== confirmPassword) { setError("Las contraseñas no coinciden"); return; }
+    if (!token) {
+      setError("Enlace inválido o incompleto");
+      return;
+    }
+    if (newPassword.length < 8) {
+      setError("Mínimo 8 caracteres");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError("Las contraseñas no coinciden");
+      return;
+    }
 
     setLoading(true);
     try {
       await authService.resetPassword(token, newPassword);
       setDone(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "No se pudo restablecer la contraseña");
+      setError(
+        e instanceof Error ? e.message : "No se pudo restablecer la contraseña",
+      );
     } finally {
       setLoading(false);
     }
@@ -35,18 +46,25 @@ export default function ResetPasswordPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-white p-6">
       <Card className="w-full max-w-md">
-        <div className="flex flex-col gap-4">
-          <h1 className="text-2xl font-bold text-gray-900">Crear nueva contraseña</h1>
+        <div className="flex flex-col  ">
+          <h1 className="text-2xl font-bold text-gray-900">
+            Crear nueva contraseña
+          </h1>
 
           {done ? (
             <>
-              <p className="text-sm text-gray-700">Tu contraseña se actualizó correctamente.</p>
-              <Button variant="ghost" onClick={() => navigate(routes.login, { replace: true })}>
+              <p className="text-sm text-gray-700">
+                Tu contraseña se actualizó correctamente.
+              </p>
+              <Button
+                variant="ghost"
+                onClick={() => navigate(routes.login, { replace: true })}
+              >
                 Ir a iniciar sesión
               </Button>
             </>
           ) : (
-            <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+            <form className="flex flex-col  " onSubmit={handleSubmit}>
               <TextField
                 label="Nueva contraseña"
                 type="password"

@@ -16,10 +16,17 @@ export function MembersScreen() {
   const openAtletaCreate = useRef<() => void>(() => {});
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 bg-gray-50 p-6">
-      <header className="flex items-center justify-between gap-4">
+    <div className="flex min-h-0 flex-1 flex-col bg-gray-50 p-6">
+      <header className="flex items-center justify-between  ">
         <h1 className="text-2xl font-bold text-gray-900">Miembros</h1>
-        <Button size="sm" onClick={() => (tab === "staff" ? openStaffCreate.current() : openAtletaCreate.current())}>
+        <Button
+          size="sm"
+          onClick={() =>
+            tab === "staff"
+              ? openStaffCreate.current()
+              : openAtletaCreate.current()
+          }
+        >
           {tab === "staff" ? "Agregar usuario" : "Agregar miembro"}
         </Button>
       </header>
@@ -38,9 +45,17 @@ export function MembersScreen() {
 
       <div className="tab-content">
         {tab === "staff" ? (
-          <StaffContent onReady={(fn) => { openStaffCreate.current = fn; }} />
+          <StaffContent
+            onReady={(fn) => {
+              openStaffCreate.current = fn;
+            }}
+          />
         ) : (
-          <AtletasContent onReady={(fn) => { openAtletaCreate.current = fn; }} />
+          <AtletasContent
+            onReady={(fn) => {
+              openAtletaCreate.current = fn;
+            }}
+          />
         )}
       </div>
     </div>

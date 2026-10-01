@@ -9,6 +9,8 @@ import { logAudit } from "@lib/audit";
 const router = Router();
 router.use(requireAuth, loadOrgContext);
 
+const DEFAULT_PERMISSIONS = ["finanzas", "athlete_dashboard", "athlete_tracker"];
+
 // ── Schemas ────────────────────────────────────────────────────────────────
 
 const updateBrandingSchema = z.object({
@@ -24,7 +26,7 @@ const createMemberSchema = z.object({
   email: z.string().email().optional(),
   password: z.string().min(8),
   role: z.enum(["ADMIN", "MEMBER"]).default("MEMBER"),
-  permissions: z.array(z.string()).default([]),
+  permissions: z.array(z.string()).default(DEFAULT_PERMISSIONS),
 });
 
 const updateMemberSchema = z.object({

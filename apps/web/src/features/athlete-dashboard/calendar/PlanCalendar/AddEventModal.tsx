@@ -40,14 +40,39 @@ export function AddEventModal({ open, onClose, onSave }: AddEventModalProps) {
   }
 
   return (
-    <Modal open={open} onClose={handleClose} title="Agregar evento" footer={<><Button variant="ghost" size="sm" onClick={handleClose}>Cancelar</Button><Button size="sm" onClick={handleSave}>Guardar evento</Button></>}>
-      <div className="flex flex-col gap-4">
-        <TextField label="Nombre del evento" value={name} onChange={(event) => setName(event.target.value)} placeholder="Ej. Campeonato Regional" error={nameError} />
+    <Modal
+      open={open}
+      onClose={handleClose}
+      title="Agregar evento"
+      footer={
+        <>
+          <Button variant="ghost" size="sm" onClick={handleClose}>
+            Cancelar
+          </Button>
+          <Button size="sm" onClick={handleSave}>
+            Guardar evento
+          </Button>
+        </>
+      }
+    >
+      <div className="flex flex-col  ">
+        <TextField
+          label="Nombre del evento"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder="Ej. Campeonato Regional"
+          error={nameError}
+        />
         <div>
           <DatePicker label="Fecha" value={date} onChange={setDate} />
           {dateError && <p className="field-error">{dateError}</p>}
         </div>
-        <Dropdown label="Tipo" options={EVENT_TYPE_OPTIONS} value={type} onChange={(value) => setType(value as EventType)} />
+        <Dropdown
+          label="Tipo"
+          options={EVENT_TYPE_OPTIONS}
+          value={type}
+          onChange={(value) => setType(value as EventType)}
+        />
       </div>
     </Modal>
   );

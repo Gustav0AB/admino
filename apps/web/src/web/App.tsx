@@ -5,7 +5,9 @@ import { ErrorBoundary } from "@/shared/components/feedback/ErrorBoundary";
 import { ToastProvider } from "@/shared/components/feedback/Toast";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { useAppLifecycle } from "@/shared/hooks/useAppLifecycle";
+import { useClientStore } from "@/shared/store/clientStore";
 import type { UserRole } from "@/shared/types/auth";
+import type { ClientFeature } from "@/shared/types/client";
 import { AppLayout } from "./layouts/AppLayout";
 import { routes } from "./routes";
 
@@ -40,6 +42,12 @@ function RoleRoute({ roles, children }: { roles: UserRole[]; children: ReactNode
   return hasAnyRole(roles) ? children : <Navigate to={routes.dashboard} replace />;
 }
 
+function FeatureRoute({ feature, roles, children }: { feature: ClientFeature; roles: UserRole[]; children: ReactNode }) {
+  const { user, hasAnyRole } = useAuth();
+  const hasFeature = useClientStore((s) => s.hasFeature);
+  return hasAnyRole(roles) && (user?.role === "SYSTEM_ADMIN" || hasFeature(feature)) ? children : <Navigate to={routes.dashboard} replace />;
+}
+
 function AppRoutes() {
   useAppLifecycle();
 
@@ -57,12 +65,12 @@ function AppRoutes() {
             <Route path={routes.dashboard} element={<DashboardPage />} />
             <Route path={routes.admin} element={<RoleRoute roles={["SYSTEM_ADMIN"]}><AdminScreen activeTab="orgs" /></RoleRoute>} />
             <Route path={routes.adminLogs} element={<RoleRoute roles={["SYSTEM_ADMIN"]}><AdminScreen activeTab="logs" /></RoleRoute>} />
-            <Route path={routes.expenses} element={<RoleRoute roles={["SYSTEM_ADMIN", "OWNER", "ADMIN"]}><ExpensesScreen /></RoleRoute>} />
-            <Route path={routes.notes} element={<RoleRoute roles={["SYSTEM_ADMIN", "OWNER", "ADMIN"]}><AssistantScreen /></RoleRoute>} />
+            <Route path={routes.expenses} element={<FeatureRoute feature="finanzas" roles={["SYSTEM_ADMIN", "OWNER", "ADMIN"]}><ExpensesScreen /></FeatureRoute>} />
+            <Route path={routes.notes} element={<FeatureRoute feature="notes" roles={["SYSTEM_ADMIN", "OWNER", "ADMIN"]}><AssistantScreen /></FeatureRoute>} />
             <Route path={routes.assistant} element={<Navigate to={routes.notes} replace />} />
-            <Route path={routes.athleteDashboard} element={<RoleRoute roles={["SYSTEM_ADMIN", "OWNER", "ADMIN"]}><AthleteDashboardScreen /></RoleRoute>} />
-            <Route path={routes.athleteDashboardAthletes} element={<RoleRoute roles={["SYSTEM_ADMIN", "OWNER", "ADMIN"]}><AthletesTab /></RoleRoute>} />
-            <Route path={routes.athleteTracker} element={<RoleRoute roles={["MEMBER"]}><AthleteTrackerScreen /></RoleRoute>} />
+            <Route path={routes.athleteDashboard} element={<FeatureRoute feature="athlete_dashboard" roles={["SYSTEM_ADMIN", "OWNER", "ADMIN"]}><AthleteDashboardScreen /></FeatureRoute>} />
+            <Route path={routes.athleteDashboardAthletes} element={<FeatureRoute feature="athlete_dashboard" roles={["SYSTEM_ADMIN", "OWNER", "ADMIN"]}><AthletesTab /></FeatureRoute>} />
+            <Route path={routes.athleteTracker} element={<FeatureRoute feature="athlete_tracker" roles={["MEMBER"]}><AthleteTrackerScreen /></FeatureRoute>} />
             <Route path={routes.clientSettings} element={<RoleRoute roles={["OWNER", "ADMIN"]}><ClientSettingsScreen /></RoleRoute>} />
             <Route path={routes.miembros} element={<RoleRoute roles={["OWNER", "ADMIN"]}><MembersScreen /></RoleRoute>} />
           </Route>

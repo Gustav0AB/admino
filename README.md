@@ -41,6 +41,13 @@ npm run type-check:api
 npm run build
 ```
 
+Smoke live contra API + Postgres local:
+
+```bash
+npm run dev:api
+npm run test:smoke
+```
+
 ## Estructura monolitica
 
 ```text
@@ -56,6 +63,10 @@ El repo ya no usa Expo ni carpetas legacy en la raiz. Las rutas, componentes y s
 
 ## Documentos vivos
 
+- `docs/README.md`: índice de la documentación técnica.
+- `docs/api-endpoints.md`: catálogo de endpoints HTTP, permisos y payloads principales.
+- `docs/flows.md`: flujos de autenticación, tenant, planeación, atleta y finanzas/IA.
+- `docs/data-model.md`: modelo de datos, límites multi-tenant y eventos en tiempo real.
 - `docs/athlete-planning-roadmap.md`: roadmap principal de planes y seguimiento de atletas.
 - `docs/frontend-cleanup.md`: bitacora vigente de limpieza frontend.
 - `docs/styles-cleanup.md`: estado actual de estilos y deuda visual.
@@ -206,13 +217,7 @@ Ya hecho:
 
 Falta importante:
 
-- Revisar mobile real del calendario del sifu.
-- Mostrar al sifu checks, RPE y notas por dia en `Actividad`.
-- Validar explicitamente que `memberId` pertenezca a la cuenta antes de asignar/desasignar planes.
-- Definir una sola asignacion activa por atleta.
-- Cambiar UI visible de `Organizaciones` a `Cuentas`.
-- Probar flujos live contra Postgres real.
-- Resolver vulnerabilidades pendientes de `react-router` cuando haya fix limpio.
+- Definir el siguiente corte de producto.
 
 ## Variables
 

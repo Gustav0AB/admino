@@ -23,17 +23,24 @@ const FEATURE_CARDS: FeatureCard[] = [
   },
   {
     feature: "athlete_dashboard",
-    label: "Planes de atletas",
+    label: "Planeación",
     description: "Atletas, planes de entrenamiento y calendario.",
     href: routes.athleteDashboard,
     roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN"],
   },
   {
     feature: "athlete_tracker",
-    label: "Mi Entrenamiento",
+    label: "Planeación",
     description: "Seguimiento de tu plan y entrenamientos del día.",
     href: routes.athleteTracker,
     roles: ["MEMBER"],
+  },
+  {
+    feature: "notes",
+    label: "Notas",
+    description: "Captura notas y conviértelas en planes o gastos.",
+    href: routes.notes,
+    roles: ["SYSTEM_ADMIN", "OWNER", "ADMIN"],
   },
   {
     feature: null,
